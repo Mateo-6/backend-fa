@@ -14,8 +14,9 @@ export class UserMongooseRepository implements UserRepository {
     // Ensure Mongoose is connected
     await getMongooseInstance();
 
-    const createdUser: User = await UserModel.create(user);
-    return createdUser;
+    const createdUser: IUserDocument = await UserModel.create(user);
+
+    return this.toDomain(createdUser);
   }
 
   /**
@@ -27,11 +28,11 @@ export class UserMongooseRepository implements UserRepository {
     // Ensure Mongoose is connected
     await getMongooseInstance();
 
-    const users: User[] = await UserModel.find()
+    const users: IUserDocument[] = await UserModel.find()
       .sort({ createdAt: -1 }) // Sort by createdAt descending
       .exec();
 
-    return users.map(user => user);
+    return users.map(user => this.toDomain(user));
   }
 
   /**
@@ -47,10 +48,27 @@ export class UserMongooseRepository implements UserRepository {
     const user: IUserDocument | null = await UserModel.findById(id).exec();
 
     if (!user) {
-      return null;
+      throw new Object({ stack: 'Not user found', statusCode: 404 });
     }
 
-    return user;
+    return this.toDomain(user);
+  }
+
+  /**
+  * Maps a mongoose document to the domain type.
+  *
+  * @param {IUserDocument} doc Mongoose document.
+  * @returns {User} Domain user.
+  */
+  private toDomain(doc: IUserDocument): User {
+    return {
+      id: doc.id,
+      username: doc.username,
+      name: doc.name,
+      phone: doc.phone,
+      email: doc.email,
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt
+    };
   }
 }
-

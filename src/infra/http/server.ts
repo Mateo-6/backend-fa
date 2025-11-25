@@ -1,6 +1,7 @@
 import express, { Application } from 'express';
 import healthRoutes from './routes/health.routes';
 import userRoutes from './routes/user.routes';
+import categoryRoutes from './routes/category.routes';
 import { env } from '../config/env';
 import { errorHandler } from './middleware/error-handler.middleware';
 
@@ -36,6 +37,7 @@ export class Server {
   private configureRoutes(): void {
     this.app.use('/health', healthRoutes);
     this.app.use('/users', userRoutes);
+    this.app.use('/categories', categoryRoutes);
   }
 
   /**

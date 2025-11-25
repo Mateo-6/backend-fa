@@ -3,6 +3,7 @@ import { User } from '../../../domain/user/types/user.types';
 
 // Interface for MongoDB document - extends User to maintain consistency
 export interface IUserDocument extends User, Document {
+  categories: Types.ObjectId[];
   _id: Types.ObjectId;
 }
 
@@ -31,6 +32,15 @@ const UserSchema = new Schema<IUserDocument>(
       type: String,
       required: true,
     },
+    categories: {
+      type: [
+        {
+          type: Schema.Types.ObjectId,
+          ref: 'Category',
+        },
+      ],
+      default: [],
+    },
   },
   {
     timestamps: true, // Automatic createdAt and updatedAt
@@ -46,6 +56,10 @@ const UserSchema = new Schema<IUserDocument>(
        */
       transform: function (doc, ret: any) {
         ret.id = ret._id.toString();
+        ret.categories =
+          Array.isArray(ret.categories) && ret.categories.length > 0
+            ? ret.categories.map((categoryId: Types.ObjectId) => categoryId.toString())
+            : [];
         delete ret.password;
         delete ret._id;
         delete ret.__v;
@@ -62,6 +76,10 @@ const UserSchema = new Schema<IUserDocument>(
        */
       transform: function (doc, ret: any) {
         ret.id = ret._id.toString();
+        ret.categories =
+          Array.isArray(ret.categories) && ret.categories.length > 0
+            ? ret.categories.map((categoryId: Types.ObjectId) => categoryId.toString())
+            : [];
         delete ret.password;
         delete ret._id;
         delete ret.__v;
