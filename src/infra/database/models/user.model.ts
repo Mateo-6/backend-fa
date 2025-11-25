@@ -1,21 +1,14 @@
-import mongoose, { Schema, Document } from 'mongoose';
-import { v4 as uuidv4 } from 'uuid';
-import { UserBase } from '../../../domain/user/types/user.types';
+import mongoose, { Schema, Document, Types } from 'mongoose';
+import { User } from '../../../domain/user/types/user.types';
 
-// Interface for MongoDB document - extends UserBase to maintain consistency
-export interface IUserDocument extends Omit<Document, '_id'>, UserBase {
-  _id: string;
-  createdAt: Date;
-  updatedAt: Date;
+// Interface for MongoDB document - extends User to maintain consistency
+export interface IUserDocument extends User, Document {
+  _id: Types.ObjectId;
 }
 
 // Mongoose Schema
 const UserSchema = new Schema<IUserDocument>(
   {
-    _id: {
-      type: String,
-      default: () => uuidv4(),
-    },
     username: {
       type: String,
       required: true,
@@ -40,9 +33,27 @@ const UserSchema = new Schema<IUserDocument>(
     },
   },
   {
-    _id: true, // Use custom _id
     timestamps: true, // Automatic createdAt and updatedAt
     collection: 'users', // Collection name
+    versionKey: false, // Disable __v field
+    toJSON: {
+      transform: function (doc, ret: any) {
+        ret.id = ret._id.toString();
+        delete ret.password;
+        delete ret._id;
+        delete ret.__v;
+        return ret;
+      },
+    },
+    toObject: {
+      transform: function (doc, ret: any) {
+        ret.id = ret._id.toString();
+        delete ret.password;
+        delete ret._id;
+        delete ret.__v;
+        return ret;
+      },
+    },
   }
 );
 

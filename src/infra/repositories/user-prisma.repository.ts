@@ -1,24 +1,23 @@
-import { UserWithId } from '../../domain/user/types/user.types';
+import { User } from '../../domain/user/types/user.types';
 import { UserRepository } from '../../domain/user/repositories/user.repository';
 import { prisma } from '../database/prisma-client';
 
 export class UserPrismaRepository implements UserRepository {
-  async create(user: UserWithId): Promise<UserWithId> {
+  async create(user: User): Promise<User> {
     // Note: Prisma schema only has name, email, age - missing username, password, phone
     // This is a limitation of the current Prisma schema
     const createdUser = await prisma.user.create({
       data: {
-        id: user.id,
         name: user.name,
         email: user.email,
-        age: 0, // Default value since age is not in UserWithId
+        age: 0, // Default value since age is not in User
       },
     });
 
     return this.toDomain(createdUser);
   }
 
-  async findAll(): Promise<UserWithId[]> {
+  async findAll(): Promise<User[]> {
     const users = await prisma.user.findMany({
       orderBy: {
         createdAt: 'desc',
@@ -28,7 +27,7 @@ export class UserPrismaRepository implements UserRepository {
     return users.map(user => this.toDomain(user));
   }
 
-  async findById(id: string): Promise<UserWithId | null> {
+  async findById(id: string): Promise<User | null> {
     const user = await prisma.user.findUnique({
       where: { id },
     });
@@ -40,7 +39,7 @@ export class UserPrismaRepository implements UserRepository {
     return this.toDomain(user);
   }
 
-  // Mapping from Prisma entity to UserWithId
+  // Mapping from Prisma entity to User
   // Note: Prisma model is missing username, password, phone fields
   private toDomain(prismaUser: {
     id: string;
@@ -49,7 +48,7 @@ export class UserPrismaRepository implements UserRepository {
     age: number;
     createdAt: Date;
     updatedAt: Date;
-  }): UserWithId {
+  }): User {
     return {
       id: prismaUser.id,
       username: '', // Not available in Prisma schema

@@ -1,28 +1,23 @@
 import { UserRepository } from "../repositories/user.repository";
-import { UserWithId } from "../types/user.types";
-import { v4 as uuidv4 } from 'uuid';
+import { User } from "../types/user.types";
 import { CreateUserDto } from "../../../application/dto/user/create-user.dto";
 
-export class UserService {
-  constructor(private userRepository: UserRepository) {}
+import * as bcrypt from 'bcrypt';
 
-  async create(data: CreateUserDto): Promise<UserWithId> {
-    const user: UserWithId = {
-      id: uuidv4(),
-      username: data.username,
-      name: data.name,
-      email: data.email,
-      password: data.password,
-      phone: data.phone,
-    };
-    return this.userRepository.create(user);
+export class UserService {
+  constructor(private userRepository: UserRepository) { }
+
+  async create(data: CreateUserDto): Promise<User> {
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+    const userWithHashedPassword = { ...data, password: hashedPassword };
+    return this.userRepository.create(userWithHashedPassword);
   }
 
-  async findAll(): Promise<UserWithId[]> {
+  async findAll(): Promise<User[]> {
     return this.userRepository.findAll();
   }
 
-  async findById(id: string): Promise<UserWithId | null> {
+  async findById(id: string): Promise<User | null> {
     return this.userRepository.findById(id);
   }
 }

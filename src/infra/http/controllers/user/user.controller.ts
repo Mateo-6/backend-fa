@@ -11,33 +11,21 @@ export class UserController {
   }
 
   public async create(req: Request, res: Response): Promise<void> {
-    try {
-      // req.body is already validated by the middleware
-      const createUserDto: CreateUserDto = req.body;
-      const user = await this.userService.create(createUserDto);
-      res.json(user);
-    } catch (err: any) {
-      res.status(400).json({ error: err.message });
-    }
+    // req.body is already validated by the middleware
+    const createUserDto: CreateUserDto = req.body;
+    const user = await this.userService.create(createUserDto);
+    res.json(user);
   }
 
   public async getAll(req: Request, res: Response): Promise<void> {
-    try {
-      const users = await this.userService.findAll();
-      res.json(users);
-    } catch (err: any) {
-      res.status(400).json({ error: err.message });
-    }
+    const users = await this.userService.findAll();
+    res.json(users);
   }
 
   public async getById(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-      const user = await this.userService.findById(id);
-      res.json(user);
-    } catch (err: any) {
-      res.status(400).json({ error: err.message });
-    }
+    const { id } = req.params;
+    const user = await this.userService.findById(id);
+    res.json(user);
   }
 
 }

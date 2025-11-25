@@ -5,6 +5,7 @@ import { UserPrismaRepository } from '../../repositories/user-prisma.repository'
 import { validate } from '../middleware/validation.middleware';
 import { createUserSchema } from '../../../application/dto/user/create-user.dto';
 import { UserMongooseRepository } from '../../repositories/user-mongoose.repository';
+import { asyncHandler } from '../middleware/async-handler.middleware';
 
 const router = Router();
 
@@ -13,9 +14,9 @@ const userRepository = new UserMongooseRepository();
 const userService = new UserService(userRepository);
 const userController = new UserController(userService);
 
-router.post('/', validate(createUserSchema), userController.create.bind(userController));
-router.get('/', userController.getAll.bind(userController));
-router.get('/:id', userController.getById.bind(userController));
+router.post('/', validate(createUserSchema), asyncHandler(userController.create.bind(userController)));
+router.get('/', asyncHandler(userController.getAll.bind(userController)));
+router.get('/:id', asyncHandler(userController.getById.bind(userController)));
 
 export default router;
 

@@ -1,7 +1,7 @@
-import { UserWithId } from "../types/user.types";
+import { User } from "../types/user.types";
 
 export interface UserRepository {
-  create(user: UserWithId): Promise<UserWithId>;
-  findAll(): Promise<UserWithId[]>;
-  findById(id: string): Promise<UserWithId | null>;
+  create(user: User): Promise<User>;
+  findAll(): Promise<User[]>;
+  findById(id: string): Promise<User | null>;
 }

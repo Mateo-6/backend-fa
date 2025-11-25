@@ -1,42 +1,39 @@
-import { UserWithId } from '../../domain/user/types/user.types';
+import { User } from '../../domain/user/types/user.types';
 import { UserRepository } from '../../domain/user/repositories/user.repository';
-import { UserModel } from '../database/models/user.model';
+import { UserModel, IUserDocument } from '../database/models/user.model';
 import { getMongooseInstance } from '../database/mongoose-client';
-import { UserMapper } from './mappers/user.mapper';
 
 export class UserMongooseRepository implements UserRepository {
-  async create(user: UserWithId): Promise<UserWithId> {
+  async create(user: User): Promise<User> {
     // Ensure Mongoose is connected
     await getMongooseInstance();
 
-    const userData = UserMapper.toMongooseData(user);
-    const createdUser = await UserModel.create(userData);
-
-    return UserMapper.fromMongooseDocument(createdUser);
+    const createdUser: User = await UserModel.create(user);
+    return createdUser;
   }
 
-  async findAll(): Promise<UserWithId[]> {
+  async findAll(): Promise<User[]> {
     // Ensure Mongoose is connected
     await getMongooseInstance();
 
-    const users = await UserModel.find()
+    const users: User[] = await UserModel.find()
       .sort({ createdAt: -1 }) // Sort by createdAt descending
       .exec();
 
-    return users.map(user => UserMapper.fromMongooseDocument(user));
+    return users.map(user => user);
   }
 
-  async findById(id: string): Promise<UserWithId | null> {
+  async findById(id: string): Promise<User | null> {
     // Ensure Mongoose is connected
     await getMongooseInstance();
 
-    const user = await UserModel.findById(id).exec();
+    const user: IUserDocument | null = await UserModel.findById(id).exec();
 
     if (!user) {
       return null;
     }
 
-    return UserMapper.fromMongooseDocument(user);
+    return user;
   }
 }
 

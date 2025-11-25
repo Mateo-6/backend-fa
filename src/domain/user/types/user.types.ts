@@ -1,18 +1,12 @@
 // Shared types for User - single source of truth for the structure
-export interface UserBase {
+export interface User {
+  id?: string;
   username: string;
   name: string;
   password: string;
   phone: string;
   email: string;
-}
-
-export interface UserWithId extends UserBase {
-  id: string;
-}
-
-export interface UserWithTimestamps extends UserWithId {
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
