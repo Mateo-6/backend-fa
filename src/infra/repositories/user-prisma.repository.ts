@@ -3,6 +3,12 @@ import { UserRepository } from '../../domain/user/repositories/user.repository';
 import { prisma } from '../database/prisma-client';
 
 export class UserPrismaRepository implements UserRepository {
+  /**
+   * Persists a new user using Prisma (limited to the fields defined in the Prisma schema).
+   *
+   * @param {User} user Domain user data to persist.
+   * @returns {Promise<User>} The mapped domain user.
+   */
   async create(user: User): Promise<User> {
     // Note: Prisma schema only has name, email, age - missing username, password, phone
     // This is a limitation of the current Prisma schema
@@ -17,6 +23,11 @@ export class UserPrismaRepository implements UserRepository {
     return this.toDomain(createdUser);
   }
 
+  /**
+   * Retrieves all Prisma user records sorted by most recent creation time.
+   *
+   * @returns {Promise<User[]>} List of mapped domain users.
+   */
   async findAll(): Promise<User[]> {
     const users = await prisma.user.findMany({
       orderBy: {
@@ -27,6 +38,12 @@ export class UserPrismaRepository implements UserRepository {
     return users.map(user => this.toDomain(user));
   }
 
+  /**
+   * Finds a Prisma user record by id and maps it to the domain model.
+   *
+   * @param {string} id Identifier of the Prisma user.
+   * @returns {Promise<User | null>} Domain user or null.
+   */
   async findById(id: string): Promise<User | null> {
     const user = await prisma.user.findUnique({
       where: { id },
@@ -41,6 +58,12 @@ export class UserPrismaRepository implements UserRepository {
 
   // Mapping from Prisma entity to User
   // Note: Prisma model is missing username, password, phone fields
+  /**
+   * Maps a Prisma user entity to the domain `User` shape.
+   *
+   * @param {{ id: string; name: string; email: string; age: number; createdAt: Date; updatedAt: Date }} prismaUser Prisma user record.
+   * @returns {User} Domain representation.
+   */
   private toDomain(prismaUser: {
     id: string;
     name: string;

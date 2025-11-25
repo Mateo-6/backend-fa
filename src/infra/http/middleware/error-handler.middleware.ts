@@ -4,6 +4,15 @@ export interface AppError extends Error {
   statusCode?: number;
 }
 
+/**
+ * Centralized Express error-handling middleware that formats error responses.
+ *
+ * @param {AppError | Error} err The error thrown within the request pipeline.
+ * @param {Request} req Express request object where the error originated.
+ * @param {Response} res Express response used to send the error payload.
+ * @param {NextFunction} next Callback to pass control to the default handler when needed.
+ * @returns {void} Sends an HTTP error response.
+ */
 export const errorHandler = (
   err: AppError | Error,
   req: Request,

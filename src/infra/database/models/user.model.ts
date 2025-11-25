@@ -37,6 +37,13 @@ const UserSchema = new Schema<IUserDocument>(
     collection: 'users', // Collection name
     versionKey: false, // Disable __v field
     toJSON: {
+      /**
+       * Normalizes the Mongo document when converted to JSON responses.
+       *
+       * @param {IUserDocument} doc Original mongoose document.
+       * @param {any} ret Serializable representation.
+       * @returns {any} Normalized representation.
+       */
       transform: function (doc, ret: any) {
         ret.id = ret._id.toString();
         delete ret.password;
@@ -46,6 +53,13 @@ const UserSchema = new Schema<IUserDocument>(
       },
     },
     toObject: {
+      /**
+       * Normalizes the Mongo document when converted to plain objects.
+       *
+       * @param {IUserDocument} doc Original mongoose document.
+       * @param {any} ret Plain object representation.
+       * @returns {any} Normalized representation.
+       */
       transform: function (doc, ret: any) {
         ret.id = ret._id.toString();
         delete ret.password;

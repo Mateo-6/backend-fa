@@ -1,6 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodSchema, ZodError } from 'zod';
 
+/**
+ * Validates the request body against the provided Zod schema and replaces it
+ * with the parsed result before invoking the next middleware.
+ *
+ * @param {ZodSchema} schema Schema used to validate the request body.
+ * @returns {(req: Request, res: Response, next: NextFunction) => void} Express middleware.
+ */
 export const validate = (schema: ZodSchema) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     const validationResult = schema.safeParse(req.body);

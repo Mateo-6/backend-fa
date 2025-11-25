@@ -9,6 +9,11 @@ export class PrismaClientSingleton {
 
   private constructor() {}
 
+  /**
+   * Retrieves the singleton Prisma client instance, instantiating it if needed.
+   *
+   * @returns {PrismaClient} Shared Prisma client.
+   */
   public static getInstance(): PrismaClient {
     if (!PrismaClientSingleton.instance) {
       // Create the MariaDB adapter (MySQL compatible) with the connection URL
