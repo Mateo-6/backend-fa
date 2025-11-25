@@ -16,7 +16,7 @@ export const validate = (schema: ZodSchema) => {
       return;
     }
 
-    // Reemplazar req.body con los datos validados (sanitizados por Zod)
+    // Replace req.body with validated data (sanitized by Zod)
     req.body = validationResult.data;
     next();
   };

@@ -2,8 +2,8 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { env } from '../config/env';
 
-// Singleton pattern para el cliente de Prisma
-// Prisma 7 requiere un adaptador explícito con la URL de la base de datos
+// Singleton pattern for Prisma client
+// Prisma 7 requires an explicit adapter with the database URL
 export class PrismaClientSingleton {
   private static instance: PrismaClient;
 
@@ -11,7 +11,7 @@ export class PrismaClientSingleton {
 
   public static getInstance(): PrismaClient {
     if (!PrismaClientSingleton.instance) {
-      // Crear el adaptador MariaDB (compatible con MySQL) con la URL de conexión
+      // Create the MariaDB adapter (MySQL compatible) with the connection URL
       const adapter = new PrismaMariaDb(env.DATABASE_URL);
 
       PrismaClientSingleton.instance = new PrismaClient({

@@ -4,11 +4,12 @@ import { UserService } from '../../../domain/user/services/user-service';
 import { UserPrismaRepository } from '../../repositories/user-prisma.repository';
 import { validate } from '../middleware/validation.middleware';
 import { createUserSchema } from '../../../application/dto/user/create-user.dto';
+import { UserMongooseRepository } from '../../repositories/user-mongoose.repository';
 
 const router = Router();
 
 // Dependency injection setup
-const userRepository = new UserPrismaRepository();
+const userRepository = new UserMongooseRepository();
 const userService = new UserService(userRepository);
 const userController = new UserController(userService);
 

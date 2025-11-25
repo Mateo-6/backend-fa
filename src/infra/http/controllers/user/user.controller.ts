@@ -12,7 +12,7 @@ export class UserController {
 
   public async create(req: Request, res: Response): Promise<void> {
     try {
-      // req.body ya está validado por el middleware
+      // req.body is already validated by the middleware
       const createUserDto: CreateUserDto = req.body;
       const user = await this.userService.create(createUserDto);
       res.json(user);
