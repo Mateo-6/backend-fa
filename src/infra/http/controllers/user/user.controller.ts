@@ -2,6 +2,8 @@
 import { Request, Response } from "express";
 import { UserService } from "../../../../domain/user/services/user-service";
 import { CreateUserDto } from "../../../../application/dto/user/create-user.dto";
+import { NotFoundError } from "../../../../domain/errors/app-error";
+import { sendSuccess } from "../../utils/response.util";
 
 export class UserController {
   private readonly userService: UserService;
@@ -24,7 +26,7 @@ export class UserController {
     // req.body is already validated by the middleware
     const createUserDto: CreateUserDto = req.body;
     const user = await this.userService.create(createUserDto);
-    res.json(user);
+    sendSuccess(res, user, 201);
   }
 
   /**
@@ -36,7 +38,7 @@ export class UserController {
    */
   public async getAll(req: Request, res: Response): Promise<void> {
     const users = await this.userService.findAll();
-    res.json(users);
+    sendSuccess(res, users);
   }
 
   /**
@@ -49,7 +51,10 @@ export class UserController {
   public async getById(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
     const user = await this.userService.findById(id);
-    res.json(user);
+    if (!user) {
+      throw new NotFoundError('User', id);
+    }
+    sendSuccess(res, user);
   }
 
 }

@@ -33,4 +33,14 @@ export class UserInMemoryRepository implements UserRepository {
   async findById(id: string): Promise<User | null> {
     return this.users.find((user) => user.id === id) || null;
   }
+
+  /**
+   * Looks up a user entity by email within the in-memory collection.
+   *
+   * @param {string} email Email address to search.
+   * @returns {Promise<User | null>} Matching user or null.
+   */
+  async findByEmail(email: string): Promise<User | null> {
+    return this.users.find((user) => user.email === email) || null;
+  }
 }

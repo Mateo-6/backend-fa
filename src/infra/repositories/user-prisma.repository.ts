@@ -56,6 +56,24 @@ export class UserPrismaRepository implements UserRepository {
     return this.toDomain(user);
   }
 
+  /**
+   * Finds a Prisma user record by email and maps it to the domain model.
+   *
+   * @param {string} email Email address of the Prisma user.
+   * @returns {Promise<User | null>} Domain user or null.
+   */
+  async findByEmail(email: string): Promise<User | null> {
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    return this.toDomain(user);
+  }
+
   // Mapping from Prisma entity to User
   // Note: Prisma model is missing username, password, phone fields
   /**

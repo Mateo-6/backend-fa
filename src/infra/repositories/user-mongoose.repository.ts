@@ -2,6 +2,7 @@ import { User } from '../../domain/user/types/user.types';
 import { UserRepository } from '../../domain/user/repositories/user.repository';
 import { UserModel, IUserDocument } from '../database/models/user.model';
 import { getMongooseInstance } from '../database/mongoose-client';
+import { NotFoundError } from '../../domain/errors/app-error';
 
 export class UserMongooseRepository implements UserRepository {
   /**
@@ -48,10 +49,29 @@ export class UserMongooseRepository implements UserRepository {
     const user: IUserDocument | null = await UserModel.findById(id).exec();
 
     if (!user) {
-      throw new Object({ stack: 'Not user found', statusCode: 404 });
+      throw new NotFoundError('User', id);
     }
 
     return this.toDomain(user);
+  }
+
+  /**
+   * Finds a user document by its email address.
+   *
+   * @param {string} email Email address of the user.
+   * @returns {Promise<User | null>} Matching user or null.
+   */
+  async findByEmail(email: string): Promise<User | null> {
+    // Ensure Mongoose is connected
+    await getMongooseInstance();
+
+    const user: IUserDocument | null = await UserModel.findOne({ email }).exec();
+
+    if (!user) {
+      return null;
+    }
+
+    return this.toDomainWithPassword(user);
   }
 
   /**
@@ -67,6 +87,25 @@ export class UserMongooseRepository implements UserRepository {
       name: doc.name,
       phone: doc.phone,
       email: doc.email,
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt
+    };
+  }
+
+  /**
+   * Maps a mongoose document to the domain type with password.
+   *
+   * @param {IUserDocument} doc Mongoose document.
+   * @returns {User} Domain user with password.
+   */
+  private toDomainWithPassword(doc: IUserDocument): User {
+    return {
+      id: doc.id,
+      username: doc.username,
+      name: doc.name,
+      phone: doc.phone,
+      email: doc.email,
+      password: doc.password,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt
     };

@@ -60,7 +60,7 @@ const UserSchema = new Schema<IUserDocument>(
           Array.isArray(ret.categories) && ret.categories.length > 0
             ? ret.categories.map((categoryId: Types.ObjectId) => categoryId.toString())
             : [];
-        delete ret.password;
+        //delete ret.password;
         delete ret._id;
         delete ret.__v;
         return ret;
@@ -80,7 +80,7 @@ const UserSchema = new Schema<IUserDocument>(
           Array.isArray(ret.categories) && ret.categories.length > 0
             ? ret.categories.map((categoryId: Types.ObjectId) => categoryId.toString())
             : [];
-        delete ret.password;
+        //delete ret.password;
         delete ret._id;
         delete ret.__v;
         return ret;

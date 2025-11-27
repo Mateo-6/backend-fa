@@ -1,14 +1,17 @@
 import { UserRepository } from "../repositories/user.repository";
 import { User } from "../types/user.types";
 import { CreateUserDto } from "../../../application/dto/user/create-user.dto";
-
-import * as bcrypt from 'bcrypt';
+import { IPasswordService } from "../../auth/services/password-service.interface";
 
 export class UserService {
   /**
    * @param {UserRepository} userRepository Repository implementation handling persistence.
+   * @param {IPasswordService} passwordService Service for password hashing.
    */
-  constructor(private userRepository: UserRepository) { }
+  constructor(
+    private userRepository: UserRepository,
+    private passwordService: IPasswordService
+  ) {}
 
   /**
    * Creates a user after hashing the provided password.
@@ -17,7 +20,7 @@ export class UserService {
    * @returns {Promise<User>} Persisted user entity.
    */
   async create(data: CreateUserDto): Promise<User> {
-    const hashedPassword = await bcrypt.hash(data.password, 10);
+    const hashedPassword = await this.passwordService.hash(data.password!);
     const userWithHashedPassword = { ...data, password: hashedPassword };
     return this.userRepository.create(userWithHashedPassword);
   }

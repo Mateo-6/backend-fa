@@ -1,8 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-
-export interface AppError extends Error {
-  statusCode?: number;
-}
+import { AppError } from '../../../domain/errors/app-error';
+import { sendError } from '../utils/response.util';
 
 /**
  * Centralized Express error-handling middleware that formats error responses.
@@ -28,12 +26,12 @@ export const errorHandler = (
   let statusCode = 500;
   let message = 'Internal server error';
 
-  if (typeof (err as AppError).statusCode === 'number') {
-    statusCode = (err as AppError).statusCode!;
+  if (err instanceof AppError) {
+    statusCode = err.statusCode;
     message = err.message;
   } else if (err.message) {
     message = err.message;
-    // Common database errors
+    // Fallback for common database errors (should be replaced with proper error classes)
     if (err.message.includes('not found')) {
       statusCode = 404;
     } else if (err.message.includes('duplicate')) {
@@ -43,13 +41,12 @@ export const errorHandler = (
     }
   }
 
-  res.status(statusCode).json({
-    error: message,
-    ...(process.env.NODE_ENV === 'development' && { 
-      stack: err.stack,
-      path: req.path,
-      method: req.method 
-    }),
-  });
+  const details = process.env.NODE_ENV === 'development' ? {
+    stack: err.stack,
+    path: req.path,
+    method: req.method,
+  } : undefined;
+
+  sendError(res, statusCode, message, details);
 };
 

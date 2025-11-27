@@ -3,6 +3,7 @@ import { UserRepository } from '../../user/repositories/user.repository';
 import { CreateCategoryDto } from '../../../application/dto/category/create-category.dto';
 import { UpdateCategoryDto } from '../../../application/dto/category/update-category.dto';
 import { Category } from '../types/category.types';
+import { NotFoundError, ForbiddenError } from '../../errors/app-error';
 
 export class CategoryService {
   /**
@@ -18,11 +19,12 @@ export class CategoryService {
    * Creates a category after verifying the owner exists.
    *
    * @param {CreateCategoryDto} data Validated category payload.
+   * @param {string} userId User identifier obtained from JWT token.
    * @returns {Promise<Category>} Newly created category.
    */
-  async create(data: CreateCategoryDto): Promise<Category> {
-    await this.ensureUserExists(data.userId);
-    return this.categoryRepository.create(data);
+  async create(data: CreateCategoryDto, userId: string): Promise<Category> {
+    await this.ensureUserExists(userId);
+    return this.categoryRepository.create({ ...data, userId });
   }
 
   /**
@@ -52,22 +54,36 @@ export class CategoryService {
 
   /**
    * Updates the provided category identifier with the given payload.
+   * Validates that the category belongs to the specified user.
    *
    * @param {string} id Category identifier.
    * @param {UpdateCategoryDto} data Partial payload with the updated fields.
-   * @returns {Promise<Category | null>} Updated category or null when it does not exist.
+   * @param {string} userId User identifier to verify ownership.
+   * @returns {Promise<Category>} Updated category.
+   * @throws {NotFoundError} If the category does not exist.
+   * @throws {ForbiddenError} If the category does not belong to the user.
    */
-  async update(id: string, data: UpdateCategoryDto): Promise<Category | null> {
-    return this.categoryRepository.update(id, data);
+  async update(id: string, data: UpdateCategoryDto, userId: string): Promise<Category> {
+    await this.ensureCategoryOwnership(id, userId);
+    const updatedCategory = await this.categoryRepository.update(id, data);
+    if (!updatedCategory) {
+      throw new NotFoundError('Category', id);
+    }
+    return updatedCategory;
   }
 
   /**
    * Deletes a category by identifier.
+   * Validates that the category belongs to the specified user.
    *
    * @param {string} id Category identifier.
+   * @param {string} userId User identifier to verify ownership.
    * @returns {Promise<void>} Resolves when deletion completes.
+   * @throws {NotFoundError} If the category does not exist.
+   * @throws {ForbiddenError} If the category does not belong to the user.
    */
-  async delete(id: string): Promise<void> {
+  async delete(id: string, userId: string): Promise<void> {
+    await this.ensureCategoryOwnership(id, userId);
     await this.categoryRepository.delete(id);
   }
 
@@ -80,8 +96,28 @@ export class CategoryService {
   private async ensureUserExists(userId: string): Promise<void> {
     const user = await this.userRepository.findById(userId);
     if (!user) {
-      throw new Error('User not found');
+      throw new NotFoundError('User', userId);
     }
+  }
+
+  /**
+   * Ensures the provided category belongs to the specified user.
+   *
+   * @param {string} categoryId Category identifier.
+   * @param {string} userId User identifier to verify ownership.
+   * @returns {Promise<Category>} The category if it belongs to the user.
+   * @throws {NotFoundError} If the category does not exist.
+   * @throws {ForbiddenError} If the category does not belong to the user.
+   */
+  private async ensureCategoryOwnership(categoryId: string, userId: string): Promise<Category> {
+    const category = await this.categoryRepository.findById(categoryId);
+    if (!category) {
+      throw new NotFoundError('Category', categoryId);
+    }
+    if (category.userId !== userId) {
+      throw new ForbiddenError('You do not have permission to access this category');
+    }
+    return category;
   }
 }
 

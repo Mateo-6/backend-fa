@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { HealthService } from '../../../domain/health/services/health-service';
+import { sendSuccess } from '../utils/response.util';
 
 export class HealthController {
   private readonly healthService: HealthService;
@@ -20,6 +21,6 @@ export class HealthController {
    */
   public getHealth = (req: Request, res: Response): void => {
     const result = this.healthService.check();
-    res.status(200).json(result);
+    sendSuccess(res, result);
   };
 }

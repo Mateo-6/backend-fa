@@ -1,7 +1,10 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { CategoryService } from '../../../../domain/category/services/category-service';
 import { CreateCategoryDto } from '../../../../application/dto/category/create-category.dto';
 import { UpdateCategoryDto } from '../../../../application/dto/category/update-category.dto';
+import { AuthenticatedRequest } from '../../types/request.types';
+import { UnauthorizedError, NotFoundError, ForbiddenError } from '../../../../domain/errors/app-error';
+import { sendSuccess } from '../../utils/response.util';
 
 export class CategoryController {
   /**
@@ -11,76 +14,90 @@ export class CategoryController {
 
   /**
    * Creates a new category using the provided payload.
+   * The userId is obtained from the JWT token (authenticated user).
    *
-   * @param {Request} req Express request whose body contains the validated payload.
+   * @param {AuthenticatedRequest} req Express request whose body contains the validated payload and user from JWT.
    * @param {Response} res Express response used to send the category.
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
-  public async create(req: Request, res: Response): Promise<void> {
+  public async create(req: AuthenticatedRequest, res: Response): Promise<void> {
+    if (!req.user?.id) {
+      throw new UnauthorizedError('User not authenticated');
+    }
+
     const createCategoryDto: CreateCategoryDto = req.body;
-    const category = await this.categoryService.create(createCategoryDto);
-    res.status(201).json(category);
+    const category = await this.categoryService.create(createCategoryDto, req.user.id);
+    sendSuccess(res, category, 201);
   }
 
   /**
-   * Retrieves every category or filters by user identifier when provided as a query parameter.
+   * Retrieves every category for the authenticated user.
+   * The userId is obtained from the JWT token.
    *
-   * @param {Request} req Express request optionally containing the userId query.
+   * @param {AuthenticatedRequest} req Express request containing the authenticated user from JWT.
    * @param {Response} res Express response used to send the category collection.
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
-  public async getAll(req: Request, res: Response): Promise<void> {
-    const userId = typeof req.query.userId === 'string' ? req.query.userId : undefined;
-    const categories = await this.categoryService.findAll(userId);
-    res.json(categories);
+  public async getAll(req: AuthenticatedRequest, res: Response): Promise<void> {
+    if (!req.user?.id) {
+      throw new UnauthorizedError('User not authenticated');
+    }
+
+    const categories = await this.categoryService.findAll(req.user.id);
+    sendSuccess(res, categories);
   }
 
   /**
    * Retrieves a single category.
    *
-   * @param {Request} req Express request containing the identifier parameter.
+   * @param {AuthenticatedRequest} req Express request containing the identifier parameter.
    * @param {Response} res Express response used to send the category.
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
-  public async getById(req: Request, res: Response): Promise<void> {
+  public async getById(req: AuthenticatedRequest, res: Response): Promise<void> {
     const { id } = req.params;
     const category = await this.categoryService.findById(id);
     if (!category) {
-      res.status(404).json({ error: 'Category not found' });
-      return;
+      throw new NotFoundError('Category', id);
     }
-    res.json(category);
+    sendSuccess(res, category);
   }
 
   /**
    * Updates an existing category.
+   * Validates that the category belongs to the authenticated user.
    *
-   * @param {Request} req Express request containing the identifier parameter and validated body.
+   * @param {AuthenticatedRequest} req Express request containing the identifier parameter and validated body.
    * @param {Response} res Express response used to send the updated category.
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
-  public async update(req: Request, res: Response): Promise<void> {
+  public async update(req: AuthenticatedRequest, res: Response): Promise<void> {
+    if (!req.user?.id) {
+      throw new UnauthorizedError('User not authenticated');
+    }
+
     const { id } = req.params;
     const updateCategoryDto: UpdateCategoryDto = req.body;
-    const category = await this.categoryService.update(id, updateCategoryDto);
-    if (!category) {
-      res.status(404).json({ error: 'Category not found' });
-      return;
-    }
-    res.json(category);
+    const category = await this.categoryService.update(id, updateCategoryDto, req.user.id);
+    sendSuccess(res, category);
   }
 
   /**
    * Deletes a category by identifier.
+   * Validates that the category belongs to the authenticated user.
    *
-   * @param {Request} req Express request containing the identifier parameter.
+   * @param {AuthenticatedRequest} req Express request containing the identifier parameter.
    * @param {Response} res Express response used to send the confirmation.
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
-  public async delete(req: Request, res: Response): Promise<void> {
+  public async delete(req: AuthenticatedRequest, res: Response): Promise<void> {
+    if (!req.user?.id) {
+      throw new UnauthorizedError('User not authenticated');
+    }
+
     const { id } = req.params;
-    await this.categoryService.delete(id);
-    res.status(204).send();
+    await this.categoryService.delete(id, req.user.id);
+    sendSuccess(res, null, 204);
   }
 }
 

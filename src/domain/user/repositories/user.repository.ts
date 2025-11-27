@@ -23,4 +23,12 @@ export interface UserRepository {
    * @returns {Promise<User | null>} The located user or null.
    */
   findById(id: string): Promise<User | null>;
+
+  /**
+   * Finds a user by its email address or returns null if not found.
+   *
+   * @param {string} email Email address of the desired user.
+   * @returns {Promise<User | null>} The located user or null.
+   */
+  findByEmail(email: string): Promise<User | null>;
 }
