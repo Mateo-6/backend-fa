@@ -3,6 +3,7 @@ import { RecurringExpenseController } from '../controllers/finance/recurring-exp
 import { RecurringExpenseService } from '../../../application/services/recurring-expense.service';
 import { RecurringExpenseMongooseRepository } from '../../repositories/recurring-expense-mongoose.repository';
 import { UserMongooseRepository } from '../../repositories/user-mongoose.repository';
+import { PaymentMethodMongooseRepository } from '../../repositories/payment-method-mongoose.repository';
 import { validate } from '../middleware/validation.middleware';
 import { createRecurringSchema } from '../../../application/dto/finance/create-recurring.dto';
 import { asyncHandler } from '../middleware/async-handler.middleware';
@@ -14,7 +15,12 @@ const router = Router();
 // Dependency injection setup
 const recurringExpenseRepository = new RecurringExpenseMongooseRepository();
 const userRepository = new UserMongooseRepository();
-const recurringExpenseService = new RecurringExpenseService(recurringExpenseRepository, userRepository);
+const paymentMethodRepository = new PaymentMethodMongooseRepository();
+const recurringExpenseService = new RecurringExpenseService(
+  recurringExpenseRepository,
+  userRepository,
+  paymentMethodRepository
+);
 const recurringExpenseController = new RecurringExpenseController(recurringExpenseService);
 const tokenService = new JwtTokenService();
 

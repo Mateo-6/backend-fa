@@ -1,5 +1,6 @@
 import { RecurringExpenseRepository } from '../../domain/finance/repositories/recurring-expense.repository';
 import { UserRepository } from '../../domain/user/repositories/user.repository';
+import { PaymentMethodRepository } from '../../domain/payment-method/repositories/payment-method.repository';
 import { CreateRecurringDto } from '../dto/finance/create-recurring.dto';
 import { RecurringExpense, RecurringFrequency } from '../../domain/finance/types/recurring-expense.types';
 import { NotFoundError, ForbiddenError } from '../../domain/errors/app-error';
@@ -11,10 +12,12 @@ export class RecurringExpenseService {
   /**
    * @param {RecurringExpenseRepository} recurringExpenseRepository Repository for recurring expense persistence.
    * @param {UserRepository} userRepository Repository used to validate the owner existence.
+   * @param {PaymentMethodRepository} paymentMethodRepository Repository used to validate payment method existence.
    */
   constructor(
     private readonly recurringExpenseRepository: RecurringExpenseRepository,
-    private readonly userRepository: UserRepository
+    private readonly userRepository: UserRepository,
+    private readonly paymentMethodRepository: PaymentMethodRepository
   ) {}
 
   /**
@@ -27,6 +30,7 @@ export class RecurringExpenseService {
    */
   async create(data: CreateRecurringDto, userId: string): Promise<RecurringExpense> {
     await this.ensureUserExists(userId);
+    await this.ensurePaymentMethodExists(data.paymentMethodId, userId);
 
     const startDate: Date = typeof data.startDate === 'string' ? new Date(data.startDate) : data.startDate;
     const nextPaymentDate = this.calculateNextPaymentDate(startDate, data.payDay, data.frequency);
@@ -191,6 +195,25 @@ export class RecurringExpenseService {
       throw new ForbiddenError('You do not have permission to access this recurring expense');
     }
     return recurringExpense;
+  }
+
+  /**
+   * Ensures the provided payment method exists and belongs to the specified user.
+   *
+   * @param {string} paymentMethodId Payment method identifier.
+   * @param {string} userId User identifier to verify ownership.
+   * @returns {Promise<void>} Resolves if the payment method exists and belongs to the user.
+   * @throws {NotFoundError} If the payment method does not exist.
+   * @throws {ForbiddenError} If the payment method does not belong to the user.
+   */
+  private async ensurePaymentMethodExists(paymentMethodId: string, userId: string): Promise<void> {
+    const paymentMethod = await this.paymentMethodRepository.findById(paymentMethodId);
+    if (!paymentMethod) {
+      throw new NotFoundError('PaymentMethod', paymentMethodId);
+    }
+    if (paymentMethod.userId !== userId) {
+      throw new ForbiddenError('You do not have permission to use this payment method');
+    }
   }
 }
 

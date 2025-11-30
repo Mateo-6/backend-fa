@@ -18,7 +18,7 @@ export interface RecurringExpense {
   amount: number;
   currency: string;
   categoryId: string;
-  paymentMethodId?: string;
+  paymentMethodId: string;
   frequency: RecurringFrequency;
   payDay: number; // Day of the month (1-31)
   startDate: Date;

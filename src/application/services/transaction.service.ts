@@ -2,6 +2,7 @@ import { TransactionRepository } from '../../domain/finance/repositories/transac
 import { RecurringExpenseRepository } from '../../domain/finance/repositories/recurring-expense.repository';
 import { CategoryRepository } from '../../domain/category/repositories/category.repository';
 import { UserRepository } from '../../domain/user/repositories/user.repository';
+import { PaymentMethodRepository } from '../../domain/payment-method/repositories/payment-method.repository';
 import { CreateTransactionDto } from '../dto/finance/create-transaction.dto';
 import { Transaction, TransactionType, CategorySnapshot } from '../../domain/finance/types/transaction.types';
 import { RecurringExpense, RecurringFrequency } from '../../domain/finance/types/recurring-expense.types';
@@ -26,12 +27,14 @@ export class TransactionService {
    * @param {RecurringExpenseRepository} recurringExpenseRepository Repository for recurring expense operations.
    * @param {CategoryRepository} categoryRepository Repository for category lookups.
    * @param {UserRepository} userRepository Repository used to validate the owner existence.
+   * @param {PaymentMethodRepository} paymentMethodRepository Repository used to validate payment method existence.
    */
   constructor(
     private readonly transactionRepository: TransactionRepository,
     private readonly recurringExpenseRepository: RecurringExpenseRepository,
     private readonly categoryRepository: CategoryRepository,
-    private readonly userRepository: UserRepository
+    private readonly userRepository: UserRepository,
+    private readonly paymentMethodRepository: PaymentMethodRepository
   ) {}
 
   /**
@@ -56,6 +59,8 @@ export class TransactionService {
       throw new ForbiddenError('You do not have permission to use this category');
     }
 
+    await this.ensurePaymentMethodExists(data.paymentMethodId, userId);
+
     const categorySnapshot: CategorySnapshot = {
       id: category.id!,
       name: category.name,
@@ -69,6 +74,7 @@ export class TransactionService {
       date: data.date,
       type: data.type,
       category: categorySnapshot,
+      paymentMethodId: data.paymentMethodId,
       isRecurring: false,
     });
   }
@@ -109,6 +115,9 @@ export class TransactionService {
       icon: undefined, // Add icon field to Category type if needed
     };
 
+    // Validate payment method
+    await this.ensurePaymentMethodExists(recurringExpense.paymentMethodId, recurringExpense.userId);
+
     // Create transaction
     const transaction = await this.transactionRepository.create({
       userId: recurringExpense.userId,
@@ -117,6 +126,7 @@ export class TransactionService {
       date: new Date(),
       type: TransactionType.EXPENSE,
       category: categorySnapshot,
+      paymentMethodId: recurringExpense.paymentMethodId,
       isRecurring: true,
       recurringExpenseId: recurringExpense.id,
     });
@@ -223,6 +233,25 @@ export class TransactionService {
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new NotFoundError('User', userId);
+    }
+  }
+
+  /**
+   * Ensures the provided payment method exists and belongs to the specified user.
+   *
+   * @param {string} paymentMethodId Payment method identifier.
+   * @param {string} userId User identifier to verify ownership.
+   * @returns {Promise<void>} Resolves if the payment method exists and belongs to the user.
+   * @throws {NotFoundError} If the payment method does not exist.
+   * @throws {ForbiddenError} If the payment method does not belong to the user.
+   */
+  private async ensurePaymentMethodExists(paymentMethodId: string, userId: string): Promise<void> {
+    const paymentMethod = await this.paymentMethodRepository.findById(paymentMethodId);
+    if (!paymentMethod) {
+      throw new NotFoundError('PaymentMethod', paymentMethodId);
+    }
+    if (paymentMethod.userId !== userId) {
+      throw new ForbiddenError('You do not have permission to use this payment method');
     }
   }
 }

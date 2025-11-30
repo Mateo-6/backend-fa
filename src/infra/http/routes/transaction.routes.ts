@@ -5,6 +5,7 @@ import { TransactionMongooseRepository } from '../../repositories/transaction-mo
 import { RecurringExpenseMongooseRepository } from '../../repositories/recurring-expense-mongoose.repository';
 import { CategoryMongooseRepository } from '../../repositories/category-mongoose.repository';
 import { UserMongooseRepository } from '../../repositories/user-mongoose.repository';
+import { PaymentMethodMongooseRepository } from '../../repositories/payment-method-mongoose.repository';
 import { validate } from '../middleware/validation.middleware';
 import { createTransactionSchema } from '../../../application/dto/finance/create-transaction.dto';
 import { asyncHandler } from '../middleware/async-handler.middleware';
@@ -18,11 +19,13 @@ const transactionRepository = new TransactionMongooseRepository();
 const recurringExpenseRepository = new RecurringExpenseMongooseRepository();
 const categoryRepository = new CategoryMongooseRepository();
 const userRepository = new UserMongooseRepository();
+const paymentMethodRepository = new PaymentMethodMongooseRepository();
 const transactionService = new TransactionService(
   transactionRepository,
   recurringExpenseRepository,
   categoryRepository,
-  userRepository
+  userRepository,
+  paymentMethodRepository
 );
 const transactionController = new TransactionController(transactionService);
 const tokenService = new JwtTokenService();

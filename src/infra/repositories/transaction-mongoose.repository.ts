@@ -22,6 +22,7 @@ export class TransactionMongooseRepository implements TransactionRepository {
       type: transaction.type,
       user: transaction.userId,
       category: transaction.category,
+      paymentMethod: transaction.paymentMethodId, // Mongoose will convert string to ObjectId
       isRecurring: transaction.isRecurring,
       recurringExpense: transaction.recurringExpenseId,
     });
@@ -97,6 +98,7 @@ export class TransactionMongooseRepository implements TransactionRepository {
       date: doc.date,
       type: doc.type,
       category: doc.category,
+      paymentMethodId: doc.paymentMethod.toString(),
       isRecurring: doc.isRecurring,
       recurringExpenseId: doc.recurringExpense?.toString(),
       createdAt: doc.createdAt,

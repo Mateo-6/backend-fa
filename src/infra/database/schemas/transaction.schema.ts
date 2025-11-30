@@ -4,9 +4,10 @@ import { Transaction, TransactionType, CategorySnapshot } from '../../../domain/
 /**
  * Mongoose document interface for Transaction.
  */
-export interface ITransactionDocument extends Omit<Transaction, 'userId' | 'recurringExpenseId'>, Document {
+export interface ITransactionDocument extends Omit<Transaction, 'userId' | 'recurringExpenseId' | 'paymentMethodId'>, Document {
   user: Types.ObjectId;
   recurringExpense?: Types.ObjectId;
+  paymentMethod: Types.ObjectId;
 }
 
 /**
@@ -67,6 +68,12 @@ const TransactionSchema = new Schema<ITransactionDocument>(
       type: CategorySnapshotSchema,
       required: true,
     },
+    paymentMethod: {
+      type: Schema.Types.ObjectId,
+      ref: 'PaymentMethod',
+      required: true,
+      index: true,
+    },
     isRecurring: {
       type: Boolean,
       default: false,
@@ -93,9 +100,11 @@ const TransactionSchema = new Schema<ITransactionDocument>(
       transform: function (doc, ret: any) {
         ret.id = ret._id.toString();
         ret.userId = ret.user?.toString();
+        ret.paymentMethodId = ret.paymentMethod?.toString();
         ret.recurringExpenseId = ret.recurringExpense?.toString() || undefined;
         delete ret._id;
         delete ret.user;
+        delete ret.paymentMethod;
         delete ret.recurringExpense;
         return ret;
       },
@@ -111,9 +120,11 @@ const TransactionSchema = new Schema<ITransactionDocument>(
       transform: function (doc, ret: any) {
         ret.id = ret._id.toString();
         ret.userId = ret.user?.toString();
+        ret.paymentMethodId = ret.paymentMethod?.toString();
         ret.recurringExpenseId = ret.recurringExpense?.toString() || undefined;
         delete ret._id;
         delete ret.user;
+        delete ret.paymentMethod;
         delete ret.recurringExpense;
         return ret;
       },

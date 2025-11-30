@@ -9,7 +9,7 @@ export const createRecurringSchema: z.ZodType<{
   amount: number;
   currency: string;
   categoryId: string;
-  paymentMethodId?: string;
+  paymentMethodId: string;
   frequency: RecurringFrequency;
   payDay: number;
   startDate: string | Date;
@@ -18,7 +18,7 @@ export const createRecurringSchema: z.ZodType<{
   amount: z.number().positive('Amount must be positive'),
   currency: z.string().min(1, 'Currency is required').max(10, 'Currency code must be less than 10 characters'),
   categoryId: z.string().min(1, 'Category ID is required'),
-  paymentMethodId: z.string().optional(),
+  paymentMethodId: z.string().min(1, 'Payment method ID is required'),
   frequency: z.nativeEnum(RecurringFrequency, {
     errorMap: () => ({ message: 'Frequency must be WEEKLY, MONTHLY, or YEARLY' }),
   }),

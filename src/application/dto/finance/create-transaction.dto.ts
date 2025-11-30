@@ -10,6 +10,7 @@ export const createTransactionSchema: z.ZodType<{
   date: string | Date;
   type: TransactionType;
   categoryId: string;
+  paymentMethodId: string;
 }> = z.object({
   amount: z.number().positive('Amount must be positive'),
   description: z.string().min(1, 'Description is required').max(500, 'Description must be less than 500 characters'),
@@ -21,6 +22,7 @@ export const createTransactionSchema: z.ZodType<{
     errorMap: () => ({ message: 'Type must be either INCOME or EXPENSE' }),
   }),
   categoryId: z.string().min(1, 'Category ID is required'),
+  paymentMethodId: z.string().min(1, 'Payment method ID is required'),
 });
 
 export type CreateTransactionDto = z.infer<typeof createTransactionSchema>;
