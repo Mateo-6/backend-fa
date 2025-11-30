@@ -43,4 +43,42 @@ export class UserInMemoryRepository implements UserRepository {
   async findByEmail(email: string): Promise<User | null> {
     return this.users.find((user) => user.email === email) || null;
   }
+
+  /**
+   * Updates an existing user in the in-memory collection.
+   *
+   * @param {string} id User identifier.
+   * @param {Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>} data Fields to update.
+   * @returns {Promise<User | null>} Updated user or null when missing.
+   */
+  async update(id: string, data: Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>): Promise<User | null> {
+    const userIndex = this.users.findIndex((user) => user.id === id);
+    if (userIndex === -1) {
+      return null;
+    }
+
+    const existingUser = this.users[userIndex];
+    const updatedUser: User = {
+      ...existingUser,
+      ...data,
+      id: existingUser.id,
+      updatedAt: new Date(),
+    };
+
+    this.users[userIndex] = updatedUser;
+    return updatedUser;
+  }
+
+  /**
+   * Removes a user from the in-memory collection.
+   *
+   * @param {string} id User identifier.
+   * @returns {Promise<void>} Resolves when the user is deleted.
+   */
+  async delete(id: string): Promise<void> {
+    const userIndex = this.users.findIndex((user) => user.id === id);
+    if (userIndex !== -1) {
+      this.users.splice(userIndex, 1);
+    }
+  }
 }

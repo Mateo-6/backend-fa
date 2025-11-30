@@ -4,9 +4,10 @@ import { RecurringExpense, RecurringFrequency } from '../../../domain/finance/ty
 /**
  * Mongoose document interface for RecurringExpense.
  */
-export interface IRecurringExpenseDocument extends Omit<RecurringExpense, 'userId' | 'categoryId'>, Document {
+export interface IRecurringExpenseDocument extends Omit<RecurringExpense, 'userId' | 'categoryId' | 'paymentMethodId'>, Document {
   user: Types.ObjectId;
   category: Types.ObjectId;
+  paymentMethod: Types.ObjectId;
 }
 
 /**
@@ -41,9 +42,11 @@ const RecurringExpenseSchema = new Schema<IRecurringExpenseDocument>(
       ref: 'Category',
       required: true,
     },
-    paymentMethodId: {
-      type: String,
-      default: null,
+    paymentMethod: {
+      type: Schema.Types.ObjectId,
+      ref: 'PaymentMethod',
+      required: true,
+      index: true,
     },
     frequency: {
       type: String,
@@ -87,9 +90,11 @@ const RecurringExpenseSchema = new Schema<IRecurringExpenseDocument>(
         ret.id = ret._id.toString();
         ret.userId = ret.user?.toString();
         ret.categoryId = ret.category?.toString();
+        ret.paymentMethodId = ret.paymentMethod?.toString();
         delete ret._id;
         delete ret.user;
         delete ret.category;
+        delete ret.paymentMethod;
         return ret;
       },
     },
@@ -105,9 +110,11 @@ const RecurringExpenseSchema = new Schema<IRecurringExpenseDocument>(
         ret.id = ret._id.toString();
         ret.userId = ret.user?.toString();
         ret.categoryId = ret.category?.toString();
+        ret.paymentMethodId = ret.paymentMethod?.toString();
         delete ret._id;
         delete ret.user;
         delete ret.category;
+        delete ret.paymentMethod;
         return ret;
       },
     },

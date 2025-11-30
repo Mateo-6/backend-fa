@@ -2,6 +2,7 @@
 import { Request, Response } from "express";
 import { UserService } from '../../../../application/services/user.service';
 import { CreateUserDto } from "../../../../application/dto/user/create-user.dto";
+import { UpdateUserDto } from "../../../../application/dto/user/update-user.dto";
 import { NotFoundError } from "../../../../domain/errors/app-error";
 import { sendSuccess } from "../../utils/response.util";
 
@@ -55,6 +56,33 @@ export class UserController {
       throw new NotFoundError('User', id);
     }
     sendSuccess(res, user);
+  }
+
+  /**
+   * Updates an existing user using the validated payload provided in the request body.
+   *
+   * @param {Request} req Express request containing the user ID in params and the update payload in body.
+   * @param {Response} res Express response used to return the updated user.
+   * @returns {Promise<void>} Resolves when the response is sent.
+   */
+  public async update(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
+    const updateUserDto: UpdateUserDto = req.body;
+    const user = await this.userService.update(id, updateUserDto);
+    sendSuccess(res, user);
+  }
+
+  /**
+   * Deletes a user by the identifier included in the route parameters.
+   *
+   * @param {Request} req Express request whose params contain the user ID.
+   * @param {Response} res Express response used to return the confirmation.
+   * @returns {Promise<void>} Resolves when the response is sent.
+   */
+  public async delete(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
+    await this.userService.delete(id);
+    sendSuccess(res, null, 204);
   }
 
 }

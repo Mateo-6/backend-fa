@@ -21,7 +21,7 @@ export class RecurringExpenseMongooseRepository implements RecurringExpenseRepos
       currency: recurringExpense.currency,
       user: recurringExpense.userId,
       category: recurringExpense.categoryId,
-      paymentMethodId: recurringExpense.paymentMethodId,
+      paymentMethod: recurringExpense.paymentMethodId, // Mongoose will convert string to ObjectId
       frequency: recurringExpense.frequency,
       payDay: recurringExpense.payDay,
       startDate: recurringExpense.startDate,
@@ -84,7 +84,7 @@ export class RecurringExpenseMongooseRepository implements RecurringExpenseRepos
       mappedData.category = data.categoryId;
     }
     if (typeof data.paymentMethodId === 'string') {
-      mappedData.paymentMethodId = data.paymentMethodId;
+      mappedData.paymentMethod = data.paymentMethodId; // Mongoose will convert string to ObjectId
     }
     if (data.frequency) {
       mappedData.frequency = data.frequency;
@@ -154,7 +154,7 @@ export class RecurringExpenseMongooseRepository implements RecurringExpenseRepos
       amount: doc.amount,
       currency: doc.currency,
       categoryId: doc.category.toString(),
-      paymentMethodId: doc.paymentMethodId ?? undefined,
+      paymentMethodId: doc.paymentMethod.toString(),
       frequency: doc.frequency,
       payDay: doc.payDay,
       startDate: doc.startDate,

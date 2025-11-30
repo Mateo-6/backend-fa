@@ -110,4 +110,43 @@ export class UserMongooseRepository implements UserRepository {
       updatedAt: doc.updatedAt
     };
   }
+
+  /**
+   * Updates a user using the provided payload.
+   *
+   * @param {string} id User identifier.
+   * @param {Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>} data Fields to update.
+   * @returns {Promise<User | null>} Updated user or null when missing.
+   */
+  async update(id: string, data: Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>): Promise<User | null> {
+    // Ensure Mongoose is connected
+    await getMongooseInstance();
+
+    const mappedData: Record<string, unknown> = data;
+
+    const user = await UserModel.findByIdAndUpdate(
+      id,
+      { $set: mappedData },
+      { new: true }
+    ).exec();
+
+    if (!user) {
+      return null;
+    }
+
+    return this.toDomain(user);
+  }
+
+  /**
+   * Deletes a user by identifier.
+   *
+   * @param {string} id User identifier.
+   * @returns {Promise<void>} Resolves when the document is deleted.
+   */
+  async delete(id: string): Promise<void> {
+    // Ensure Mongoose is connected
+    await getMongooseInstance();
+
+    await UserModel.findByIdAndDelete(id).exec();
+  }
 }

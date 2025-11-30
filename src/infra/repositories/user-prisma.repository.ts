@@ -77,6 +77,42 @@ export class UserPrismaRepository implements UserRepository {
   // Mapping from Prisma entity to User
   // Note: Prisma model is missing username, password, phone fields
   /**
+   * Updates a Prisma user record with the provided data.
+   *
+   * @param {string} id User identifier.
+   * @param {Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>} data Fields to update.
+   * @returns {Promise<User | null>} Updated user or null when missing.
+   */
+  async update(id: string, data: Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>): Promise<User | null> {
+    const mappedData: Record<string, unknown> = {};
+    if (typeof data.name === 'string') {
+      mappedData.name = data.name;
+    }
+    if (typeof data.email === 'string') {
+      mappedData.email = data.email;
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: mappedData,
+    });
+
+    return this.toDomain(updatedUser);
+  }
+
+  /**
+   * Deletes a Prisma user record by identifier.
+   *
+   * @param {string} id User identifier.
+   * @returns {Promise<void>} Resolves when the user is deleted.
+   */
+  async delete(id: string): Promise<void> {
+    await prisma.user.delete({
+      where: { id },
+    });
+  }
+
+  /**
    * Maps a Prisma user entity to the domain `User` shape.
    *
    * @param {{ id: string; name: string; email: string; age: number; createdAt: Date; updatedAt: Date }} prismaUser Prisma user record.

@@ -1,7 +1,9 @@
 import { UserRepository } from '../../domain/user/repositories/user.repository';
 import { User } from '../../domain/user/types/user.types';
 import { CreateUserDto } from '../dto/user/create-user.dto';
+import { UpdateUserDto } from '../dto/user/update-user.dto';
 import { IPasswordService } from '../../domain/auth/services/password-service.interface';
+import { NotFoundError } from '../../domain/errors/app-error';
 
 /**
  * Service for managing users.
@@ -46,6 +48,37 @@ export class UserService {
    */
   async findById(id: string): Promise<User | null> {
     return this.userRepository.findById(id);
+  }
+
+  /**
+   * Updates an existing user with the provided data.
+   *
+   * @param {string} id User identifier.
+   * @param {UpdateUserDto} data Partial payload with the updated fields.
+   * @returns {Promise<User>} Updated user.
+   * @throws {NotFoundError} If the user does not exist.
+   */
+  async update(id: string, data: UpdateUserDto): Promise<User> {
+    const updatedUser = await this.userRepository.update(id, data);
+    if (!updatedUser) {
+      throw new NotFoundError('User', id);
+    }
+    return updatedUser;
+  }
+
+  /**
+   * Deletes a user by identifier.
+   *
+   * @param {string} id User identifier.
+   * @returns {Promise<void>} Resolves when deletion completes.
+   * @throws {NotFoundError} If the user does not exist.
+   */
+  async delete(id: string): Promise<void> {
+    const user = await this.userRepository.findById(id);
+    if (!user) {
+      throw new NotFoundError('User', id);
+    }
+    await this.userRepository.delete(id);
   }
 }
 

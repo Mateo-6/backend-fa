@@ -31,4 +31,21 @@ export interface UserRepository {
    * @returns {Promise<User | null>} The located user or null.
    */
   findByEmail(email: string): Promise<User | null>;
+
+  /**
+   * Updates an existing user with the provided data.
+   *
+   * @param {string} id Identifier of the user to update.
+   * @param {Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>} data Partial user data to update.
+   * @returns {Promise<User | null>} The updated user or null if not found.
+   */
+  update(id: string, data: Partial<Omit<User, 'id' | 'createdAt' | 'updatedAt'>>): Promise<User | null>;
+
+  /**
+   * Deletes a user by its identifier.
+   *
+   * @param {string} id Identifier of the user to delete.
+   * @returns {Promise<void>} Resolves when the user is deleted.
+   */
+  delete(id: string): Promise<void>;
 }
