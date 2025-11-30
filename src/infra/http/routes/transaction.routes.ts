@@ -1,0 +1,54 @@
+import { Router } from 'express';
+import { TransactionController } from '../controllers/finance/transaction.controller';
+import { TransactionService } from '../../../application/services/transaction.service';
+import { TransactionMongooseRepository } from '../../repositories/transaction-mongoose.repository';
+import { RecurringExpenseMongooseRepository } from '../../repositories/recurring-expense-mongoose.repository';
+import { CategoryMongooseRepository } from '../../repositories/category-mongoose.repository';
+import { UserMongooseRepository } from '../../repositories/user-mongoose.repository';
+import { validate } from '../middleware/validation.middleware';
+import { createTransactionSchema } from '../../../application/dto/finance/create-transaction.dto';
+import { asyncHandler } from '../middleware/async-handler.middleware';
+import { authMiddleware } from '../middleware/auth.middleware';
+import { JwtTokenService } from '../../services/jwt-token.service';
+
+const router = Router();
+
+// Dependency injection setup
+const transactionRepository = new TransactionMongooseRepository();
+const recurringExpenseRepository = new RecurringExpenseMongooseRepository();
+const categoryRepository = new CategoryMongooseRepository();
+const userRepository = new UserMongooseRepository();
+const transactionService = new TransactionService(
+  transactionRepository,
+  recurringExpenseRepository,
+  categoryRepository,
+  userRepository
+);
+const transactionController = new TransactionController(transactionService);
+const tokenService = new JwtTokenService();
+
+// All transaction routes are protected with authentication middleware
+router.post(
+  '/manual',
+  authMiddleware(tokenService),
+  validate(createTransactionSchema),
+  asyncHandler(transactionController.createManual.bind(transactionController))
+);
+router.post(
+  '/recurring/:recurringExpenseId',
+  authMiddleware(tokenService),
+  asyncHandler(transactionController.processRecurringPayment.bind(transactionController))
+);
+router.get(
+  '/history',
+  authMiddleware(tokenService),
+  asyncHandler(transactionController.getHistory.bind(transactionController))
+);
+router.delete(
+  '/:id',
+  authMiddleware(tokenService),
+  asyncHandler(transactionController.delete.bind(transactionController))
+);
+
+export default router;
+

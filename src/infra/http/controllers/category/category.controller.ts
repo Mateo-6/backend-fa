@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { CategoryService } from '../../../../domain/category/services/category-service';
+import { CategoryService } from '../../../../application/services/category.service';
 import { CreateCategoryDto } from '../../../../application/dto/category/create-category.dto';
 import { UpdateCategoryDto } from '../../../../application/dto/category/update-category.dto';
 import { AuthenticatedRequest } from '../../types/request.types';

@@ -3,6 +3,8 @@ import healthRoutes from './routes/health.routes';
 import userRoutes from './routes/user.routes';
 import categoryRoutes from './routes/category.routes';
 import authRoutes from './routes/auth.routes';
+import transactionRoutes from './routes/transaction.routes';
+import recurringExpenseRoutes from './routes/recurring-expense.routes';
 import { env } from '../config/env';
 import { errorHandler } from './middleware/error-handler.middleware';
 
@@ -40,6 +42,8 @@ export class Server {
     this.app.use('/auth', authRoutes);
     this.app.use('/users', userRoutes);
     this.app.use('/categories', categoryRoutes);
+    this.app.use('/transactions', transactionRoutes);
+    this.app.use('/recurring-expenses', recurringExpenseRoutes);
   }
 
   /**

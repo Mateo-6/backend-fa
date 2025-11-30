@@ -1,6 +1,6 @@
 // controllers/UserController.ts
 import { Request, Response } from "express";
-import { UserService } from "../../../../domain/user/services/user-service";
+import { UserService } from '../../../../application/services/user.service';
 import { CreateUserDto } from "../../../../application/dto/user/create-user.dto";
 import { NotFoundError } from "../../../../domain/errors/app-error";
 import { sendSuccess } from "../../utils/response.util";

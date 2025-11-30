@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { CategoryController } from '../controllers/category/category.controller';
-import { CategoryService } from '../../../domain/category/services/category-service';
+import { CategoryService } from '../../../application/services/category.service';
 import { CategoryMongooseRepository } from '../../repositories/category-mongoose.repository';
 import { UserMongooseRepository } from '../../repositories/user-mongoose.repository';
 import { validate } from '../middleware/validation.middleware';

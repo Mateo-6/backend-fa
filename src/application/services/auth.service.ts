@@ -1,12 +1,12 @@
-import { UserRepository } from '../../../domain/user/repositories/user.repository';
-import { ITokenService } from '../../../domain/auth/services/token-service.interface';
-import { IPasswordService } from '../../../domain/auth/services/password-service.interface';
-import { LoginDto } from '../../../domain/auth/dtos/login.dto';
-import { User } from '../../../domain/user/types/user.types';
-import { UnauthorizedError } from '../../../domain/errors/app-error';
+import { UserRepository } from '../../domain/user/repositories/user.repository';
+import { ITokenService } from '../../domain/auth/services/token-service.interface';
+import { IPasswordService } from '../../domain/auth/services/password-service.interface';
+import { LoginDto } from '../dto/auth/login.dto';
+import { User } from '../../domain/user/types/user.types';
+import { UnauthorizedError } from '../../domain/errors/app-error';
 
 /**
- * Response object returned by the login use case.
+ * Response object returned by the authentication service.
  */
 export interface LoginResponse {
   token: string;
@@ -14,10 +14,10 @@ export interface LoginResponse {
 }
 
 /**
- * Use case for authenticating a user and generating a JWT token.
- * Handles the business logic for user login.
+ * Service for managing authentication operations.
+ * Orchestrates user authentication, password validation, and token generation.
  */
-export class LoginUserUseCase {
+export class AuthService {
   /**
    * @param {UserRepository} userRepository Repository for user data access.
    * @param {ITokenService} tokenService Service for token generation.
@@ -34,9 +34,9 @@ export class LoginUserUseCase {
    *
    * @param {LoginDto} loginData Email and password for authentication.
    * @returns {Promise<LoginResponse>} Token and user data (without password).
-   * @throws {Error} If credentials are invalid or user is not found.
+   * @throws {UnauthorizedError} If credentials are invalid or user is not found.
    */
-  async execute(loginData: LoginDto): Promise<LoginResponse> {
+  async login(loginData: LoginDto): Promise<LoginResponse> {
     // Find user by email
     const user = await this.userRepository.findByEmail(loginData.email);
     if (!user) {

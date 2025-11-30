@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { LoginUserUseCase } from '../../../../application/use-cases/auth/login-user.use-case';
-import { LoginDto } from '../../../../domain/auth/dtos/login.dto';
+import { AuthService } from '../../../../application/services/auth.service';
+import { LoginDto } from '../../../../application/dto/auth/login.dto';
 import { UnauthorizedError } from '../../../../domain/errors/app-error';
 import { sendSuccess } from '../../utils/response.util';
 
@@ -8,13 +8,13 @@ import { sendSuccess } from '../../utils/response.util';
  * Controller for handling authentication-related HTTP requests.
  */
 export class AuthController {
-  private readonly loginUserUseCase: LoginUserUseCase;
+  private readonly authService: AuthService;
 
   /**
-   * @param {LoginUserUseCase} loginUserUseCase Use case for user login operations.
+   * @param {AuthService} authService Service for authentication operations.
    */
-  constructor(loginUserUseCase: LoginUserUseCase) {
-    this.loginUserUseCase = loginUserUseCase;
+  constructor(authService: AuthService) {
+    this.authService = authService;
   }
 
   /**
@@ -30,7 +30,7 @@ export class AuthController {
     const loginDto: LoginDto = req.body;
 
     try {
-      const result = await this.loginUserUseCase.execute(loginDto);
+      const result = await this.authService.login(loginDto);
       sendSuccess(res, result);
     } catch (error) {
       // Re-throw as UnauthorizedError if it's not already an AppError

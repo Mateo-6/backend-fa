@@ -1,10 +1,14 @@
-import { CategoryRepository } from '../repositories/category.repository';
-import { UserRepository } from '../../user/repositories/user.repository';
-import { CreateCategoryDto } from '../../../application/dto/category/create-category.dto';
-import { UpdateCategoryDto } from '../../../application/dto/category/update-category.dto';
-import { Category } from '../types/category.types';
-import { NotFoundError, ForbiddenError } from '../../errors/app-error';
+import { CategoryRepository } from '../../domain/category/repositories/category.repository';
+import { UserRepository } from '../../domain/user/repositories/user.repository';
+import { CreateCategoryDto } from '../dto/category/create-category.dto';
+import { UpdateCategoryDto } from '../dto/category/update-category.dto';
+import { Category } from '../../domain/category/types/category.types';
+import { NotFoundError, ForbiddenError } from '../../domain/errors/app-error';
 
+/**
+ * Service for managing categories.
+ * Orchestrates category use cases, validates authorization, and coordinates repositories.
+ */
 export class CategoryService {
   /**
    * @param {CategoryRepository} categoryRepository Repository responsible for persistence.
@@ -92,6 +96,7 @@ export class CategoryService {
    *
    * @param {string} userId Owner identifier.
    * @returns {Promise<void>} Resolves if the user exists, otherwise throws.
+   * @throws {NotFoundError} If the user does not exist.
    */
   private async ensureUserExists(userId: string): Promise<void> {
     const user = await this.userRepository.findById(userId);

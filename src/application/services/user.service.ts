@@ -1,8 +1,12 @@
-import { UserRepository } from "../repositories/user.repository";
-import { User } from "../types/user.types";
-import { CreateUserDto } from "../../../application/dto/user/create-user.dto";
-import { IPasswordService } from "../../auth/services/password-service.interface";
+import { UserRepository } from '../../domain/user/repositories/user.repository';
+import { User } from '../../domain/user/types/user.types';
+import { CreateUserDto } from '../dto/user/create-user.dto';
+import { IPasswordService } from '../../domain/auth/services/password-service.interface';
 
+/**
+ * Service for managing users.
+ * Orchestrates user use cases and coordinates repositories.
+ */
 export class UserService {
   /**
    * @param {UserRepository} userRepository Repository implementation handling persistence.
@@ -44,3 +48,4 @@ export class UserService {
     return this.userRepository.findById(id);
   }
 }
+
