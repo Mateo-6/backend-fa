@@ -1,0 +1,882 @@
+{
+	"info": {
+		"_postman_id": "financial-app-api-collection",
+		"name": "Financial App API",
+		"description": "Complete API collection for Financial App - Health, Auth, Users, Categories, Transactions, Recurring Expenses, and Payment Methods",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": ["{{base_url}}"],
+							"path": ["health"]
+						},
+						"description": "Check the health status of the API server."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.token) {",
+									"        pm.environment.set('auth_token', response.data.token);",
+									"        pm.environment.set('user_id', response.data.user.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "login"]
+						},
+						"description": "Login to get JWT token. The token will be automatically saved to environment variable 'auth_token'."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Create User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.id) {",
+									"        pm.environment.set('user_id', response.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"johndoe\",\n    \"name\": \"John Doe\",\n    \"email\": \"john.doe@example.com\",\n    \"password\": \"password123\",\n    \"phone\": \"+1234567890\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": ["{{base_url}}"],
+							"path": ["users"]
+						},
+						"description": "Create a new user. Password must be at least 8 characters long."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": ["{{base_url}}"],
+							"path": ["users"]
+						},
+						"description": "Get all users in the system."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/:id",
+							"host": ["{{base_url}}"],
+							"path": ["users", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{user_id}}"
+								}
+							]
+						},
+						"description": "Get a specific user by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"John Updated Doe\",\n    \"email\": \"john.updated@example.com\",\n    \"phone\": \"+9876543210\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/:id",
+							"host": ["{{base_url}}"],
+							"path": ["users", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{user_id}}"
+								}
+							]
+						},
+						"description": "Update a user. All fields (username, name, phone, email) are optional, but at least one field must be provided."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/:id",
+							"host": ["{{base_url}}"],
+							"path": ["users", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{user_id}}"
+								}
+							]
+						},
+						"description": "Delete a user by ID."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Categories",
+			"item": [
+				{
+					"name": "Create Category",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Food & Dining\",\n    \"description\": \"Restaurants, groceries, and food expenses\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/categories",
+							"host": ["{{base_url}}"],
+							"path": ["categories"]
+						},
+						"description": "Create a new category. Save the category ID for use in transactions."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Categories",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/categories",
+							"host": ["{{base_url}}"],
+							"path": ["categories"]
+						},
+						"description": "Get all categories for the authenticated user."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Category by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/categories/:id",
+							"host": ["{{base_url}}"],
+							"path": ["categories", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "category_id_here"
+								}
+							]
+						},
+						"description": "Get a specific category by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Category",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Category Name\",\n    \"description\": \"Updated description\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/categories/:id",
+							"host": ["{{base_url}}"],
+							"path": ["categories", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "category_id_here"
+								}
+							]
+						},
+						"description": "Update a category."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Category",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/categories/:id",
+							"host": ["{{base_url}}"],
+							"path": ["categories", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "category_id_here"
+								}
+							]
+						},
+						"description": "Delete a category."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Transactions",
+			"item": [
+				{
+					"name": "Create Manual Transaction",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.id) {",
+									"        pm.environment.set('transaction_id', response.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"amount\": 150.50,\n    \"description\": \"Grocery shopping at supermarket\",\n    \"date\": \"2024-01-15T10:30:00Z\",\n    \"type\": \"EXPENSE\",\n    \"categoryId\": \"{{category_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/transactions/manual",
+							"host": ["{{base_url}}"],
+							"path": ["transactions", "manual"]
+						},
+						"description": "Create a manual transaction (not from recurring expense). Type can be 'INCOME' or 'EXPENSE'."
+					},
+					"response": []
+				},
+				{
+					"name": "Process Recurring Payment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.id) {",
+									"        pm.environment.set('transaction_id', response.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/transactions/recurring/:recurringExpenseId",
+							"host": ["{{base_url}}"],
+							"path": ["transactions", "recurring", ":recurringExpenseId"],
+							"variable": [
+								{
+									"key": "recurringExpenseId",
+									"value": "{{recurring_expense_id}}"
+								}
+							]
+						},
+						"description": "Process a payment from a recurring expense. This creates a transaction and updates the next payment date."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transaction History",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/transactions/history?startDate=2024-01-01T00:00:00Z&endDate=2024-12-31T23:59:59Z&type=EXPENSE&categoryId={{category_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["transactions", "history"],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2024-01-01T00:00:00Z",
+									"description": "Start date filter (ISO 8601 format)"
+								},
+								{
+									"key": "endDate",
+									"value": "2024-12-31T23:59:59Z",
+									"description": "End date filter (ISO 8601 format)"
+								},
+								{
+									"key": "type",
+									"value": "EXPENSE",
+									"description": "Filter by type: INCOME or EXPENSE"
+								},
+								{
+									"key": "categoryId",
+									"value": "{{category_id}}",
+									"description": "Filter by category ID"
+								}
+							]
+						},
+						"description": "Get transaction history with optional filters. All query parameters are optional."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transaction History (All)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/transactions/history",
+							"host": ["{{base_url}}"],
+							"path": ["transactions", "history"]
+						},
+						"description": "Get all transactions for the authenticated user without filters."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Transaction",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/transactions/:id",
+							"host": ["{{base_url}}"],
+							"path": ["transactions", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{transaction_id}}"
+								}
+							]
+						},
+						"description": "Delete a transaction by ID."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Recurring Expenses",
+			"item": [
+				{
+					"name": "Create Recurring Expense",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.id) {",
+									"        pm.environment.set('recurring_expense_id', response.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Netflix Subscription\",\n    \"amount\": 15.99,\n    \"currency\": \"USD\",\n    \"categoryId\": \"{{category_id}}\",\n    \"paymentMethodId\": \"credit_card_123\",\n    \"frequency\": \"MONTHLY\",\n    \"payDay\": 15,\n    \"startDate\": \"2024-01-15T00:00:00Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/recurring-expenses",
+							"host": ["{{base_url}}"],
+							"path": ["recurring-expenses"]
+						},
+						"description": "Create a new recurring expense. Frequency can be: WEEKLY, MONTHLY, or YEARLY. payDay is the day of the month (1-31)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Recurring Expenses",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/recurring-expenses",
+							"host": ["{{base_url}}"],
+							"path": ["recurring-expenses"]
+						},
+						"description": "Get all recurring expenses for the authenticated user."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Recurring Expense",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Netflix Subscription\",\n    \"amount\": 19.99,\n    \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/recurring-expenses/:id",
+							"host": ["{{base_url}}"],
+							"path": ["recurring-expenses", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{recurring_expense_id}}"
+								}
+							]
+						},
+						"description": "Update a recurring expense. You can update any field: name, amount, currency, categoryId, paymentMethodId, frequency, payDay, startDate, nextPaymentDate, isActive."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Recurring Expense",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/recurring-expenses/:id",
+							"host": ["{{base_url}}"],
+							"path": ["recurring-expenses", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{recurring_expense_id}}"
+								}
+							]
+						},
+						"description": "Delete a recurring expense by ID."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Payment Methods",
+			"item": [
+				{
+					"name": "Create Credit Card Payment Method",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.id) {",
+									"        pm.environment.set('payment_method_id', response.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Visa Credit Card\",\n    \"type\": \"CREDIT_CARD\",\n    \"currency\": \"USD\",\n    \"details\": {\n        \"cut_off_day\": 15,\n        \"payment_day\": 5,\n        \"credit_limit\": 5000.00,\n        \"current_balance\": 1250.50\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/payment-methods",
+							"host": ["{{base_url}}"],
+							"path": ["payment-methods"]
+						},
+						"description": "Create a credit card payment method. cut_off_day (1-31): Day when statement closes. payment_day (1-31): Payment due date."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Bank Account Payment Method",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.id) {",
+									"        pm.environment.set('payment_method_id', response.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Chase Checking Account\",\n    \"type\": \"BANK_ACCOUNT\",\n    \"currency\": \"USD\",\n    \"details\": {\n        \"bank_name\": \"Chase Bank\",\n        \"account_number\": \"1234\",\n        \"account_type\": \"CHECKING\"\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/payment-methods",
+							"host": ["{{base_url}}"],
+							"path": ["payment-methods"]
+						},
+						"description": "Create a bank account payment method. account_number must be exactly 4 digits. account_type can be 'SAVINGS' or 'CHECKING'."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Cash Payment Method",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.id) {",
+									"        pm.environment.set('payment_method_id', response.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Cash Wallet\",\n    \"type\": \"CASH\",\n    \"currency\": \"USD\",\n    \"details\": {}\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/payment-methods",
+							"host": ["{{base_url}}"],
+							"path": ["payment-methods"]
+						},
+						"description": "Create a cash payment method. Details can be an empty object or omitted."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Payment Methods",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/payment-methods",
+							"host": ["{{base_url}}"],
+							"path": ["payment-methods"]
+						},
+						"description": "Get all payment methods for the authenticated user."
+					},
+					"response": []
+				},
+				{
+					"name": "Calculate Payment Due Date",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/payment-methods/:id/calculate-due-date?transactionDate=2024-01-20T10:00:00Z",
+							"host": ["{{base_url}}"],
+							"path": ["payment-methods", ":id", "calculate-due-date"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{payment_method_id}}"
+								}
+							],
+							"query": [
+								{
+									"key": "transactionDate",
+									"value": "2024-01-20T10:00:00Z",
+									"description": "Transaction date in ISO 8601 format"
+								}
+							]
+						},
+						"description": "Calculate payment due date for credit card transactions. Returns null for non-credit card payment methods. Business logic: If transaction is before cut_off_day → payment due on payment_day of current month. If transaction is on/after cut_off_day → payment due on payment_day of next month."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Payment Method",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/payment-methods/:id",
+							"host": ["{{base_url}}"],
+							"path": ["payment-methods", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{payment_method_id}}"
+								}
+							]
+						},
+						"description": "Delete a payment method by ID."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "auth_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "category_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "transaction_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "recurring_expense_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "payment_method_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
+

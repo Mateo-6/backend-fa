@@ -1,6 +1,6 @@
 import { PaymentMethodRepository } from '../../domain/payment-method/repositories/payment-method.repository';
 import { PaymentMethod } from '../../domain/payment-method/types/payment-method.types';
-import { PaymentMethodModel, IPaymentMethodDocument } from '../database/schemas/payment-method.schema';
+import { PaymentMethodModel, IPaymentMethodDocument } from '../database/models/payment-method.model';
 import { getMongooseInstance } from '../database/mongoose-client';
 
 /**

@@ -1,6 +1,6 @@
 import { TransactionRepository, TransactionFilters } from '../../domain/finance/repositories/transaction.repository';
 import { Transaction } from '../../domain/finance/types/transaction.types';
-import { TransactionModel, ITransactionDocument } from '../database/schemas/transaction.schema';
+import { TransactionModel, ITransactionDocument } from '../database/models/transaction.model';
 import { getMongooseInstance } from '../database/mongoose-client';
 
 /**

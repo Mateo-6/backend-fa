@@ -1,6 +1,6 @@
 import { RecurringExpenseRepository } from '../../domain/finance/repositories/recurring-expense.repository';
 import { RecurringExpense } from '../../domain/finance/types/recurring-expense.types';
-import { RecurringExpenseModel, IRecurringExpenseDocument } from '../database/schemas/recurring-expense.schema';
+import { RecurringExpenseModel, IRecurringExpenseDocument } from '../database/models/recurring-expense.model';
 import { getMongooseInstance } from '../database/mongoose-client';
 
 /**
