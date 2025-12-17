@@ -1,9 +1,11 @@
 import { Response } from 'express';
 import { TransactionService } from '../../../../application/services/transaction.service';
 import { CreateTransactionDto } from '../../../../application/dto/finance/create-transaction.dto';
+import { UpdateTransactionDto } from '../../../../application/dto/finance/update-transaction.dto';
 import { AuthenticatedRequest } from '../../types/request.types';
 import { UnauthorizedError } from '../../../../domain/errors/app-error';
 import { sendSuccess } from '../../utils/response.util';
+import { TransactionType } from '../../../../domain/finance/types/transaction.types';
 
 /**
  * Controller for handling transaction-related HTTP requests.
@@ -66,7 +68,7 @@ export class TransactionController {
     const filters: {
       startDate?: Date;
       endDate?: Date;
-      type?: string;
+      type?: TransactionType;
       categoryId?: string;
     } = {};
 
@@ -77,7 +79,10 @@ export class TransactionController {
       filters.endDate = new Date(req.query.endDate as string);
     }
     if (req.query.type) {
-      filters.type = req.query.type as string;
+      const typeValue = (req.query.type as string).toUpperCase();
+      if (typeValue === TransactionType.INCOME || typeValue === TransactionType.EXPENSE) {
+        filters.type = typeValue as TransactionType;
+      }
     }
     if (req.query.categoryId) {
       filters.categoryId = req.query.categoryId as string;
@@ -85,6 +90,25 @@ export class TransactionController {
 
     const transactions = await this.transactionService.getHistory(req.user.id, filters);
     sendSuccess(res, transactions);
+  }
+
+  /**
+   * Updates an INCOME transaction.
+   * Validates that the transaction belongs to the authenticated user and is of type INCOME.
+   *
+   * @param {AuthenticatedRequest} req Express request containing the identifier parameter and validated body.
+   * @param {Response} res Express response used to send the updated transaction.
+   * @returns {Promise<void>} Resolves when the response is dispatched.
+   */
+  public async update(req: AuthenticatedRequest, res: Response): Promise<void> {
+    if (!req.user?.id) {
+      throw new UnauthorizedError('User not authenticated');
+    }
+
+    const { id } = req.params;
+    const updateTransactionDto: UpdateTransactionDto = req.body;
+    const transaction = await this.transactionService.update(id, updateTransactionDto, req.user.id);
+    sendSuccess(res, transaction);
   }
 
   /**
@@ -102,7 +126,7 @@ export class TransactionController {
 
     const { id } = req.params;
     await this.transactionService.delete(id, req.user.id);
-    sendSuccess(res, null, 204);
+    sendSuccess(res, { message: 'Transaction deleted successfully' }, 200);
   }
 }
 

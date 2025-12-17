@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { Category } from '../../../domain/category/types/category.types';
+import { Category, CategoryType } from '../../../domain/category/types/category.types';
 
 export const createCategorySchema: z.ZodType<
-  Pick<Category, 'name' | 'description'>
+  Pick<Category, 'name' | 'description' | 'type'>
 > = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name must be less than 100 characters'),
   description: z
@@ -10,6 +10,9 @@ export const createCategorySchema: z.ZodType<
     .min(1, 'Description must have at least 1 character')
     .max(255, 'Description must be less than 255 characters')
     .optional(),
+  type: z.nativeEnum(CategoryType, {
+    errorMap: () => ({ message: 'Type must be either "income" or "expense"' }),
+  }),
 });
 
 export type CreateCategoryDto = z.infer<typeof createCategorySchema>;

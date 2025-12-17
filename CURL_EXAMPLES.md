@@ -107,6 +107,26 @@ curl -X GET "${BASE_URL}/transactions/history?startDate=2024-01-01T00:00:00Z&end
 - `type`: `"INCOME"` or `"EXPENSE"`
 - `categoryId`: Category ID string
 
+### Update Transaction (INCOME only)
+```bash
+curl -X PUT "${BASE_URL}/transactions/TRANSACTION_ID_HERE" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -d '{
+    "amount": 200.00,
+    "description": "Updated salary payment",
+    "date": "2024-01-15T10:30:00Z",
+    "categoryId": "CATEGORY_ID_HERE",
+    "paymentMethodId": "PAYMENT_METHOD_ID_HERE"
+  }'
+```
+
+**Note:** 
+- Only INCOME transactions can be updated
+- All fields (`amount`, `description`, `date`, `categoryId`, `paymentMethodId`) are optional
+- At least one field must be provided
+- `paymentMethodId` is optional for INCOME transactions
+
 ### Delete Transaction
 ```bash
 curl -X DELETE "${BASE_URL}/transactions/TRANSACTION_ID_HERE" \

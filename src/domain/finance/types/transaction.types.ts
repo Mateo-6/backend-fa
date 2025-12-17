@@ -26,7 +26,7 @@ export interface Transaction {
   date: Date;
   type: TransactionType;
   category: CategorySnapshot; // Embedded snapshot to avoid lookups
-  paymentMethodId: string; // Reference to PaymentMethod
+  paymentMethodId?: string; // Reference to PaymentMethod (required for EXPENSE, optional for INCOME)
   isRecurring: boolean;
   recurringExpenseId?: string; // Optional reference to RecurringExpense
   createdAt?: Date;

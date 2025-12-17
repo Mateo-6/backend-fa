@@ -22,7 +22,7 @@ export class TransactionMongooseRepository implements TransactionRepository {
       type: transaction.type,
       user: transaction.userId,
       category: transaction.category,
-      paymentMethod: transaction.paymentMethodId, // Mongoose will convert string to ObjectId
+      paymentMethod: transaction.paymentMethodId || null, // Mongoose will convert string to ObjectId, null for INCOME transactions
       isRecurring: transaction.isRecurring,
       recurringExpense: transaction.recurringExpenseId,
     });
@@ -73,6 +73,52 @@ export class TransactionMongooseRepository implements TransactionRepository {
   }
 
   /**
+   * Updates a transaction using the provided payload.
+   *
+   * @param {string} id Transaction identifier.
+   * @param {Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>} data Fields to update.
+   * @returns {Promise<Transaction | null>} Updated transaction or null when missing.
+   */
+  async update(
+    id: string,
+    data: Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>
+  ): Promise<Transaction | null> {
+    await getMongooseInstance();
+    const mappedData: Record<string, unknown> = {};
+
+    if (typeof data.amount === 'number') {
+      mappedData.amount = data.amount;
+    }
+    if (typeof data.description === 'string') {
+      mappedData.description = data.description;
+    }
+    if (data.date instanceof Date) {
+      mappedData.date = data.date;
+    }
+    if (data.type) {
+      mappedData.type = data.type;
+    }
+    if (data.category) {
+      mappedData.category = data.category;
+    }
+    if (data.paymentMethodId !== undefined) {
+      mappedData.paymentMethod = data.paymentMethodId || null;
+    }
+    if (typeof data.isRecurring === 'boolean') {
+      mappedData.isRecurring = data.isRecurring;
+    }
+    if (data.recurringExpenseId !== undefined) {
+      mappedData.recurringExpense = data.recurringExpenseId || null;
+    }
+
+    const transaction = await TransactionModel.findByIdAndUpdate(id, { $set: mappedData }, { new: true }).exec();
+    if (!transaction) {
+      return null;
+    }
+    return this.toDomain(transaction);
+  }
+
+  /**
    * Deletes a transaction by identifier.
    *
    * @param {string} id Transaction identifier.
@@ -98,7 +144,7 @@ export class TransactionMongooseRepository implements TransactionRepository {
       date: doc.date,
       type: doc.type,
       category: doc.category,
-      paymentMethodId: doc.paymentMethod.toString(),
+      paymentMethodId: doc.paymentMethod?.toString() || undefined,
       isRecurring: doc.isRecurring,
       recurringExpenseId: doc.recurringExpense?.toString(),
       createdAt: doc.createdAt,

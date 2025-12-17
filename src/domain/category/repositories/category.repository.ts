@@ -1,4 +1,4 @@
-import { Category } from '../types/category.types';
+import { Category, CategoryType } from '../types/category.types';
 
 export interface CategoryRepository {
   /**
@@ -18,11 +18,13 @@ export interface CategoryRepository {
 
   /**
    * Retrieves every category associated with the provided user.
+   * Optionally filters by category type.
    *
    * @param {string} userId Owner identifier.
+   * @param {CategoryType | undefined} type Optional category type filter (income or expense).
    * @returns {Promise<Category[]>} Collection of categories belonging to the user.
    */
-  findAllByUser(userId: string): Promise<Category[]>;
+  findAllByUser(userId: string, type?: CategoryType): Promise<Category[]>;
 
   /**
    * Finds a category by identifier.

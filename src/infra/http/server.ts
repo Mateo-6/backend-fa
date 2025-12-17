@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.routes';
 import transactionRoutes from './routes/transaction.routes';
 import recurringExpenseRoutes from './routes/recurring-expense.routes';
 import paymentMethodRoutes from './routes/payment-method.routes';
+import dashboardRoutes from './routes/dashboard.routes';
 import { env } from '../config/env';
 import { errorHandler } from './middleware/error-handler.middleware';
 
@@ -46,6 +47,7 @@ export class Server {
     this.app.use('/transactions', transactionRoutes);
     this.app.use('/recurring-expenses', recurringExpenseRoutes);
     this.app.use('/payment-methods', paymentMethodRoutes);
+    this.app.use('/dashboard', dashboardRoutes);
   }
 
   /**

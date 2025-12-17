@@ -84,7 +84,7 @@ export class RecurringExpenseController {
 
     const { id } = req.params;
     await this.recurringExpenseService.delete(id, req.user.id);
-    sendSuccess(res, null, 204);
+    sendSuccess(res, { message: 'Recurring expense deleted successfully' }, 200);
   }
 }
 

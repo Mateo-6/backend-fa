@@ -7,7 +7,7 @@ import { Transaction, TransactionType, CategorySnapshot } from '../../../domain/
 export interface ITransactionDocument extends Omit<Transaction, 'userId' | 'recurringExpenseId' | 'paymentMethodId'>, Document {
   user: Types.ObjectId;
   recurringExpense?: Types.ObjectId;
-  paymentMethod: Types.ObjectId;
+  paymentMethod?: Types.ObjectId;
 }
 
 /**
@@ -71,7 +71,8 @@ const TransactionSchema = new Schema<ITransactionDocument>(
     paymentMethod: {
       type: Schema.Types.ObjectId,
       ref: 'PaymentMethod',
-      required: true,
+      required: false,
+      default: null,
       index: true,
     },
     isRecurring: {
@@ -100,7 +101,7 @@ const TransactionSchema = new Schema<ITransactionDocument>(
       transform: function (doc, ret: any) {
         ret.id = ret._id.toString();
         ret.userId = ret.user?.toString();
-        ret.paymentMethodId = ret.paymentMethod?.toString();
+        ret.paymentMethodId = ret.paymentMethod?.toString() || undefined;
         ret.recurringExpenseId = ret.recurringExpense?.toString() || undefined;
         delete ret._id;
         delete ret.user;
@@ -120,7 +121,7 @@ const TransactionSchema = new Schema<ITransactionDocument>(
       transform: function (doc, ret: any) {
         ret.id = ret._id.toString();
         ret.userId = ret.user?.toString();
-        ret.paymentMethodId = ret.paymentMethod?.toString();
+        ret.paymentMethodId = ret.paymentMethod?.toString() || undefined;
         ret.recurringExpenseId = ret.recurringExpense?.toString() || undefined;
         delete ret._id;
         delete ret.user;

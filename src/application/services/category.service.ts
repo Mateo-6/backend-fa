@@ -2,7 +2,7 @@ import { CategoryRepository } from '../../domain/category/repositories/category.
 import { UserRepository } from '../../domain/user/repositories/user.repository';
 import { CreateCategoryDto } from '../dto/category/create-category.dto';
 import { UpdateCategoryDto } from '../dto/category/update-category.dto';
-import { Category } from '../../domain/category/types/category.types';
+import { Category, CategoryType } from '../../domain/category/types/category.types';
 import { NotFoundError, ForbiddenError } from '../../domain/errors/app-error';
 
 /**
@@ -33,17 +33,34 @@ export class CategoryService {
 
   /**
    * Retrieves every category or filters by user when a user identifier is provided.
+   * Optionally filters by category type (income or expense).
    *
    * @param {string | undefined} userId Optional owner identifier used for filtering.
+   * @param {string | undefined} type Optional category type filter (income or expense).
    * @returns {Promise<Category[]>} Collection of categories.
    */
-  async findAll(userId?: string): Promise<Category[]> {
+  async findAll(userId?: string, type?: string): Promise<Category[]> {
     if (userId) {
       await this.ensureUserExists(userId);
-      return this.categoryRepository.findAllByUser(userId);
+      const categoryType = type ? this.validateCategoryType(type) : undefined;
+      return this.categoryRepository.findAllByUser(userId, categoryType);
     }
 
     return this.categoryRepository.findAll();
+  }
+
+  /**
+   * Validates and converts a string to CategoryType enum value.
+   *
+   * @param {string} type String representation of category type.
+   * @returns {CategoryType | undefined} Valid CategoryType or undefined if invalid.
+   */
+  private validateCategoryType(type: string): CategoryType | undefined {
+    const normalizedType = type.toLowerCase();
+    if (normalizedType === CategoryType.INCOME || normalizedType === CategoryType.EXPENSE) {
+      return normalizedType as CategoryType;
+    }
+    return undefined;
   }
 
   /**

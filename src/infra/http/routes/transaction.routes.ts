@@ -8,6 +8,7 @@ import { UserMongooseRepository } from '../../repositories/user-mongoose.reposit
 import { PaymentMethodMongooseRepository } from '../../repositories/payment-method-mongoose.repository';
 import { validate } from '../middleware/validation.middleware';
 import { createTransactionSchema } from '../../../application/dto/finance/create-transaction.dto';
+import { updateTransactionSchema } from '../../../application/dto/finance/update-transaction.dto';
 import { asyncHandler } from '../middleware/async-handler.middleware';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { JwtTokenService } from '../../services/jwt-token.service';
@@ -46,6 +47,12 @@ router.get(
   '/history',
   authMiddleware(tokenService),
   asyncHandler(transactionController.getHistory.bind(transactionController))
+);
+router.put(
+  '/:id',
+  authMiddleware(tokenService),
+  validate(updateTransactionSchema),
+  asyncHandler(transactionController.update.bind(transactionController))
 );
 router.delete(
   '/:id',

@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Financial App - Recurring Expenses</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .phone-container {
+            width: 100%;
+            max-width: 375px;
+            background: #000;
+            border-radius: 40px;
+            padding: 8px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .phone-screen {
+            background: #f5f5f7;
+            border-radius: 32px;
+            overflow: hidden;
+            min-height: 667px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-bar {
+            background: linear-gradient(135deg, #ff9500 0%, #ff6b35 100%);
+            color: #fff;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-right {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .signal-bars {
+            display: flex;
+            gap: 2px;
+            align-items: flex-end;
+        }
+
+        .bar {
+            width: 3px;
+            background: #fff;
+            border-radius: 1px;
+        }
+
+        .bar:nth-child(1) { height: 4px; }
+        .bar:nth-child(2) { height: 6px; }
+        .bar:nth-child(3) { height: 8px; }
+        .bar:nth-child(4) { height: 10px; }
+
+        .battery {
+            width: 24px;
+            height: 12px;
+            border: 1px solid #fff;
+            border-radius: 2px;
+            position: relative;
+            background: #fff;
+        }
+
+        .battery::after {
+            content: '';
+            position: absolute;
+            right: -3px;
+            top: 3px;
+            width: 2px;
+            height: 6px;
+            background: #fff;
+            border-radius: 0 1px 1px 0;
+        }
+
+        .battery-fill {
+            width: 80%;
+            height: 100%;
+            background: #4cd964;
+            border-radius: 1px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff9500 0%, #ff6b35 100%);
+            padding: 16px 20px 20px;
+            color: #fff;
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .back-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 700;
+            flex: 1;
+            text-align: center;
+        }
+
+        .header-actions {
+            width: 36px;
+        }
+
+        .summary-section {
+            text-align: center;
+        }
+
+        .summary-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .summary-amount {
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        .summary-count {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            padding-bottom: 80px;
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .filter-tab {
+            padding: 8px 16px;
+            background: #fff;
+            border: none;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .filter-tab.active {
+            background: #ff9500;
+            color: #fff;
+        }
+
+        .recurring-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .recurring-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .recurring-card:active {
+            transform: scale(0.98);
+        }
+
+        .recurring-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .recurring-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .recurring-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: #fff3e0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .recurring-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .recurring-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+
+        .recurring-frequency {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .recurring-amount {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ff9500;
+            text-align: right;
+        }
+
+        .recurring-card-body {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-top: 12px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .recurring-meta-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+
+        .recurring-meta-label {
+            color: #666;
+        }
+
+        .recurring-meta-value {
+            color: #1a1a1a;
+            font-weight: 500;
+        }
+
+        .recurring-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .recurring-status.active {
+            background: #e8f5e9;
+            color: #4cd964;
+        }
+
+        .recurring-status.inactive {
+            background: #ffebee;
+            color: #ff3b30;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state-text {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .empty-state-subtext {
+            font-size: 14px;
+            opacity: 0.7;
+        }
+
+        .fab {
+            position: absolute;
+            bottom: 100px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 28px;
+            background: linear-gradient(135deg, #ff9500 0%, #ff6b35 100%);
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(255, 149, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+
+        .fab:active {
+            transform: scale(0.95);
+        }
+
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 20px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #999;
+            padding: 8px;
+            transition: color 0.2s;
+        }
+
+        .nav-item.active {
+            color: #ff9500;
+        }
+
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .nav-label {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .home-indicator {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 134px;
+            height: 5px;
+            background: #000;
+            border-radius: 3px;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #fff;
+            border-radius: 24px 24px 0 0;
+            width: 100%;
+            max-width: 375px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 16px;
+            background: #f0f0f0;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            background: #f8f9fa;
+            color: #333;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #ff9500;
+            background: #fff;
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            background: #f8f9fa;
+            color: #333;
+            cursor: pointer;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: #ff9500;
+            background: #fff;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .form-switch {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+        }
+
+        .switch-label {
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .switch {
+            position: relative;
+            width: 50px;
+            height: 30px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.3s;
+            border-radius: 30px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #ff9500;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        .form-actions {
+            padding: 20px;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ff9500 0%, #ff6b35 100%);
+            color: #fff;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        @media (max-width: 480px) {
+            .phone-container {
+                max-width: 100%;
+                border-radius: 0;
+                padding: 0;
+            }
+
+            .phone-screen {
+                border-radius: 0;
+            }
+
+            body {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-container">
+        <div class="phone-screen">
+            <div class="status-bar">
+                <div class="status-left">
+                    <span>9:41</span>
+                </div>
+                <div class="status-right">
+                    <div class="signal-bars">
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                    </div>
+                    <div class="battery">
+                        <div class="battery-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="header">
+                <div class="header-top">
+                    <button class="back-button">←</button>
+                    <div class="header-title">Recurring Expenses</div>
+                    <div class="header-actions"></div>
+                </div>
+                <div class="summary-section">
+                    <div class="summary-label">Monthly Total</div>
+                    <div class="summary-amount">$245.98</div>
+                    <div class="summary-count">6 active subscriptions</div>
+                </div>
+            </div>
+
+            <div class="content">
+                <div class="filter-tabs">
+                    <button class="filter-tab active">All</button>
+                    <button class="filter-tab">Active</button>
+                    <button class="filter-tab">Inactive</button>
+                </div>
+
+                <div class="recurring-list" id="recurringList">
+                    <div class="recurring-card" data-expense='{"name":"Netflix Subscription","amount":15.99,"currency":"USD","frequency":"MONTHLY","payDay":15,"startDate":"2024-01-15","nextPaymentDate":"2024-01-15","category":"entertainment","paymentMethod":"credit","isActive":true}'>
+                        <div class="recurring-card-header">
+                            <div class="recurring-info">
+                                <div class="recurring-icon">📱</div>
+                                <div class="recurring-details">
+                                    <div class="recurring-name">Netflix Subscription</div>
+                                    <div class="recurring-frequency">Monthly</div>
+                                </div>
+                            </div>
+                            <div class="recurring-amount">$15.99</div>
+                        </div>
+                        <div class="recurring-card-body">
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Next Payment</span>
+                                <span class="recurring-meta-value">Jan 15, 2024</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Category</span>
+                                <span class="recurring-meta-value">Entertainment</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Payment Method</span>
+                                <span class="recurring-meta-value">Credit Card</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Status</span>
+                                <span class="recurring-status active">● Active</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="recurring-card" data-expense='{"name":"Gym Membership","amount":49.99,"currency":"USD","frequency":"MONTHLY","payDay":20,"startDate":"2024-01-20","nextPaymentDate":"2024-01-20","category":"health","paymentMethod":"bank","isActive":true}'>
+                        <div class="recurring-card-header">
+                            <div class="recurring-info">
+                                <div class="recurring-icon">🏋️</div>
+                                <div class="recurring-details">
+                                    <div class="recurring-name">Gym Membership</div>
+                                    <div class="recurring-frequency">Monthly</div>
+                                </div>
+                            </div>
+                            <div class="recurring-amount">$49.99</div>
+                        </div>
+                        <div class="recurring-card-body">
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Next Payment</span>
+                                <span class="recurring-meta-value">Jan 20, 2024</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Category</span>
+                                <span class="recurring-meta-value">Health</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Payment Method</span>
+                                <span class="recurring-meta-value">Bank Account</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Status</span>
+                                <span class="recurring-status active">● Active</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="recurring-card" data-expense='{"name":"Spotify Premium","amount":9.99,"currency":"USD","frequency":"MONTHLY","payDay":10,"startDate":"2024-01-10","nextPaymentDate":"2024-01-10","category":"entertainment","paymentMethod":"credit","isActive":true}'>
+                        <div class="recurring-card-header">
+                            <div class="recurring-info">
+                                <div class="recurring-icon">🎵</div>
+                                <div class="recurring-details">
+                                    <div class="recurring-name">Spotify Premium</div>
+                                    <div class="recurring-frequency">Monthly</div>
+                                </div>
+                            </div>
+                            <div class="recurring-amount">$9.99</div>
+                        </div>
+                        <div class="recurring-card-body">
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Next Payment</span>
+                                <span class="recurring-meta-value">Jan 10, 2024</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Category</span>
+                                <span class="recurring-meta-value">Entertainment</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Payment Method</span>
+                                <span class="recurring-meta-value">Credit Card</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Status</span>
+                                <span class="recurring-status active">● Active</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="recurring-card" data-expense='{"name":"Cloud Storage","amount":4.99,"currency":"USD","frequency":"MONTHLY","payDay":25,"startDate":"2024-01-25","nextPaymentDate":"2024-01-25","category":"bills","paymentMethod":"credit","isActive":true}'>
+                        <div class="recurring-card-header">
+                            <div class="recurring-info">
+                                <div class="recurring-icon">☁️</div>
+                                <div class="recurring-details">
+                                    <div class="recurring-name">Cloud Storage</div>
+                                    <div class="recurring-frequency">Monthly</div>
+                                </div>
+                            </div>
+                            <div class="recurring-amount">$4.99</div>
+                        </div>
+                        <div class="recurring-card-body">
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Next Payment</span>
+                                <span class="recurring-meta-value">Jan 25, 2024</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Category</span>
+                                <span class="recurring-meta-value">Bills & Utilities</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Payment Method</span>
+                                <span class="recurring-meta-value">Credit Card</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Status</span>
+                                <span class="recurring-status active">● Active</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="recurring-card" data-expense='{"name":"Streaming Service","amount":12.99,"currency":"USD","frequency":"MONTHLY","payDay":5,"startDate":"2024-01-05","nextPaymentDate":"2024-01-05","category":"entertainment","paymentMethod":"bank","isActive":true}'>
+                        <div class="recurring-card-header">
+                            <div class="recurring-info">
+                                <div class="recurring-icon">📺</div>
+                                <div class="recurring-details">
+                                    <div class="recurring-name">Streaming Service</div>
+                                    <div class="recurring-frequency">Monthly</div>
+                                </div>
+                            </div>
+                            <div class="recurring-amount">$12.99</div>
+                        </div>
+                        <div class="recurring-card-body">
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Next Payment</span>
+                                <span class="recurring-meta-value">Jan 5, 2024</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Category</span>
+                                <span class="recurring-meta-value">Entertainment</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Payment Method</span>
+                                <span class="recurring-meta-value">Bank Account</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Status</span>
+                                <span class="recurring-status active">● Active</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="recurring-card" data-expense='{"name":"Online Course","amount":29.99,"currency":"USD","frequency":"MONTHLY","payDay":30,"startDate":"2024-01-30","nextPaymentDate":"2024-01-30","category":"education","paymentMethod":"credit","isActive":true}'>
+                        <div class="recurring-card-header">
+                            <div class="recurring-info">
+                                <div class="recurring-icon">📚</div>
+                                <div class="recurring-details">
+                                    <div class="recurring-name">Online Course</div>
+                                    <div class="recurring-frequency">Monthly</div>
+                                </div>
+                            </div>
+                            <div class="recurring-amount">$29.99</div>
+                        </div>
+                        <div class="recurring-card-body">
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Next Payment</span>
+                                <span class="recurring-meta-value">Jan 30, 2024</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Category</span>
+                                <span class="recurring-meta-value">Education</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Payment Method</span>
+                                <span class="recurring-meta-value">Credit Card</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Status</span>
+                                <span class="recurring-status active">● Active</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="recurring-card" data-expense='{"name":"Credit Card Fee","amount":99.00,"currency":"USD","frequency":"YEARLY","payDay":15,"startDate":"2023-12-15","nextPaymentDate":"2024-12-15","category":"bills","paymentMethod":"credit","isActive":false}'>
+                        <div class="recurring-card-header">
+                            <div class="recurring-info">
+                                <div class="recurring-icon">💳</div>
+                                <div class="recurring-details">
+                                    <div class="recurring-name">Credit Card Fee</div>
+                                    <div class="recurring-frequency">Yearly</div>
+                                </div>
+                            </div>
+                            <div class="recurring-amount">$99.00</div>
+                        </div>
+                        <div class="recurring-card-body">
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Next Payment</span>
+                                <span class="recurring-meta-value">Dec 15, 2024</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Category</span>
+                                <span class="recurring-meta-value">Bills & Utilities</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Payment Method</span>
+                                <span class="recurring-meta-value">Credit Card</span>
+                            </div>
+                            <div class="recurring-meta-item">
+                                <span class="recurring-meta-label">Status</span>
+                                <span class="recurring-status inactive">● Inactive</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="fab" id="addRecurringBtn">+</button>
+
+            <div class="bottom-nav">
+                <a href="#" class="nav-item">
+                    <div class="nav-icon">🏠</div>
+                    <div class="nav-label">Home</div>
+                </a>
+                <a href="#" class="nav-item active">
+                    <div class="nav-icon">🔄</div>
+                    <div class="nav-label">Recurring</div>
+                </a>
+                <a href="#" class="nav-item">
+                    <div class="nav-icon">📊</div>
+                    <div class="nav-label">Analytics</div>
+                </a>
+                <a href="#" class="nav-item">
+                    <div class="nav-icon">⚙️</div>
+                    <div class="nav-label">Settings</div>
+                </a>
+            </div>
+
+            <div class="home-indicator"></div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Recurring Expense Modal -->
+    <div class="modal-overlay" id="recurringModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Add Recurring Expense</div>
+                <button class="modal-close" id="closeModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="name">Name</label>
+                    <input
+                        type="text"
+                        id="name"
+                        class="form-input"
+                        placeholder="Enter expense name"
+                        maxlength="100"
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="amount">Amount</label>
+                    <input
+                        type="number"
+                        id="amount"
+                        class="form-input"
+                        placeholder="0.00"
+                        step="0.01"
+                        min="0.01"
+                    />
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="currency">Currency</label>
+                        <select id="currency" class="form-select">
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="GBP">GBP</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="frequency">Frequency</label>
+                        <select id="frequency" class="form-select">
+                            <option value="WEEKLY">Weekly</option>
+                            <option value="MONTHLY" selected>Monthly</option>
+                            <option value="YEARLY">Yearly</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="payDay">Pay Day</label>
+                    <input
+                        type="number"
+                        id="payDay"
+                        class="form-input"
+                        placeholder="Day of month (1-31)"
+                        min="1"
+                        max="31"
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="startDate">Start Date</label>
+                    <input
+                        type="date"
+                        id="startDate"
+                        class="form-input"
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="category">Category</label>
+                    <select id="category" class="form-select">
+                        <option value="">Select category</option>
+                        <option value="entertainment">Entertainment</option>
+                        <option value="health">Health</option>
+                        <option value="bills">Bills & Utilities</option>
+                        <option value="education">Education</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="paymentMethod">Payment Method</label>
+                    <select id="paymentMethod" class="form-select">
+                        <option value="">Select payment method</option>
+                        <option value="bank">Bank Account</option>
+                        <option value="credit">Credit Card</option>
+                        <option value="cash">Cash</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="nextPaymentDate">Next Payment Date</label>
+                    <input
+                        type="date"
+                        id="nextPaymentDate"
+                        class="form-input"
+                    />
+                </div>
+
+                <div class="form-switch">
+                    <span class="switch-label">Active</span>
+                    <label class="switch">
+                        <input type="checkbox" id="isActive" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
+                <button class="btn btn-primary" id="saveBtn">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Opens the modal for adding a new recurring expense
+         */
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add Recurring Expense';
+            clearForm();
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('startDate').value = today;
+            document.getElementById('nextPaymentDate').value = today;
+            document.getElementById('recurringModal').classList.add('show');
+        }
+
+        /**
+         * Opens the modal for editing an existing recurring expense
+         * @param {Object} expenseData - The expense data object
+         */
+        function openEditModal(expenseData) {
+            document.getElementById('modalTitle').textContent = 'Edit Recurring Expense';
+            
+            // Populate form fields
+            document.getElementById('name').value = expenseData.name || '';
+            document.getElementById('amount').value = expenseData.amount || '';
+            document.getElementById('currency').value = expenseData.currency || 'USD';
+            document.getElementById('frequency').value = expenseData.frequency || 'MONTHLY';
+            document.getElementById('payDay').value = expenseData.payDay || '';
+            
+            // Format dates for input fields
+            if (expenseData.startDate) {
+                const startDate = new Date(expenseData.startDate);
+                document.getElementById('startDate').value = startDate.toISOString().split('T')[0];
+            }
+            
+            if (expenseData.nextPaymentDate) {
+                const nextDate = new Date(expenseData.nextPaymentDate);
+                document.getElementById('nextPaymentDate').value = nextDate.toISOString().split('T')[0];
+            }
+            
+            document.getElementById('category').value = expenseData.category || '';
+            document.getElementById('paymentMethod').value = expenseData.paymentMethod || '';
+            document.getElementById('isActive').checked = expenseData.isActive !== false;
+            
+            document.getElementById('recurringModal').classList.add('show');
+        }
+
+        /**
+         * Clears all form fields
+         */
+        function clearForm() {
+            document.getElementById('name').value = '';
+            document.getElementById('amount').value = '';
+            document.getElementById('currency').value = 'USD';
+            document.getElementById('frequency').value = 'MONTHLY';
+            document.getElementById('payDay').value = '';
+            document.getElementById('startDate').value = '';
+            document.getElementById('nextPaymentDate').value = '';
+            document.getElementById('category').value = '';
+            document.getElementById('paymentMethod').value = '';
+            document.getElementById('isActive').checked = true;
+        }
+
+        /**
+         * Closes the modal
+         */
+        function closeModal() {
+            document.getElementById('recurringModal').classList.remove('show');
+        }
+
+        // Add button click handler
+        document.getElementById('addRecurringBtn').addEventListener('click', openAddModal);
+
+        // Close button handlers
+        document.getElementById('closeModal').addEventListener('click', closeModal);
+        document.getElementById('cancelBtn').addEventListener('click', closeModal);
+
+        // Save button handler (no actual save logic, just closes modal)
+        document.getElementById('saveBtn').addEventListener('click', () => {
+            // In a real app, here you would save the data
+            // For now, just close the modal
+            closeModal();
+        });
+
+        // Close modal when clicking overlay
+        document.getElementById('recurringModal').addEventListener('click', (e) => {
+            if (e.target.id === 'recurringModal') {
+                closeModal();
+            }
+        });
+
+        // Add click handlers to all recurring cards
+        document.querySelectorAll('.recurring-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const expenseData = JSON.parse(card.getAttribute('data-expense') || '{}');
+                openEditModal(expenseData);
+            });
+        });
+
+        // Filter tabs
+        document.querySelectorAll('.filter-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+            });
+        });
+
+        // Set today's date as default for new expenses
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('startDate').value = today;
+        document.getElementById('nextPaymentDate').value = today;
+    </script>
+</body>
+</html>

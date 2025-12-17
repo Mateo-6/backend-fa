@@ -17,6 +17,12 @@ const CategorySchema = new Schema<ICategoryDocument>(
       default: null,
       trim: true,
     },
+    type: {
+      type: String,
+      enum: ['income', 'expense'],
+      required: true,
+      index: true,
+    },
     user: {
       type: Schema.Types.ObjectId,
       ref: 'User',

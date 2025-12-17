@@ -33,8 +33,9 @@ export class CategoryController {
   /**
    * Retrieves every category for the authenticated user.
    * The userId is obtained from the JWT token.
+   * Optionally filters categories by type (income or expense).
    *
-   * @param {AuthenticatedRequest} req Express request containing the authenticated user from JWT.
+   * @param {AuthenticatedRequest} req Express request containing the authenticated user from JWT and optional type query parameter.
    * @param {Response} res Express response used to send the category collection.
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
@@ -43,7 +44,8 @@ export class CategoryController {
       throw new UnauthorizedError('User not authenticated');
     }
 
-    const categories = await this.categoryService.findAll(req.user.id);
+    const type = req.query.type as string | undefined;
+    const categories = await this.categoryService.findAll(req.user.id, type);
     sendSuccess(res, categories);
   }
 

@@ -4,8 +4,10 @@ import { CategoryRepository } from '../../domain/category/repositories/category.
 import { UserRepository } from '../../domain/user/repositories/user.repository';
 import { PaymentMethodRepository } from '../../domain/payment-method/repositories/payment-method.repository';
 import { CreateTransactionDto } from '../dto/finance/create-transaction.dto';
+import { UpdateTransactionDto } from '../dto/finance/update-transaction.dto';
 import { Transaction, TransactionType, CategorySnapshot } from '../../domain/finance/types/transaction.types';
 import { RecurringExpense, RecurringFrequency } from '../../domain/finance/types/recurring-expense.types';
+import { CategoryType } from '../../domain/category/types/category.types';
 import { NotFoundError, ForbiddenError } from '../../domain/errors/app-error';
 
 /**
@@ -40,6 +42,7 @@ export class TransactionService {
   /**
    * Creates a manual transaction (not from a recurring expense).
    * Validates the category and creates a snapshot of it in the transaction.
+   * Payment method is validated only for EXPENSE transactions.
    *
    * @param {CreateTransactionDto} data Validated transaction payload.
    * @param {string} userId User identifier obtained from JWT token.
@@ -59,7 +62,16 @@ export class TransactionService {
       throw new ForbiddenError('You do not have permission to use this category');
     }
 
-    await this.ensurePaymentMethodExists(data.paymentMethodId, userId);
+    // Validate that category type matches transaction type
+    const expectedCategoryType = data.type === TransactionType.INCOME ? CategoryType.INCOME : CategoryType.EXPENSE;
+    if (category.type !== expectedCategoryType) {
+      throw new ForbiddenError(`Category type "${category.type}" does not match transaction type "${data.type}"`);
+    }
+
+    // Payment method is required only for EXPENSE transactions
+    if (data.type === TransactionType.EXPENSE && data.paymentMethodId) {
+      await this.ensurePaymentMethodExists(data.paymentMethodId, userId);
+    }
 
     const categorySnapshot: CategorySnapshot = {
       id: category.id!,
@@ -107,6 +119,11 @@ export class TransactionService {
     const category = await this.categoryRepository.findById(recurringExpense.categoryId);
     if (!category) {
       throw new NotFoundError('Category', recurringExpense.categoryId);
+    }
+
+    // Validate that category type matches transaction type (recurring expenses are always EXPENSE)
+    if (category.type !== CategoryType.EXPENSE) {
+      throw new ForbiddenError(`Category type "${category.type}" does not match transaction type "EXPENSE"`);
     }
 
     const categorySnapshot: CategorySnapshot = {
@@ -161,6 +178,84 @@ export class TransactionService {
     };
 
     return this.transactionRepository.findAllByUser(userId, repositoryFilters);
+  }
+
+  /**
+   * Updates an INCOME transaction by identifier.
+   * Validates that the transaction belongs to the specified user and is of type INCOME.
+   * Only INCOME transactions can be updated.
+   *
+   * @param {string} id Transaction identifier.
+   * @param {UpdateTransactionDto} data Partial payload with the updated fields.
+   * @param {string} userId User identifier to verify ownership.
+   * @returns {Promise<Transaction>} Updated transaction.
+   * @throws {NotFoundError} If the transaction does not exist.
+   * @throws {ForbiddenError} If the transaction does not belong to the user or is not an INCOME transaction.
+   */
+  async update(id: string, data: UpdateTransactionDto, userId: string): Promise<Transaction> {
+    const transaction = await this.transactionRepository.findById(id);
+    if (!transaction) {
+      throw new NotFoundError('Transaction', id);
+    }
+
+    if (transaction.userId !== userId) {
+      throw new ForbiddenError('You do not have permission to update this transaction');
+    }
+
+    // Only INCOME transactions can be updated
+    if (transaction.type !== TransactionType.INCOME) {
+      throw new ForbiddenError('Only INCOME transactions can be updated');
+    }
+
+    // Prepare update data
+    const updateData: Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>> = {};
+
+    if (typeof data.amount === 'number') {
+      updateData.amount = data.amount;
+    }
+    if (typeof data.description === 'string') {
+      updateData.description = data.description;
+    }
+    if (data.date instanceof Date) {
+      updateData.date = data.date;
+    }
+
+    // Handle category update
+    if (data.categoryId) {
+      const category = await this.categoryRepository.findById(data.categoryId);
+      if (!category) {
+        throw new NotFoundError('Category', data.categoryId);
+      }
+      if (category.userId !== userId) {
+        throw new ForbiddenError('You do not have permission to use this category');
+      }
+      // Validate that category type matches transaction type (only INCOME transactions can be updated)
+      if (category.type !== CategoryType.INCOME) {
+        throw new ForbiddenError(`Category type "${category.type}" does not match transaction type "INCOME"`);
+      }
+      updateData.category = {
+        id: category.id!,
+        name: category.name,
+        icon: undefined,
+      };
+    }
+
+    // Handle payment method update (optional for INCOME transactions)
+    if (data.paymentMethodId !== undefined) {
+      if (data.paymentMethodId) {
+        await this.ensurePaymentMethodExists(data.paymentMethodId, userId);
+        updateData.paymentMethodId = data.paymentMethodId;
+      } else {
+        updateData.paymentMethodId = undefined;
+      }
+    }
+
+    const updatedTransaction = await this.transactionRepository.update(id, updateData);
+    if (!updatedTransaction) {
+      throw new NotFoundError('Transaction', id);
+    }
+
+    return updatedTransaction;
   }
 
   /**

@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Financial App - Sign Up</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .phone-container {
+            width: 100%;
+            max-width: 375px;
+            background: #000;
+            border-radius: 40px;
+            padding: 8px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .phone-screen {
+            background: #fff;
+            border-radius: 32px;
+            overflow: hidden;
+            min-height: 667px;
+            position: relative;
+        }
+
+        .status-bar {
+            background: #000;
+            color: #fff;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-right {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .signal-bars {
+            display: flex;
+            gap: 2px;
+            align-items: flex-end;
+        }
+
+        .bar {
+            width: 3px;
+            background: #fff;
+            border-radius: 1px;
+        }
+
+        .bar:nth-child(1) { height: 4px; }
+        .bar:nth-child(2) { height: 6px; }
+        .bar:nth-child(3) { height: 8px; }
+        .bar:nth-child(4) { height: 10px; }
+
+        .battery {
+            width: 24px;
+            height: 12px;
+            border: 1px solid #fff;
+            border-radius: 2px;
+            position: relative;
+            background: #fff;
+        }
+
+        .battery::after {
+            content: '';
+            position: absolute;
+            right: -3px;
+            top: 3px;
+            width: 2px;
+            height: 6px;
+            background: #fff;
+            border-radius: 0 1px 1px 0;
+        }
+
+        .battery-fill {
+            width: 80%;
+            height: 100%;
+            background: #4cd964;
+            border-radius: 1px;
+        }
+
+        .content {
+            padding: 30px 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: calc(100% - 44px);
+            overflow-y: auto;
+            max-height: calc(100vh - 44px);
+        }
+
+        .logo-container {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .logo-icon {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .logo-icon::before {
+            content: '$';
+            font-size: 42px;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .app-title {
+            font-size: 26px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 6px;
+        }
+
+        .app-subtitle {
+            font-size: 15px;
+            color: #666;
+            font-weight: 400;
+        }
+
+        .signup-form {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+            position: relative;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 14px 14px 45px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+            color: #333;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 18px;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #667eea;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .error-message {
+            color: #ff3b30;
+            font-size: 12px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .password-strength {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .password-strength.weak {
+            color: #ff3b30;
+        }
+
+        .password-strength.medium {
+            color: #ff9500;
+        }
+
+        .password-strength.strong {
+            color: #4cd964;
+        }
+
+        .signup-button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .signup-button:active {
+            transform: scale(0.98);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .signup-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .login-link-text {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .login-link-text a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .loading-spinner {
+            display: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+        }
+
+        .loading-spinner.show {
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .success-message {
+            display: none;
+            background: #4cd964;
+            color: #fff;
+            padding: 12px 18px;
+            border-radius: 8px;
+            margin-top: 15px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .success-message.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .home-indicator {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 134px;
+            height: 5px;
+            background: #000;
+            border-radius: 3px;
+        }
+
+        @media (max-width: 480px) {
+            .phone-container {
+                max-width: 100%;
+                border-radius: 0;
+                padding: 0;
+            }
+
+            .phone-screen {
+                border-radius: 0;
+            }
+
+            body {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-container">
+        <div class="phone-screen">
+            <div class="status-bar">
+                <div class="status-left">
+                    <span>9:41</span>
+                </div>
+                <div class="status-right">
+                    <div class="signal-bars">
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                    </div>
+                    <div class="battery">
+                        <div class="battery-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content">
+                <div class="logo-container">
+                    <div class="logo-icon"></div>
+                    <h1 class="app-title">Create Account</h1>
+                    <p class="app-subtitle">Join Financial App today</p>
+                </div>
+
+                <form class="signup-form" id="signupForm">
+                    <div class="form-group">
+                        <label class="form-label" for="username">Username</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">👤</span>
+                            <input
+                                type="text"
+                                id="username"
+                                class="form-input"
+                                placeholder="Choose a username"
+                                required
+                                autocomplete="username"
+                                maxlength="100"
+                            />
+                        </div>
+                        <div class="error-message" id="usernameError"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="name">Full Name</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">📝</span>
+                            <input
+                                type="text"
+                                id="name"
+                                class="form-input"
+                                placeholder="Enter your full name"
+                                required
+                                autocomplete="name"
+                                maxlength="100"
+                            />
+                        </div>
+                        <div class="error-message" id="nameError"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="email">Email</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">✉️</span>
+                            <input
+                                type="email"
+                                id="email"
+                                class="form-input"
+                                placeholder="Enter your email"
+                                required
+                                autocomplete="email"
+                            />
+                        </div>
+                        <div class="error-message" id="emailError"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="phone">Phone</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">📱</span>
+                            <input
+                                type="tel"
+                                id="phone"
+                                class="form-input"
+                                placeholder="Enter your phone number"
+                                required
+                                autocomplete="tel"
+                                maxlength="100"
+                            />
+                        </div>
+                        <div class="error-message" id="phoneError"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="password">Password</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">🔒</span>
+                            <input
+                                type="password"
+                                id="password"
+                                class="form-input"
+                                placeholder="Create a password (min 8 characters)"
+                                required
+                                autocomplete="new-password"
+                                minlength="8"
+                            />
+                            <button
+                                type="button"
+                                class="password-toggle"
+                                id="passwordToggle"
+                                aria-label="Toggle password visibility"
+                            >
+                                👁️
+                            </button>
+                        </div>
+                        <div class="password-strength" id="passwordStrength"></div>
+                        <div class="error-message" id="passwordError"></div>
+                    </div>
+
+                    <button type="submit" class="signup-button" id="signupButton">
+                        <span class="loading-spinner" id="loadingSpinner"></span>
+                        <span id="buttonText">Create Account</span>
+                    </button>
+
+                    <div class="success-message" id="successMessage">
+                        Account created successfully! Redirecting...
+                    </div>
+
+                    <div class="login-link">
+                        <p class="login-link-text">
+                            Already have an account? <a href="mobile-login-preview.html">Sign In</a>
+                        </p>
+                    </div>
+                </form>
+            </div>
+
+            <div class="home-indicator"></div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Toggles password visibility
+         * @param {HTMLInputElement} passwordInput - The password input element
+         * @param {HTMLButtonElement} toggleButton - The toggle button element
+         */
+        function togglePasswordVisibility(passwordInput, toggleButton) {
+            const isPassword = passwordInput.type === 'password';
+            passwordInput.type = isPassword ? 'text' : 'password';
+            toggleButton.textContent = isPassword ? '🙈' : '👁️';
+        }
+
+        /**
+         * Validates email format
+         * @param {string} email - Email to validate
+         * @returns {boolean} True if email is valid
+         */
+        function validateEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        /**
+         * Checks password strength and returns strength level
+         * @param {string} password - Password to check
+         * @returns {Object} Object with strength level and message
+         */
+        function checkPasswordStrength(password) {
+            if (password.length < 8) {
+                return { level: 'weak', message: 'Password must be at least 8 characters' };
+            }
+            
+            let strength = 0;
+            if (password.length >= 8) strength++;
+            if (password.length >= 12) strength++;
+            if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+            if (/\d/.test(password)) strength++;
+            if (/[^a-zA-Z\d]/.test(password)) strength++;
+
+            if (strength <= 2) {
+                return { level: 'weak', message: 'Weak password' };
+            } else if (strength <= 3) {
+                return { level: 'medium', message: 'Medium strength' };
+            } else {
+                return { level: 'strong', message: 'Strong password' };
+            }
+        }
+
+        /**
+         * Shows error message for a field
+         * @param {string} fieldId - ID of the field
+         * @param {string} message - Error message to display
+         */
+        function showError(fieldId, message) {
+            const errorElement = document.getElementById(`${fieldId}Error`);
+            if (errorElement) {
+                errorElement.textContent = message;
+                errorElement.classList.add('show');
+            }
+        }
+
+        /**
+         * Hides error message for a field
+         * @param {string} fieldId - ID of the field
+         */
+        function hideError(fieldId) {
+            const errorElement = document.getElementById(`${fieldId}Error`);
+            if (errorElement) {
+                errorElement.classList.remove('show');
+            }
+        }
+
+        /**
+         * Sets loading state for the signup button
+         * @param {boolean} isLoading - Whether the button should be in loading state
+         */
+        function setLoadingState(isLoading) {
+            const signupButton = document.getElementById('signupButton');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const buttonText = document.getElementById('buttonText');
+
+            if (isLoading) {
+                signupButton.disabled = true;
+                loadingSpinner.classList.add('show');
+                buttonText.textContent = 'Creating account...';
+            } else {
+                signupButton.disabled = false;
+                loadingSpinner.classList.remove('show');
+                buttonText.textContent = 'Create Account';
+            }
+        }
+
+        /**
+         * Performs signup request to the API
+         * @param {Object} userData - User data object with username, name, email, phone, and password
+         * @returns {Promise<Object>} Response object with created user data
+         */
+        async function performSignup(userData) {
+            const baseUrl = 'http://localhost:3000';
+            const response = await fetch(`${baseUrl}/users`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userData),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'Failed to create account');
+            }
+
+            return await response.json();
+        }
+
+        // Initialize event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            const signupForm = document.getElementById('signupForm');
+            const usernameInput = document.getElementById('username');
+            const nameInput = document.getElementById('name');
+            const emailInput = document.getElementById('email');
+            const phoneInput = document.getElementById('phone');
+            const passwordInput = document.getElementById('password');
+            const passwordToggle = document.getElementById('passwordToggle');
+            const passwordStrength = document.getElementById('passwordStrength');
+            const successMessage = document.getElementById('successMessage');
+
+            // Password toggle functionality
+            passwordToggle.addEventListener('click', () => {
+                togglePasswordVisibility(passwordInput, passwordToggle);
+            });
+
+            // Password strength indicator
+            passwordInput.addEventListener('input', () => {
+                const password = passwordInput.value;
+                if (password.length > 0) {
+                    const strength = checkPasswordStrength(password);
+                    passwordStrength.textContent = strength.message;
+                    passwordStrength.className = `password-strength ${strength.level}`;
+                } else {
+                    passwordStrength.textContent = '';
+                    passwordStrength.className = 'password-strength';
+                }
+                hideError('password');
+            });
+
+            // Clear errors on input
+            usernameInput.addEventListener('input', () => {
+                hideError('username');
+            });
+
+            nameInput.addEventListener('input', () => {
+                hideError('name');
+            });
+
+            emailInput.addEventListener('input', () => {
+                hideError('email');
+            });
+
+            phoneInput.addEventListener('input', () => {
+                hideError('phone');
+            });
+
+            // Form submission
+            signupForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                // Hide previous success message
+                successMessage.classList.remove('show');
+
+                // Get form values
+                const username = usernameInput.value.trim();
+                const name = nameInput.value.trim();
+                const email = emailInput.value.trim();
+                const phone = phoneInput.value.trim();
+                const password = passwordInput.value;
+
+                // Validate inputs
+                let isValid = true;
+
+                if (!username) {
+                    showError('username', 'Username is required');
+                    isValid = false;
+                } else if (username.length > 100) {
+                    showError('username', 'Username must be less than 100 characters');
+                    isValid = false;
+                }
+
+                if (!name) {
+                    showError('name', 'Name is required');
+                    isValid = false;
+                } else if (name.length > 100) {
+                    showError('name', 'Name must be less than 100 characters');
+                    isValid = false;
+                }
+
+                if (!email) {
+                    showError('email', 'Email is required');
+                    isValid = false;
+                } else if (!validateEmail(email)) {
+                    showError('email', 'Invalid email format');
+                    isValid = false;
+                }
+
+                if (!phone) {
+                    showError('phone', 'Phone is required');
+                    isValid = false;
+                } else if (phone.length > 100) {
+                    showError('phone', 'Phone must be less than 100 characters');
+                    isValid = false;
+                }
+
+                if (!password) {
+                    showError('password', 'Password is required');
+                    isValid = false;
+                } else if (password.length < 8) {
+                    showError('password', 'Password must be at least 8 characters long');
+                    isValid = false;
+                }
+
+                if (!isValid) {
+                    return;
+                }
+
+                // Set loading state
+                setLoadingState(true);
+
+                try {
+                    // Perform signup
+                    const result = await performSignup({
+                        username,
+                        name,
+                        email,
+                        phone,
+                        password,
+                    });
+
+                    // Show success message
+                    successMessage.classList.add('show');
+
+                    // Store user data (in a real app, you'd use secure storage)
+                    if (result.data) {
+                        localStorage.setItem('userData', JSON.stringify(result.data));
+                    }
+
+                    // Simulate redirect (in a real app, navigate to login or home screen)
+                    setTimeout(() => {
+                        alert(`Account created successfully!\n\nUsername: ${result.data?.username || 'N/A'}\nEmail: ${result.data?.email || 'N/A'}\n\n(Preview mode - redirecting to login...)`);
+                        window.location.href = 'mobile-login-preview.html';
+                    }, 1500);
+                } catch (error) {
+                    setLoadingState(false);
+                    const errorMessage = error.message || 'Failed to create account. Please try again.';
+                    
+                    // Try to show field-specific errors
+                    if (errorMessage.toLowerCase().includes('email')) {
+                        showError('email', errorMessage);
+                    } else if (errorMessage.toLowerCase().includes('username')) {
+                        showError('username', errorMessage);
+                    } else {
+                        showError('password', errorMessage);
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

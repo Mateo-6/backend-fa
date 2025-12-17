@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Financial App - Home</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .phone-container {
+            width: 100%;
+            max-width: 375px;
+            background: #000;
+            border-radius: 40px;
+            padding: 8px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .phone-screen {
+            background: #f5f5f7;
+            border-radius: 32px;
+            overflow: hidden;
+            min-height: 667px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-bar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-right {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .signal-bars {
+            display: flex;
+            gap: 2px;
+            align-items: flex-end;
+        }
+
+        .bar {
+            width: 3px;
+            background: #fff;
+            border-radius: 1px;
+        }
+
+        .bar:nth-child(1) { height: 4px; }
+        .bar:nth-child(2) { height: 6px; }
+        .bar:nth-child(3) { height: 8px; }
+        .bar:nth-child(4) { height: 10px; }
+
+        .battery {
+            width: 24px;
+            height: 12px;
+            border: 1px solid #fff;
+            border-radius: 2px;
+            position: relative;
+            background: #fff;
+        }
+
+        .battery::after {
+            content: '';
+            position: absolute;
+            right: -3px;
+            top: 3px;
+            width: 2px;
+            height: 6px;
+            background: #fff;
+            border-radius: 0 1px 1px 0;
+        }
+
+        .battery-fill {
+            width: 80%;
+            height: 100%;
+            background: #4cd964;
+            border-radius: 1px;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 80px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px 20px 30px;
+            color: #fff;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .greeting {
+            font-size: 16px;
+            opacity: 0.9;
+            margin-bottom: 4px;
+        }
+
+        .user-name {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .profile-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .balance-section {
+            margin-top: 20px;
+        }
+
+        .balance-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .balance-amount {
+            font-size: 36px;
+            font-weight: 700;
+        }
+
+        .summary-cards {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .summary-card {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .summary-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 6px;
+        }
+
+        .summary-amount {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .summary-amount.income {
+            color: #4cd964;
+        }
+
+        .summary-amount.expense {
+            color: #ff3b30;
+        }
+
+        .main-content {
+            padding: 20px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-link {
+            font-size: 14px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .quick-action {
+            background: #fff;
+            border-radius: 16px;
+            padding: 16px 8px;
+            text-align: center;
+            text-decoration: none;
+            color: #333;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
+
+        .quick-action:active {
+            transform: scale(0.95);
+        }
+
+        .quick-action-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .quick-action-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: #666;
+        }
+
+        .transactions-list {
+            background: #fff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            margin-bottom: 24px;
+        }
+
+        .transaction-item {
+            padding: 16px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .transaction-item:last-child {
+            border-bottom: none;
+        }
+
+        .transaction-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .transaction-icon.income {
+            background: #e8f5e9;
+            color: #4cd964;
+        }
+
+        .transaction-icon.expense {
+            background: #ffebee;
+            color: #ff3b30;
+        }
+
+        .transaction-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .transaction-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+
+        .transaction-meta {
+            font-size: 13px;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .transaction-amount {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .transaction-amount.income {
+            color: #4cd964;
+        }
+
+        .transaction-amount.expense {
+            color: #ff3b30;
+        }
+
+        .recurring-section {
+            background: #fff;
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            margin-bottom: 24px;
+        }
+
+        .recurring-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .recurring-item:last-child {
+            border-bottom: none;
+        }
+
+        .recurring-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .recurring-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .recurring-details {
+            flex: 1;
+        }
+
+        .recurring-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 2px;
+        }
+
+        .recurring-date {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .recurring-amount {
+            font-size: 15px;
+            font-weight: 700;
+            color: #ff3b30;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        .empty-state-text {
+            font-size: 14px;
+        }
+
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 20px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #999;
+            padding: 8px;
+            transition: color 0.2s;
+        }
+
+        .nav-item.active {
+            color: #667eea;
+        }
+
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .nav-label {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .home-indicator {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 134px;
+            height: 5px;
+            background: #000;
+            border-radius: 3px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        @media (max-width: 480px) {
+            .phone-container {
+                max-width: 100%;
+                border-radius: 0;
+                padding: 0;
+            }
+
+            .phone-screen {
+                border-radius: 0;
+            }
+
+            body {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-container">
+        <div class="phone-screen">
+            <div class="status-bar">
+                <div class="status-left">
+                    <span>9:41</span>
+                </div>
+                <div class="status-right">
+                    <div class="signal-bars">
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                    </div>
+                    <div class="battery">
+                        <div class="battery-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content">
+                <div class="header">
+                    <div class="header-top">
+                        <div>
+                            <div class="greeting" id="greeting">Good morning</div>
+                            <div class="user-name" id="userName">John Doe</div>
+                        </div>
+                        <button class="profile-button" id="profileButton">👤</button>
+                    </div>
+
+                    <div class="balance-section">
+                        <div class="balance-label">Total Balance</div>
+                        <div class="balance-amount" id="totalBalance">$0.00</div>
+                    </div>
+
+                    <div class="summary-cards">
+                        <div class="summary-card">
+                            <div class="summary-label">Income</div>
+                            <div class="summary-amount income" id="totalIncome">$0.00</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-label">Expenses</div>
+                            <div class="summary-amount expense" id="totalExpenses">$0.00</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="main-content">
+                    <div class="quick-actions">
+                        <a href="#" class="quick-action" id="addIncome">
+                            <div class="quick-action-icon">➕</div>
+                            <div class="quick-action-label">Income</div>
+                        </a>
+                        <a href="#" class="quick-action" id="addExpense">
+                            <div class="quick-action-icon">➖</div>
+                            <div class="quick-action-label">Expense</div>
+                        </a>
+                        <a href="#" class="quick-action" id="recurring">
+                            <div class="quick-action-icon">🔄</div>
+                            <div class="quick-action-label">Recurring</div>
+                        </a>
+                        <a href="#" class="quick-action" id="categories">
+                            <div class="quick-action-icon">📁</div>
+                            <div class="quick-action-label">Categories</div>
+                        </a>
+                    </div>
+
+                    <div class="section-title">
+                        <span>Recent Transactions</span>
+                        <a href="#" class="section-link">See All</a>
+                    </div>
+
+                    <div class="transactions-list" id="transactionsList">
+                        <div class="loading">Loading transactions...</div>
+                    </div>
+
+                    <div class="section-title">
+                        <span>Upcoming Payments</span>
+                        <a href="#" class="section-link">See All</a>
+                    </div>
+
+                    <div class="recurring-section" id="recurringList">
+                        <div class="loading">Loading recurring expenses...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-nav">
+                <a href="#" class="nav-item active">
+                    <div class="nav-icon">🏠</div>
+                    <div class="nav-label">Home</div>
+                </a>
+                <a href="#" class="nav-item">
+                    <div class="nav-icon">📊</div>
+                    <div class="nav-label">Analytics</div>
+                </a>
+                <a href="#" class="nav-item">
+                    <div class="nav-icon">💳</div>
+                    <div class="nav-label">Cards</div>
+                </a>
+                <a href="#" class="nav-item">
+                    <div class="nav-icon">⚙️</div>
+                    <div class="nav-label">Settings</div>
+                </a>
+            </div>
+
+            <div class="home-indicator"></div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Formats a number as currency
+         * @param {number} amount - Amount to format
+         * @returns {string} Formatted currency string
+         */
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+            }).format(amount);
+        }
+
+        /**
+         * Formats a date to a readable string
+         * @param {string|Date} date - Date to format
+         * @returns {string} Formatted date string
+         */
+        function formatDate(date) {
+            const d = new Date(date);
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            if (d.toDateString() === today.toDateString()) {
+                return 'Today';
+            } else if (d.toDateString() === yesterday.toDateString()) {
+                return 'Yesterday';
+            } else {
+                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            }
+        }
+
+        /**
+         * Gets greeting based on time of day
+         * @returns {string} Greeting message
+         */
+        function getGreeting() {
+            const hour = new Date().getHours();
+            if (hour < 12) return 'Good morning';
+            if (hour < 18) return 'Good afternoon';
+            return 'Good evening';
+        }
+
+        /**
+         * Gets category icon based on category name
+         * @param {string} categoryName - Name of the category
+         * @returns {string} Emoji icon
+         */
+        function getCategoryIcon(categoryName) {
+            const icons = {
+                'food': '🍔',
+                'dining': '🍔',
+                'restaurant': '🍽️',
+                'groceries': '🛒',
+                'transport': '🚗',
+                'transportation': '🚗',
+                'shopping': '🛍️',
+                'entertainment': '🎬',
+                'bills': '📄',
+                'utilities': '💡',
+                'health': '🏥',
+                'salary': '💰',
+                'income': '💵',
+                'subscription': '📱',
+                'default': '📝',
+            };
+
+            const lowerName = categoryName.toLowerCase();
+            for (const [key, icon] of Object.entries(icons)) {
+                if (lowerName.includes(key)) {
+                    return icon;
+                }
+            }
+            return icons.default;
+        }
+
+        /**
+         * Fetches transaction history from API
+         * @param {string} token - Authentication token
+         * @returns {Promise<Array>} Array of transactions
+         */
+        async function fetchTransactions(token) {
+            const baseUrl = 'http://localhost:3000';
+            const response = await fetch(`${baseUrl}/transactions/history`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch transactions');
+            }
+
+            const result = await response.json();
+            return result.data || [];
+        }
+
+        /**
+         * Fetches recurring expenses from API
+         * @param {string} token - Authentication token
+         * @returns {Promise<Array>} Array of recurring expenses
+         */
+        async function fetchRecurringExpenses(token) {
+            const baseUrl = 'http://localhost:3000';
+            const response = await fetch(`${baseUrl}/recurring-expenses`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch recurring expenses');
+            }
+
+            const result = await response.json();
+            return result.data || [];
+        }
+
+        /**
+         * Calculates financial summary from transactions
+         * @param {Array} transactions - Array of transactions
+         * @returns {Object} Object with totalIncome, totalExpenses, and balance
+         */
+        function calculateSummary(transactions) {
+            let totalIncome = 0;
+            let totalExpenses = 0;
+
+            transactions.forEach(transaction => {
+                if (transaction.type === 'INCOME') {
+                    totalIncome += transaction.amount;
+                } else {
+                    totalExpenses += transaction.amount;
+                }
+            });
+
+            return {
+                totalIncome,
+                totalExpenses,
+                balance: totalIncome - totalExpenses,
+            };
+        }
+
+        /**
+         * Renders transactions list
+         * @param {Array} transactions - Array of transactions
+         */
+        function renderTransactions(transactions) {
+            const container = document.getElementById('transactionsList');
+            
+            if (transactions.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <div class="empty-state-text">No transactions yet</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort by date (newest first) and take first 5
+            const sorted = transactions
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .slice(0, 5);
+
+            container.innerHTML = sorted.map(transaction => {
+                const icon = getCategoryIcon(transaction.category?.name || 'default');
+                const isIncome = transaction.type === 'INCOME';
+                
+                return `
+                    <div class="transaction-item">
+                        <div class="transaction-icon ${isIncome ? 'income' : 'expense'}">
+                            ${icon}
+                        </div>
+                        <div class="transaction-details">
+                            <div class="transaction-name">${transaction.description || 'Transaction'}</div>
+                            <div class="transaction-meta">
+                                <span>${transaction.category?.name || 'Uncategorized'}</span>
+                                <span>•</span>
+                                <span>${formatDate(transaction.date)}</span>
+                            </div>
+                        </div>
+                        <div class="transaction-amount ${isIncome ? 'income' : 'expense'}">
+                            ${isIncome ? '+' : '-'}${formatCurrency(transaction.amount)}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /**
+         * Renders recurring expenses list
+         * @param {Array} recurringExpenses - Array of recurring expenses
+         */
+        function renderRecurringExpenses(recurringExpenses) {
+            const container = document.getElementById('recurringList');
+            
+            if (recurringExpenses.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔄</div>
+                        <div class="empty-state-text">No recurring expenses</div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Filter active and sort by next payment date
+            const active = recurringExpenses
+                .filter(expense => expense.isActive)
+                .sort((a, b) => new Date(a.nextPaymentDate) - new Date(b.nextPaymentDate))
+                .slice(0, 3);
+
+            if (active.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">✅</div>
+                        <div class="empty-state-text">No upcoming payments</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = active.map(expense => {
+                const nextDate = new Date(expense.nextPaymentDate);
+                const daysUntil = Math.ceil((nextDate - new Date()) / (1000 * 60 * 60 * 24));
+                const dateText = daysUntil === 0 
+                    ? 'Today' 
+                    : daysUntil === 1 
+                    ? 'Tomorrow' 
+                    : `${daysUntil} days`;
+
+                return `
+                    <div class="recurring-item">
+                        <div class="recurring-info">
+                            <div class="recurring-icon">🔄</div>
+                            <div class="recurring-details">
+                                <div class="recurring-name">${expense.name}</div>
+                                <div class="recurring-date">${dateText}</div>
+                            </div>
+                        </div>
+                        <div class="recurring-amount">${formatCurrency(expense.amount)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /**
+         * Loads and displays all data on the home page
+         */
+        async function loadHomeData() {
+            const token = localStorage.getItem('authToken');
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+
+            // Set user name
+            if (userData.name) {
+                document.getElementById('userName').textContent = userData.name;
+            }
+
+            // Set greeting
+            document.getElementById('greeting').textContent = getGreeting();
+
+            try {
+                // Fetch transactions and recurring expenses in parallel
+                const [transactions, recurringExpenses] = await Promise.all([
+                    fetchTransactions(token),
+                    fetchRecurringExpenses(token),
+                ]);
+
+                // Calculate and display summary
+                const summary = calculateSummary(transactions);
+                document.getElementById('totalBalance').textContent = formatCurrency(summary.balance);
+                document.getElementById('totalIncome').textContent = formatCurrency(summary.totalIncome);
+                document.getElementById('totalExpenses').textContent = formatCurrency(summary.totalExpenses);
+
+                // Render lists
+                renderTransactions(transactions);
+                renderRecurringExpenses(recurringExpenses);
+            } catch (error) {
+                console.error('Error loading data:', error);
+                // Show error state
+                document.getElementById('transactionsList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <div class="empty-state-text">Failed to load data</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadHomeData();
+
+            // Quick action handlers
+            document.getElementById('addIncome').addEventListener('click', (e) => {
+                e.preventDefault();
+                alert('Add Income - Feature coming soon!');
+            });
+
+            document.getElementById('addExpense').addEventListener('click', (e) => {
+                e.preventDefault();
+                alert('Add Expense - Feature coming soon!');
+            });
+
+            document.getElementById('recurring').addEventListener('click', (e) => {
+                e.preventDefault();
+                alert('Recurring Expenses - Feature coming soon!');
+            });
+
+            document.getElementById('categories').addEventListener('click', (e) => {
+                e.preventDefault();
+                alert('Categories - Feature coming soon!');
+            });
+
+            document.getElementById('profileButton').addEventListener('click', () => {
+                alert('Profile - Feature coming soon!');
+            });
+        });
+    </script>
+</body>
+</html>

@@ -43,7 +43,13 @@ export const authMiddleware = (tokenService: ITokenService) => {
 
       next();
     } catch (error) {
-      next(error);
+      // Ensure all token-related errors are UnauthorizedError with 401 status
+      if (error instanceof UnauthorizedError) {
+        next(error);
+      } else {
+        // Convert any other errors (e.g., from token verification) to UnauthorizedError
+        next(new UnauthorizedError('Invalid or expired token'));
+      }
     }
   };
 };

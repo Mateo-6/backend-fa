@@ -40,6 +40,15 @@ export interface TransactionRepository {
   findById(id: string): Promise<Transaction | null>;
 
   /**
+   * Updates an existing transaction with the provided partial payload.
+   *
+   * @param {string} id Transaction identifier.
+   * @param {Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>} data Fields to update.
+   * @returns {Promise<Transaction | null>} Updated transaction or null when missing.
+   */
+  update(id: string, data: Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>): Promise<Transaction | null>;
+
+  /**
    * Removes a transaction by identifier.
    *
    * @param {string} id Transaction identifier.

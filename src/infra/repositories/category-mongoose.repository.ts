@@ -1,5 +1,5 @@
 import { CategoryRepository } from '../../domain/category/repositories/category.repository';
-import { Category } from '../../domain/category/types/category.types';
+import { Category, CategoryType } from '../../domain/category/types/category.types';
 import { CategoryModel, ICategoryDocument } from '../database/models/category.model';
 import { getMongooseInstance } from '../database/mongoose-client';
 import { UserModel } from '../database/models/user.model';
@@ -16,6 +16,7 @@ export class CategoryMongooseRepository implements CategoryRepository {
     const createdCategory = await CategoryModel.create({
       name: category.name,
       description: category.description,
+      type: category.type,
       user: category.userId,
     });
     await UserModel.findByIdAndUpdate(createdCategory.user, {
@@ -37,13 +38,19 @@ export class CategoryMongooseRepository implements CategoryRepository {
 
   /**
    * Retrieves the categories that belong to the provided user.
+   * Optionally filters by category type.
    *
    * @param {string} userId Owner identifier.
+   * @param {CategoryType | undefined} type Optional category type filter (income or expense).
    * @returns {Promise<Category[]>} Categories tied to the user.
    */
-  async findAllByUser(userId: string): Promise<Category[]> {
+  async findAllByUser(userId: string, type?: CategoryType): Promise<Category[]> {
     await getMongooseInstance();
-    const categories = await CategoryModel.find({ user: userId }).sort({ createdAt: -1 }).exec();
+    const query: Record<string, unknown> = { user: userId };
+    if (type) {
+      query.type = type;
+    }
+    const categories = await CategoryModel.find(query).sort({ createdAt: -1 }).exec();
     return categories.map((category) => this.toDomain(category));
   }
 
@@ -77,6 +84,9 @@ export class CategoryMongooseRepository implements CategoryRepository {
     }
     if (typeof data.description === 'string') {
       mappedData.description = data.description;
+    }
+    if (typeof data.type === 'string') {
+      mappedData.type = data.type;
     }
     const category = await CategoryModel.findByIdAndUpdate(
       id,
@@ -118,6 +128,7 @@ export class CategoryMongooseRepository implements CategoryRepository {
       id: doc.id,
       name: doc.name,
       description: doc.description ?? undefined,
+      type: doc.type,
       userId: doc.user.toString(),
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,

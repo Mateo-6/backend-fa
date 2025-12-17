@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Financial App - Payment Methods</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .phone-container {
+            width: 100%;
+            max-width: 375px;
+            background: #000;
+            border-radius: 40px;
+            padding: 8px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .phone-screen {
+            background: #f5f5f7;
+            border-radius: 32px;
+            overflow: hidden;
+            min-height: 667px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .status-bar {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: #fff;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-left {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-right {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .signal-bars {
+            display: flex;
+            gap: 2px;
+            align-items: flex-end;
+        }
+
+        .bar {
+            width: 3px;
+            background: #fff;
+            border-radius: 1px;
+        }
+
+        .bar:nth-child(1) { height: 4px; }
+        .bar:nth-child(2) { height: 6px; }
+        .bar:nth-child(3) { height: 8px; }
+        .bar:nth-child(4) { height: 10px; }
+
+        .battery {
+            width: 24px;
+            height: 12px;
+            border: 1px solid #fff;
+            border-radius: 2px;
+            position: relative;
+            background: #fff;
+        }
+
+        .battery::after {
+            content: '';
+            position: absolute;
+            right: -3px;
+            top: 3px;
+            width: 2px;
+            height: 6px;
+            background: #fff;
+            border-radius: 0 1px 1px 0;
+        }
+
+        .battery-fill {
+            width: 80%;
+            height: 100%;
+            background: #4cd964;
+            border-radius: 1px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            padding: 16px 20px 20px;
+            color: #fff;
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .back-button {
+            width: 36px;
+            height: 36px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 700;
+            flex: 1;
+            text-align: center;
+        }
+
+        .header-actions {
+            width: 36px;
+        }
+
+        .summary-section {
+            text-align: center;
+        }
+
+        .summary-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .summary-count {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            padding-bottom: 80px;
+        }
+
+        .payment-methods-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .payment-method-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            cursor: pointer;
+            transition: transform 0.2s;
+            position: relative;
+        }
+
+        .payment-method-card:active {
+            transform: scale(0.98);
+        }
+
+        .payment-method-card.credit-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        .payment-method-card.bank-account {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: #fff;
+        }
+
+        .payment-method-card.cash {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+            color: #fff;
+        }
+
+        .payment-method-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .payment-method-info {
+            flex: 1;
+        }
+
+        .payment-method-type {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .payment-method-name {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .payment-method-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .payment-action-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .payment-action-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .payment-method-details {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .detail-label {
+            font-weight: 500;
+        }
+
+        .detail-value {
+            font-weight: 600;
+        }
+
+        .credit-limit-bar {
+            margin-top: 12px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .credit-limit-fill {
+            height: 100%;
+            background: #fff;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state-text {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .empty-state-subtext {
+            font-size: 14px;
+            opacity: 0.7;
+        }
+
+        .fab {
+            position: absolute;
+            bottom: 100px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 28px;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+
+        .fab:active {
+            transform: scale(0.95);
+        }
+
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-around;
+            padding: 8px 0 20px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #999;
+            padding: 8px;
+            transition: color 0.2s;
+        }
+
+        .nav-item.active {
+            color: #3498db;
+        }
+
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        .nav-label {
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .home-indicator {
+            position: absolute;
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 134px;
+            height: 5px;
+            background: #000;
+            border-radius: 3px;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #fff;
+            border-radius: 24px 24px 0 0;
+            width: 100%;
+            max-width: 375px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 16px;
+            background: #f0f0f0;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            background: #f8f9fa;
+            color: #333;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #3498db;
+            background: #fff;
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            background: #f8f9fa;
+            color: #333;
+            cursor: pointer;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: #3498db;
+            background: #fff;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .details-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #f0f0f0;
+        }
+
+        .details-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 16px;
+        }
+
+        .form-actions {
+            padding: 20px;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: #fff;
+        }
+
+        .btn-danger {
+            background: #ff3b30;
+            color: #fff;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .delete-confirm {
+            display: none;
+            padding: 20px;
+            border-top: 1px solid #f0f0f0;
+            text-align: center;
+        }
+
+        .delete-confirm.show {
+            display: block;
+        }
+
+        .delete-confirm-text {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+
+        .delete-confirm-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .details-container {
+            display: none;
+        }
+
+        .details-container.show {
+            display: block;
+        }
+
+        @media (max-width: 480px) {
+            .phone-container {
+                max-width: 100%;
+                border-radius: 0;
+                padding: 0;
+            }
+
+            .phone-screen {
+                border-radius: 0;
+            }
+
+            body {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="phone-container">
+        <div class="phone-screen">
+            <div class="status-bar">
+                <div class="status-left">
+                    <span>9:41</span>
+                </div>
+                <div class="status-right">
+                    <div class="signal-bars">
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                    </div>
+                    <div class="battery">
+                        <div class="battery-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="header">
+                <div class="header-top">
+                    <button class="back-button">←</button>
+                    <div class="header-title">Payment Methods</div>
+                    <div class="header-actions"></div>
+                </div>
+                <div class="summary-section">
+                    <div class="summary-label">Total Payment Methods</div>
+                    <div class="summary-count">4</div>
+                </div>
+            </div>
+
+            <div class="content">
+                <div class="payment-methods-list" id="paymentMethodsList">
+                    <div class="payment-method-card credit-card" data-payment='{"id":"1","name":"Visa Credit Card","type":"CREDIT_CARD","currency":"USD","details":{"cut_off_day":15,"payment_day":5,"credit_limit":5000,"current_balance":1250.50}}'>
+                        <div class="payment-method-header">
+                            <div class="payment-method-info">
+                                <div class="payment-method-type">Credit Card</div>
+                                <div class="payment-method-name">Visa Credit Card</div>
+                            </div>
+                            <div class="payment-method-actions">
+                                <button class="payment-action-btn" onclick="event.stopPropagation(); editPaymentMethod(this.closest('.payment-method-card'))">✏️</button>
+                                <button class="payment-action-btn" onclick="event.stopPropagation(); deletePaymentMethod(this.closest('.payment-method-card'))">🗑️</button>
+                            </div>
+                        </div>
+                        <div class="payment-method-details">
+                            <div class="detail-item">
+                                <span class="detail-label">Currency</span>
+                                <span class="detail-value">USD</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Credit Limit</span>
+                                <span class="detail-value">$5,000.00</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Current Balance</span>
+                                <span class="detail-value">$1,250.50</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Available</span>
+                                <span class="detail-value">$3,749.50</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Cut-off Day</span>
+                                <span class="detail-value">15th</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Payment Day</span>
+                                <span class="detail-value">5th</span>
+                            </div>
+                            <div class="credit-limit-bar">
+                                <div class="credit-limit-fill" style="width: 25%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="payment-method-card bank-account" data-payment='{"id":"2","name":"Chase Checking Account","type":"BANK_ACCOUNT","currency":"USD","details":{"bank_name":"Chase Bank","account_number":"1234","account_type":"CHECKING"}}'>
+                        <div class="payment-method-header">
+                            <div class="payment-method-info">
+                                <div class="payment-method-type">Bank Account</div>
+                                <div class="payment-method-name">Chase Checking Account</div>
+                            </div>
+                            <div class="payment-method-actions">
+                                <button class="payment-action-btn" onclick="event.stopPropagation(); editPaymentMethod(this.closest('.payment-method-card'))">✏️</button>
+                                <button class="payment-action-btn" onclick="event.stopPropagation(); deletePaymentMethod(this.closest('.payment-method-card'))">🗑️</button>
+                            </div>
+                        </div>
+                        <div class="payment-method-details">
+                            <div class="detail-item">
+                                <span class="detail-label">Currency</span>
+                                <span class="detail-value">USD</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Bank</span>
+                                <span class="detail-value">Chase Bank</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Account Number</span>
+                                <span class="detail-value">****1234</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Account Type</span>
+                                <span class="detail-value">Checking</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="payment-method-card bank-account" data-payment='{"id":"3","name":"Savings Account","type":"BANK_ACCOUNT","currency":"USD","details":{"bank_name":"Bank of America","account_number":"5678","account_type":"SAVINGS"}}'>
+                        <div class="payment-method-header">
+                            <div class="payment-method-info">
+                                <div class="payment-method-type">Bank Account</div>
+                                <div class="payment-method-name">Savings Account</div>
+                            </div>
+                            <div class="payment-method-actions">
+                                <button class="payment-action-btn" onclick="event.stopPropagation(); editPaymentMethod(this.closest('.payment-method-card'))">✏️</button>
+                                <button class="payment-action-btn" onclick="event.stopPropagation(); deletePaymentMethod(this.closest('.payment-method-card'))">🗑️</button>
+                            </div>
+                        </div>
+                        <div class="payment-method-details">
+                            <div class="detail-item">
+                                <span class="detail-label">Currency</span>
+                                <span class="detail-value">USD</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Bank</span>
+                                <span class="detail-value">Bank of America</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Account Number</span>
+                                <span class="detail-value">****5678</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Account Type</span>
+                                <span class="detail-value">Savings</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="payment-method-card cash" data-payment='{"id":"4","name":"Cash Wallet","type":"CASH","currency":"USD","details":{}}'>
+                        <div class="payment-method-header">
+                            <div class="payment-method-info">
+                                <div class="payment-method-type">Cash</div>
+                                <div class="payment-method-name">Cash Wallet</div>
+                            </div>
+                            <div class="payment-method-actions">
+                                <button class="payment-action-btn" onclick="event.stopPropagation(); editPaymentMethod(this.closest('.payment-method-card'))">✏️</button>
+                                <button class="payment-action-btn" onclick="event.stopPropagation(); deletePaymentMethod(this.closest('.payment-method-card'))">🗑️</button>
+                            </div>
+                        </div>
+                        <div class="payment-method-details">
+                            <div class="detail-item">
+                                <span class="detail-label">Currency</span>
+                                <span class="detail-value">USD</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="fab" id="addPaymentMethodBtn">+</button>
+
+            <div class="bottom-nav">
+                <a href="#" class="nav-item">
+                    <div class="nav-icon">🏠</div>
+                    <div class="nav-label">Home</div>
+                </a>
+                <a href="#" class="nav-item active">
+                    <div class="nav-icon">💳</div>
+                    <div class="nav-label">Cards</div>
+                </a>
+                <a href="#" class="nav-item">
+                    <div class="nav-icon">📊</div>
+                    <div class="nav-label">Analytics</div>
+                </a>
+                <a href="#" class="nav-item">
+                    <div class="nav-icon">⚙️</div>
+                    <div class="nav-label">Settings</div>
+                </a>
+            </div>
+
+            <div class="home-indicator"></div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Payment Method Modal -->
+    <div class="modal-overlay" id="paymentMethodModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Add Payment Method</div>
+                <button class="modal-close" id="closeModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="paymentName">Name</label>
+                    <input
+                        type="text"
+                        id="paymentName"
+                        class="form-input"
+                        placeholder="Enter payment method name"
+                        maxlength="100"
+                    />
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="paymentType">Type</label>
+                        <select id="paymentType" class="form-select">
+                            <option value="">Select type</option>
+                            <option value="CREDIT_CARD">Credit Card</option>
+                            <option value="BANK_ACCOUNT">Bank Account</option>
+                            <option value="CASH">Cash</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="paymentCurrency">Currency</label>
+                        <select id="paymentCurrency" class="form-select">
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="GBP">GBP</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Credit Card Details -->
+                <div class="details-container" id="creditCardDetails">
+                    <div class="details-section">
+                        <div class="details-title">Credit Card Details</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="cutOffDay">Cut-off Day</label>
+                                <input
+                                    type="number"
+                                    id="cutOffDay"
+                                    class="form-input"
+                                    placeholder="1-31"
+                                    min="1"
+                                    max="31"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="paymentDay">Payment Day</label>
+                                <input
+                                    type="number"
+                                    id="paymentDay"
+                                    class="form-input"
+                                    placeholder="1-31"
+                                    min="1"
+                                    max="31"
+                                />
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="creditLimit">Credit Limit</label>
+                                <input
+                                    type="number"
+                                    id="creditLimit"
+                                    class="form-input"
+                                    placeholder="0.00"
+                                    step="0.01"
+                                    min="0"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="currentBalance">Current Balance</label>
+                                <input
+                                    type="number"
+                                    id="currentBalance"
+                                    class="form-input"
+                                    placeholder="0.00"
+                                    step="0.01"
+                                    min="0"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bank Account Details -->
+                <div class="details-container" id="bankAccountDetails">
+                    <div class="details-section">
+                        <div class="details-title">Bank Account Details</div>
+                        <div class="form-group">
+                            <label class="form-label" for="bankName">Bank Name</label>
+                            <input
+                                type="text"
+                                id="bankName"
+                                class="form-input"
+                                placeholder="Enter bank name"
+                                maxlength="100"
+                            />
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="accountNumber">Account Number (Last 4)</label>
+                                <input
+                                    type="text"
+                                    id="accountNumber"
+                                    class="form-input"
+                                    placeholder="1234"
+                                    maxlength="4"
+                                    pattern="[0-9]{4}"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="accountType">Account Type</label>
+                                <select id="accountType" class="form-select">
+                                    <option value="">Select type</option>
+                                    <option value="CHECKING">Checking</option>
+                                    <option value="SAVINGS">Savings</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cash Details (empty, no fields needed) -->
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
+                <button class="btn btn-primary" id="saveBtn">Save</button>
+            </div>
+            <div class="delete-confirm" id="deleteConfirm">
+                <div class="delete-confirm-text">Are you sure you want to delete this payment method?</div>
+                <div class="delete-confirm-actions">
+                    <button class="btn btn-secondary" id="cancelDeleteBtn">Cancel</button>
+                    <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPaymentMethodId = null;
+        let isDeleteMode = false;
+
+        /**
+         * Shows/hides detail sections based on payment type
+         * @param {string} type - Payment method type
+         */
+        function toggleDetailsSections(type) {
+            document.getElementById('creditCardDetails').classList.remove('show');
+            document.getElementById('bankAccountDetails').classList.remove('show');
+
+            if (type === 'CREDIT_CARD') {
+                document.getElementById('creditCardDetails').classList.add('show');
+            } else if (type === 'BANK_ACCOUNT') {
+                document.getElementById('bankAccountDetails').classList.add('show');
+            }
+        }
+
+        /**
+         * Opens the modal for adding a new payment method
+         */
+        function openAddModal() {
+            isDeleteMode = false;
+            currentPaymentMethodId = null;
+            document.getElementById('modalTitle').textContent = 'Add Payment Method';
+            document.getElementById('deleteConfirm').classList.remove('show');
+            clearForm();
+            document.getElementById('paymentMethodModal').classList.add('show');
+        }
+
+        /**
+         * Opens the modal for editing an existing payment method
+         * @param {HTMLElement} cardElement - The payment method card element
+         */
+        function editPaymentMethod(cardElement) {
+            isDeleteMode = false;
+            const paymentData = JSON.parse(cardElement.getAttribute('data-payment') || '{}');
+            currentPaymentMethodId = paymentData.id;
+            
+            document.getElementById('modalTitle').textContent = 'Edit Payment Method';
+            document.getElementById('deleteConfirm').classList.remove('show');
+            
+            // Populate form fields
+            document.getElementById('paymentName').value = paymentData.name || '';
+            document.getElementById('paymentType').value = paymentData.type || '';
+            document.getElementById('paymentCurrency').value = paymentData.currency || 'USD';
+            
+            toggleDetailsSections(paymentData.type);
+            
+            // Populate details based on type
+            if (paymentData.type === 'CREDIT_CARD' && paymentData.details) {
+                document.getElementById('cutOffDay').value = paymentData.details.cut_off_day || '';
+                document.getElementById('paymentDay').value = paymentData.details.payment_day || '';
+                document.getElementById('creditLimit').value = paymentData.details.credit_limit || '';
+                document.getElementById('currentBalance').value = paymentData.details.current_balance || '';
+            } else if (paymentData.type === 'BANK_ACCOUNT' && paymentData.details) {
+                document.getElementById('bankName').value = paymentData.details.bank_name || '';
+                document.getElementById('accountNumber').value = paymentData.details.account_number || '';
+                document.getElementById('accountType').value = paymentData.details.account_type || '';
+            }
+            
+            document.getElementById('paymentMethodModal').classList.add('show');
+        }
+
+        /**
+         * Shows delete confirmation for a payment method
+         * @param {HTMLElement} cardElement - The payment method card element
+         */
+        function deletePaymentMethod(cardElement) {
+            const paymentData = JSON.parse(cardElement.getAttribute('data-payment') || '{}');
+            currentPaymentMethodId = paymentData.id;
+            isDeleteMode = true;
+            
+            document.getElementById('modalTitle').textContent = 'Delete Payment Method';
+            document.getElementById('paymentName').value = paymentData.name || '';
+            document.getElementById('paymentName').disabled = true;
+            document.getElementById('paymentType').value = paymentData.type || '';
+            document.getElementById('paymentType').disabled = true;
+            document.getElementById('paymentCurrency').value = paymentData.currency || 'USD';
+            document.getElementById('paymentCurrency').disabled = true;
+            
+            toggleDetailsSections(paymentData.type);
+            document.getElementById('deleteConfirm').classList.add('show');
+            
+            document.getElementById('paymentMethodModal').classList.add('show');
+        }
+
+        /**
+         * Clears all form fields
+         */
+        function clearForm() {
+            document.getElementById('paymentName').value = '';
+            document.getElementById('paymentType').value = '';
+            document.getElementById('paymentCurrency').value = 'USD';
+            document.getElementById('cutOffDay').value = '';
+            document.getElementById('paymentDay').value = '';
+            document.getElementById('creditLimit').value = '';
+            document.getElementById('currentBalance').value = '';
+            document.getElementById('bankName').value = '';
+            document.getElementById('accountNumber').value = '';
+            document.getElementById('accountType').value = '';
+            
+            document.getElementById('paymentName').disabled = false;
+            document.getElementById('paymentType').disabled = false;
+            document.getElementById('paymentCurrency').disabled = false;
+            
+            document.getElementById('creditCardDetails').classList.remove('show');
+            document.getElementById('bankAccountDetails').classList.remove('show');
+        }
+
+        /**
+         * Closes the modal
+         */
+        function closeModal() {
+            document.getElementById('paymentMethodModal').classList.remove('show');
+            isDeleteMode = false;
+            currentPaymentMethodId = null;
+            setTimeout(() => {
+                clearForm();
+                document.getElementById('deleteConfirm').classList.remove('show');
+            }, 300);
+        }
+
+        // Add button click handler
+        document.getElementById('addPaymentMethodBtn').addEventListener('click', openAddModal);
+
+        // Payment type change handler
+        document.getElementById('paymentType').addEventListener('change', (e) => {
+            toggleDetailsSections(e.target.value);
+        });
+
+        // Close button handlers
+        document.getElementById('closeModal').addEventListener('click', closeModal);
+        document.getElementById('cancelBtn').addEventListener('click', closeModal);
+
+        // Save button handler
+        document.getElementById('saveBtn').addEventListener('click', () => {
+            // In a real app, here you would save the payment method
+            // For now, just close the modal
+            closeModal();
+        });
+
+        // Delete confirmation handlers
+        document.getElementById('cancelDeleteBtn').addEventListener('click', closeModal);
+        document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
+            // In a real app, here you would delete the payment method
+            // For now, just close the modal
+            closeModal();
+        });
+
+        // Close modal when clicking overlay
+        document.getElementById('paymentMethodModal').addEventListener('click', (e) => {
+            if (e.target.id === 'paymentMethodModal') {
+                closeModal();
+            }
+        });
+
+        // Add click handlers to payment method cards (for viewing/editing)
+        document.querySelectorAll('.payment-method-card').forEach(card => {
+            card.addEventListener('click', () => {
+                editPaymentMethod(card);
+            });
+        });
+    </script>
+</body>
+</html>
+
+
+

@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "financial-app-api-collection",
 		"name": "Financial App API",
-		"description": "Complete API collection for Financial App - Health, Auth, Users, Categories, Transactions, Recurring Expenses, and Payment Methods",
+		"description": "Complete API collection for Financial App - Health, Auth, Dashboard, Users, Categories, Transactions, Recurring Expenses, and Payment Methods",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -65,6 +65,30 @@
 							"path": ["auth", "login"]
 						},
 						"description": "Login to get JWT token. The token will be automatically saved to environment variable 'auth_token'."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Dashboard",
+			"item": [
+				{
+					"name": "Get Dashboard Data",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/dashboard",
+							"host": ["{{base_url}}"],
+							"path": ["dashboard"]
+						},
+						"description": "Get complete dashboard data for the authenticated user. Returns financial summary (totalBalance, totalIncome, totalExpenses), recent transactions (last 10), and upcoming payments (next 10 active recurring expenses). All calculations are performed server-side."
 					},
 					"response": []
 				}
@@ -201,7 +225,7 @@
 			"name": "Categories",
 			"item": [
 				{
-					"name": "Create Category",
+					"name": "Create Category (Expense)",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -216,14 +240,41 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Food & Dining\",\n    \"description\": \"Restaurants, groceries, and food expenses\"\n}"
+							"raw": "{\n    \"name\": \"Food & Dining\",\n    \"description\": \"Restaurants, groceries, and food expenses\",\n    \"type\": \"expense\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/categories",
 							"host": ["{{base_url}}"],
 							"path": ["categories"]
 						},
-						"description": "Create a new category. Save the category ID for use in transactions."
+						"description": "Create a new expense category. Type must be either 'income' or 'expense'. Save the category ID for use in transactions. The category type must match the transaction type (expense categories for EXPENSE transactions, income categories for INCOME transactions)."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Category (Income)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Salary\",\n    \"description\": \"Monthly salary income\",\n    \"type\": \"income\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/categories",
+							"host": ["{{base_url}}"],
+							"path": ["categories"]
+						},
+						"description": "Create a new income category. Type must be either 'income' or 'expense'. Save the category ID for use in transactions. The category type must match the transaction type (expense categories for EXPENSE transactions, income categories for INCOME transactions)."
 					},
 					"response": []
 				},
@@ -242,7 +293,59 @@
 							"host": ["{{base_url}}"],
 							"path": ["categories"]
 						},
-						"description": "Get all categories for the authenticated user."
+						"description": "Get all categories for the authenticated user. Optionally filter by type using the 'type' query parameter (income or expense)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Categories by Type (Income)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/categories?type=income",
+							"host": ["{{base_url}}"],
+							"path": ["categories"],
+							"query": [
+								{
+									"key": "type",
+									"value": "income",
+									"description": "Filter by category type: 'income' or 'expense'"
+								}
+							]
+						},
+						"description": "Get all income categories for the authenticated user. The 'type' query parameter filters categories by type (income or expense)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Categories by Type (Expense)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/categories?type=expense",
+							"host": ["{{base_url}}"],
+							"path": ["categories"],
+							"query": [
+								{
+									"key": "type",
+									"value": "expense",
+									"description": "Filter by category type: 'income' or 'expense'"
+								}
+							]
+						},
+						"description": "Get all expense categories for the authenticated user. The 'type' query parameter filters categories by type (income or expense)."
 					},
 					"response": []
 				},
@@ -287,7 +390,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Updated Category Name\",\n    \"description\": \"Updated description\"\n}"
+							"raw": "{\n    \"name\": \"Updated Category Name\",\n    \"description\": \"Updated description\",\n    \"type\": \"expense\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/categories/:id",
@@ -300,7 +403,7 @@
 								}
 							]
 						},
-						"description": "Update a category."
+						"description": "Update a category. All fields (name, description, type) are optional, but at least one field must be provided. Type must be either 'income' or 'expense'."
 					},
 					"response": []
 				},
@@ -455,7 +558,59 @@
 								}
 							]
 						},
-						"description": "Get transaction history with optional filters. All query parameters are optional."
+						"description": "Get transaction history with optional filters. All query parameters are optional. Use 'type' parameter to filter by EXPENSE or INCOME."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transaction History (Expenses Only)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/transactions/history?type=EXPENSE",
+							"host": ["{{base_url}}"],
+							"path": ["transactions", "history"],
+							"query": [
+								{
+									"key": "type",
+									"value": "EXPENSE",
+									"description": "Filter by type: INCOME or EXPENSE"
+								}
+							]
+						},
+						"description": "Get all expense transactions for the authenticated user. Use type=EXPENSE to filter expenses only."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transaction History (Income Only)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/transactions/history?type=INCOME",
+							"host": ["{{base_url}}"],
+							"path": ["transactions", "history"],
+							"query": [
+								{
+									"key": "type",
+									"value": "INCOME",
+									"description": "Filter by type: INCOME or EXPENSE"
+								}
+							]
+						},
+						"description": "Get all income transactions for the authenticated user. Use type=INCOME to filter income only."
 					},
 					"response": []
 				},
@@ -475,6 +630,39 @@
 							"path": ["transactions", "history"]
 						},
 						"description": "Get all transactions for the authenticated user without filters."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Transaction (INCOME only)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"amount\": 200.00,\n    \"description\": \"Updated salary payment\",\n    \"date\": \"2024-01-15T10:30:00Z\",\n    \"categoryId\": \"{{category_id}}\",\n    \"paymentMethodId\": \"{{payment_method_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/transactions/:id",
+							"host": ["{{base_url}}"],
+							"path": ["transactions", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{transaction_id}}"
+								}
+							]
+						},
+						"description": "Update an INCOME transaction. Only INCOME transactions can be updated. All fields (amount, description, date, categoryId, paymentMethodId) are optional, but at least one field must be provided. Payment method is optional for INCOME transactions."
 					},
 					"response": []
 				},
