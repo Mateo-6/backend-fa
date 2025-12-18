@@ -149,10 +149,12 @@ export class TransactionService {
     });
 
     // Calculate and update next payment date
+    // For YEARLY frequency, we need the startDate to preserve the original month
     const nextPaymentDate = this.calculateNextPaymentDate(
       new Date(),
       recurringExpense.payDay,
-      recurringExpense.frequency
+      recurringExpense.frequency,
+      recurringExpense.startDate
     );
     await this.recurringExpenseRepository.updateNextPaymentDate(recurringExpenseId, nextPaymentDate);
 
@@ -282,20 +284,32 @@ export class TransactionService {
   /**
    * Calculates the next payment date based on current date, pay day, and frequency.
    *
-   * @param {Date} currentDate Current date.
+   * @param {Date} currentDate Current date (usually the payment processing date).
    * @param {number} payDay Day of the month when payment should occur (1-31).
+   *                        - WEEKLY: This value is ignored (not used in calculation)
+   *                        - MONTHLY: Day of each month when payment occurs
+   *                        - YEARLY: Day of the month, preserving the month from startDate
    * @param {RecurringFrequency} frequency Frequency of the payment (WEEKLY, MONTHLY, YEARLY).
+   * @param {Date} startDate Original start date of the recurring expense. Required for YEARLY frequency to preserve the month.
    * @returns {Date} Calculated next payment date.
    */
-  private calculateNextPaymentDate(currentDate: Date, payDay: number, frequency: RecurringFrequency): Date {
+  private calculateNextPaymentDate(
+    currentDate: Date,
+    payDay: number,
+    frequency: RecurringFrequency,
+    startDate?: Date
+  ): Date {
     let nextDate = new Date(currentDate);
 
     switch (frequency) {
       case RecurringFrequency.WEEKLY:
+        // For weekly, add 7 days from current date
+        // Note: payDay parameter is ignored for WEEKLY frequency
         nextDate.setDate(currentDate.getDate() + 7);
         break;
 
       case RecurringFrequency.MONTHLY:
+        // For monthly, use the pay day of next month
         nextDate.setMonth(currentDate.getMonth() + 1);
         nextDate.setDate(payDay);
         // Handle months with fewer days (e.g., Feb 31 -> Feb 28/29)
@@ -305,9 +319,30 @@ export class TransactionService {
         break;
 
       case RecurringFrequency.YEARLY:
-        nextDate.setFullYear(currentDate.getFullYear() + 1);
-        nextDate.setDate(payDay);
-        // Handle leap years and months with fewer days
+        // For yearly, preserve the month from startDate but use next year
+        // This ensures yearly payments always occur in the same month as the original startDate
+        if (startDate) {
+          nextDate = new Date(startDate);
+          const targetYear = currentDate.getFullYear() + 1;
+          // Check if the same month this year has already passed
+          const thisYearDate = new Date(startDate);
+          thisYearDate.setFullYear(currentDate.getFullYear());
+          thisYearDate.setDate(payDay);
+          
+          if (thisYearDate > currentDate) {
+            // Same month this year hasn't passed yet, use this year
+            nextDate = thisYearDate;
+          } else {
+            // Same month this year has passed, use next year
+            nextDate.setFullYear(targetYear);
+            nextDate.setDate(payDay);
+          }
+        } else {
+          // Fallback if startDate is not provided (should not happen in normal flow)
+          nextDate.setFullYear(currentDate.getFullYear() + 1);
+          nextDate.setDate(payDay);
+        }
+        // Handle leap years and months with fewer days (e.g., Feb 31 -> Feb 28/29)
         if (nextDate.getDate() !== payDay) {
           nextDate.setDate(0); // Last day of previous month
         }

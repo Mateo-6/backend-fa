@@ -95,7 +95,10 @@ export class RecurringExpenseService {
    * Calculates the next payment date based on start date, pay day, and frequency.
    *
    * @param {Date} startDate Start date of the recurring expense.
-   * @param {number} payDay Day of the month when payment should occur (1-31). Only used for MONTHLY and YEARLY frequencies.
+   * @param {number} payDay Day of the month when payment should occur (1-31). 
+   *                        - WEEKLY: This value is ignored (not used in calculation)
+   *                        - MONTHLY: Day of each month when payment occurs
+   *                        - YEARLY: Day of the month, preserving the month from startDate
    * @param {RecurringFrequency} frequency Frequency of the payment (WEEKLY, MONTHLY, YEARLY).
    * @returns {Date} Calculated next payment date.
    */
@@ -106,6 +109,7 @@ export class RecurringExpenseService {
     switch (frequency) {
       case RecurringFrequency.WEEKLY:
         // For weekly, add 7 days from start date (or from now if start date is in the past)
+        // Note: payDay parameter is ignored for WEEKLY frequency
         if (startDate > now) {
           nextDate = new Date(startDate);
         } else {
@@ -136,7 +140,8 @@ export class RecurringExpenseService {
         break;
 
       case RecurringFrequency.YEARLY:
-        // For yearly, use the pay day of the month in the next year
+        // For yearly, use the pay day of the same month as startDate in the next year
+        // This preserves the month from startDate (e.g., if startDate is January, next payment is also in January)
         if (startDate > now) {
           nextDate = new Date(startDate);
           nextDate.setDate(payDay);
@@ -146,11 +151,24 @@ export class RecurringExpenseService {
             nextDate.setDate(payDay);
           }
         } else {
-          nextDate = new Date(now);
-          nextDate.setFullYear(now.getFullYear() + 1);
-          nextDate.setDate(payDay);
+          // Preserve the month from startDate, but calculate for next year
+          nextDate = new Date(startDate);
+          const targetYear = now.getFullYear() + 1;
+          // Check if the target date has already passed this year, if so use next year
+          const thisYearDate = new Date(startDate);
+          thisYearDate.setFullYear(now.getFullYear());
+          thisYearDate.setDate(payDay);
+          
+          if (thisYearDate > now) {
+            // Same month this year hasn't passed yet, use this year
+            nextDate = thisYearDate;
+          } else {
+            // Same month this year has passed, use next year
+            nextDate.setFullYear(targetYear);
+            nextDate.setDate(payDay);
+          }
         }
-        // Handle leap years and months with fewer days
+        // Handle leap years and months with fewer days (e.g., Feb 31 -> Feb 28/29)
         if (nextDate.getDate() !== payDay) {
           nextDate.setDate(0); // Last day of previous month
         }

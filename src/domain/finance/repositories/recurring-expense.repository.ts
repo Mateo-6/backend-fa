@@ -53,5 +53,14 @@ export interface RecurringExpenseRepository {
    * @returns {Promise<RecurringExpense | null>} Updated recurring expense or null when missing.
    */
   updateNextPaymentDate(id: string, nextPaymentDate: Date): Promise<RecurringExpense | null>;
+
+  /**
+   * Finds all active recurring expenses that are due for payment.
+   * Returns recurring expenses where nextPaymentDate is less than or equal to the provided date.
+   *
+   * @param {Date} date Date to check against (typically today's date).
+   * @returns {Promise<RecurringExpense[]>} Collection of recurring expenses due for payment.
+   */
+  findDueForPayment(date: Date): Promise<RecurringExpense[]>;
 }
 

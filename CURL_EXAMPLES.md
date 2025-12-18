@@ -156,6 +156,9 @@ curl -X POST "${BASE_URL}/recurring-expenses" \
 
 **Frequency options:** `"WEEKLY"`, `"MONTHLY"`, `"YEARLY"`  
 **payDay:** Day of the month (1-31)
+  - **WEEKLY**: This value is accepted but ignored. Payment occurs 7 days from startDate.
+  - **MONTHLY**: Payment occurs on this day of each month (e.g., payDay: 15 = 15th of every month).
+  - **YEARLY**: Payment occurs on this day, preserving the month from startDate (e.g., if startDate is January 15th and payDay is 1, payment is January 1st each year).
 
 ### Get All Recurring Expenses
 ```bash

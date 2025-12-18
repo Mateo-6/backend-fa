@@ -141,6 +141,27 @@ export class RecurringExpenseMongooseRepository implements RecurringExpenseRepos
   }
 
   /**
+   * Finds all active recurring expenses that are due for payment.
+   * Returns recurring expenses where nextPaymentDate is less than or equal to the provided date.
+   *
+   * @param {Date} date Date to check against (typically today's date).
+   * @returns {Promise<RecurringExpense[]>} Collection of recurring expenses due for payment.
+   */
+  async findDueForPayment(date: Date): Promise<RecurringExpense[]> {
+    await getMongooseInstance();
+    // Set time to end of day to include all expenses due today
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const recurringExpenses = await RecurringExpenseModel.find({
+      isActive: true,
+      nextPaymentDate: { $lte: endOfDay },
+    }).exec();
+
+    return recurringExpenses.map((recurringExpense) => this.toDomain(recurringExpense));
+  }
+
+  /**
    * Maps a mongoose document to the domain type.
    *
    * @param {IRecurringExpenseDocument} doc Mongoose document.
