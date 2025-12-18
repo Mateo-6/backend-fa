@@ -32,8 +32,8 @@ export class NotFoundError extends AppError {
    */
   constructor(resource: string, identifier?: string) {
     const message = identifier
-      ? `${resource} with id '${identifier}' not found`
-      : `${resource} not found`;
+      ? `${resource} con id '${identifier}' no encontrado`
+      : `${resource} no encontrado`;
     super(message, 404);
   }
 }
@@ -48,7 +48,7 @@ export class UnauthorizedError extends AppError {
    *
    * @param {string} message Optional custom error message (default: "Unauthorized").
    */
-  constructor(message: string = 'Unauthorized') {
+  constructor(message: string = 'No autorizado') {
     super(message, 401);
   }
 }
@@ -63,7 +63,7 @@ export class ForbiddenError extends AppError {
    *
    * @param {string} message Optional custom error message (default: "Forbidden").
    */
-  constructor(message: string = 'Forbidden: You do not have permission to access this resource') {
+  constructor(message: string = 'Prohibido: No tienes permiso para acceder a este recurso') {
     super(message, 403);
   }
 }

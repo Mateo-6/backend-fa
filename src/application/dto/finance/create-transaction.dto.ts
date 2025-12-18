@@ -14,23 +14,23 @@ export const createTransactionSchema: z.ZodType<{
   paymentMethodId?: string;
 }> = z
   .object({
-    amount: z.number().positive('Amount must be positive'),
-    description: z.string().min(1, 'Description is required').max(500, 'Description must be less than 500 characters'),
+    amount: z.number().positive('El monto debe ser positivo'),
+    description: z.string().min(1, 'La descripción es requerida').max(500, 'La descripción debe tener menos de 500 caracteres'),
     date: z
       .union([z.string(), z.date()])
       .transform((val) => (typeof val === 'string' ? new Date(val) : val))
-      .refine((val) => !isNaN(val.getTime()), { message: 'Invalid date format' }),
+      .refine((val) => !isNaN(val.getTime()), { message: 'Formato de fecha inválido' }),
     type: z.nativeEnum(TransactionType, {
-      errorMap: () => ({ message: 'Type must be either INCOME or EXPENSE' }),
+      errorMap: () => ({ message: 'El tipo debe ser INCOME o EXPENSE' }),
     }),
-    categoryId: z.string().min(1, 'Category ID is required'),
-    paymentMethodId: z.string().min(1, 'Payment method ID is required').optional(),
+    categoryId: z.string().min(1, 'El ID de categoría es requerido'),
+    paymentMethodId: z.string().min(1, 'El ID del método de pago es requerido').optional(),
   })
   .superRefine((data, ctx) => {
     if (data.type === TransactionType.EXPENSE && (!data.paymentMethodId || data.paymentMethodId.trim() === '')) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Payment method ID is required for EXPENSE transactions',
+        message: 'El ID del método de pago es requerido para transacciones de tipo EXPENSE',
         path: ['paymentMethodId'],
       });
     }

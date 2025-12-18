@@ -17,14 +17,14 @@ export const authMiddleware = (tokenService: ITokenService) => {
       const authHeader = req.headers.authorization;
 
       if (!authHeader) {
-        throw new UnauthorizedError('Authorization header is required');
+        throw new UnauthorizedError('Se requiere el encabezado de autorización');
       }
 
       // Check if header follows "Bearer <token>" format
       const parts = authHeader.split(' ');
 
       if (parts.length !== 2 || parts[0] !== 'Bearer') {
-        throw new UnauthorizedError('Invalid authorization header format. Expected: Bearer <token>');
+        throw new UnauthorizedError('Formato de encabezado de autorización inválido. Se espera: Bearer <token>');
       }
 
       const token = parts[1];
@@ -33,7 +33,7 @@ export const authMiddleware = (tokenService: ITokenService) => {
       const decoded = tokenService.verify(token) as { id: string };
 
       if (!decoded.id) {
-        throw new UnauthorizedError('Invalid token payload');
+        throw new UnauthorizedError('Carga útil del token inválida');
       }
 
       // Attach user info to request
@@ -48,7 +48,7 @@ export const authMiddleware = (tokenService: ITokenService) => {
         next(error);
       } else {
         // Convert any other errors (e.g., from token verification) to UnauthorizedError
-        next(new UnauthorizedError('Invalid or expired token'));
+        next(new UnauthorizedError('Token inválido o expirado'));
       }
     }
   };

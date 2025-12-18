@@ -25,7 +25,7 @@ export class RecurringExpenseController {
    */
   public async create(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) {
-      throw new UnauthorizedError('User not authenticated');
+      throw new UnauthorizedError('Usuario no autenticado');
     }
 
     const createRecurringDto: CreateRecurringDto = req.body;
@@ -43,7 +43,7 @@ export class RecurringExpenseController {
    */
   public async getAll(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) {
-      throw new UnauthorizedError('User not authenticated');
+      throw new UnauthorizedError('Usuario no autenticado');
     }
 
     const recurringExpenses = await this.recurringExpenseService.findAllByUser(req.user.id);
@@ -60,7 +60,7 @@ export class RecurringExpenseController {
    */
   public async update(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) {
-      throw new UnauthorizedError('User not authenticated');
+      throw new UnauthorizedError('Usuario no autenticado');
     }
 
     const { id } = req.params;
@@ -79,12 +79,12 @@ export class RecurringExpenseController {
    */
   public async delete(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) {
-      throw new UnauthorizedError('User not authenticated');
+      throw new UnauthorizedError('Usuario no autenticado');
     }
 
     const { id } = req.params;
     await this.recurringExpenseService.delete(id, req.user.id);
-    sendSuccess(res, { message: 'Recurring expense deleted successfully' }, 200);
+    sendSuccess(res, { message: 'Gasto recurrente eliminado exitosamente' }, 200);
   }
 }
 

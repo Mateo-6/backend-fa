@@ -40,12 +40,12 @@ export class AuthService {
     // Find user by email
     const user = await this.userRepository.findByEmail(loginData.email);
     if (!user) {
-      throw new UnauthorizedError('Invalid credentials');
+      throw new UnauthorizedError('Credenciales inválidas');
     }
 
     // Verify password
     if (!user.password) {
-      throw new UnauthorizedError('Invalid credentials');
+      throw new UnauthorizedError('Credenciales inválidas');
     }
 
     const isPasswordValid = await this.passwordService.compare(
@@ -54,7 +54,7 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
-      throw new UnauthorizedError('Invalid credentials');
+      throw new UnauthorizedError('Credenciales inválidas');
     }
 
     // Generate token with user id

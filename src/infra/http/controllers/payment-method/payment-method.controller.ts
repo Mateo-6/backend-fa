@@ -24,7 +24,7 @@ export class PaymentMethodController {
    */
   public async create(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) {
-      throw new UnauthorizedError('User not authenticated');
+      throw new UnauthorizedError('Usuario no autenticado');
     }
 
     const createPaymentMethodDto: CreatePaymentMethodDto = req.body;
@@ -42,7 +42,7 @@ export class PaymentMethodController {
    */
   public async getAll(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) {
-      throw new UnauthorizedError('User not authenticated');
+      throw new UnauthorizedError('Usuario no autenticado');
     }
 
     const paymentMethods = await this.paymentMethodService.findAllByUser(req.user.id);
@@ -58,19 +58,19 @@ export class PaymentMethodController {
    */
   public async calculatePaymentDueDate(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) {
-      throw new UnauthorizedError('User not authenticated');
+      throw new UnauthorizedError('Usuario no autenticado');
     }
 
     const { id } = req.params;
     const { transactionDate } = req.query;
 
     if (!transactionDate || typeof transactionDate !== 'string') {
-      throw new NotFoundError('TransactionDate', 'Transaction date query parameter is required');
+      throw new NotFoundError('TransactionDate', 'Se requiere el parámetro de consulta de fecha de transacción');
     }
 
     const date = new Date(transactionDate);
     if (isNaN(date.getTime())) {
-      throw new NotFoundError('TransactionDate', 'Invalid transaction date format. Use ISO 8601 format');
+      throw new NotFoundError('TransactionDate', 'Formato de fecha de transacción inválido. Usa el formato ISO 8601');
     }
 
     const dueDate = await this.paymentMethodService.calculatePaymentDueDate(id, date);
@@ -87,7 +87,7 @@ export class PaymentMethodController {
    */
   public async delete(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) {
-      throw new UnauthorizedError('User not authenticated');
+      throw new UnauthorizedError('Usuario no autenticado');
     }
 
     const { id } = req.params;

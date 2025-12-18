@@ -143,7 +143,7 @@ export class PaymentMethodService {
       throw new NotFoundError('PaymentMethod', paymentMethodId);
     }
     if (paymentMethod.userId !== userId) {
-      throw new ForbiddenError('You do not have permission to access this payment method');
+      throw new ForbiddenError('No tienes permiso para acceder a este método de pago');
     }
     return paymentMethod;
   }

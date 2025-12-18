@@ -41,7 +41,7 @@ export class JwtTokenService implements ITokenService {
     try {
       return jwt.verify(token, this.secret) as object;
     } catch (error) {
-      throw new UnauthorizedError('Invalid or expired token');
+      throw new UnauthorizedError('Token inválido o expirado');
     }
   }
 }

@@ -11,20 +11,20 @@ export const updateUserSchema: z.ZodType<
   .object({
     username: z
       .string()
-      .min(1, 'Username is required')
-      .max(100, 'Username must be less than 100 characters')
+      .min(1, 'El nombre de usuario es requerido')
+      .max(100, 'El nombre de usuario debe tener menos de 100 caracteres')
       .optional(),
     name: z
       .string()
-      .min(1, 'Name is required')
-      .max(100, 'Name must be less than 100 characters')
+      .min(1, 'El nombre es requerido')
+      .max(100, 'El nombre debe tener menos de 100 caracteres')
       .optional(),
     phone: z
       .string()
-      .min(1, 'Phone is required')
-      .max(100, 'Phone must be less than 100 characters')
+      .min(1, 'El teléfono es requerido')
+      .max(100, 'El teléfono debe tener menos de 100 caracteres')
       .optional(),
-    email: z.string().email('Invalid email format').optional(),
+    email: z.string().email('Formato de email inválido').optional(),
   })
   .refine(
     (data) =>
@@ -32,7 +32,7 @@ export const updateUserSchema: z.ZodType<
       typeof data.name === 'string' ||
       typeof data.phone === 'string' ||
       typeof data.email === 'string',
-    'Provide at least one field to update'
+    'Proporciona al menos un campo para actualizar'
   );
 
 export type UpdateUserDto = z.infer<typeof updateUserSchema>;

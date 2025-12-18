@@ -192,7 +192,7 @@ export class RecurringExpenseService {
       throw new NotFoundError('RecurringExpense', recurringExpenseId);
     }
     if (recurringExpense.userId !== userId) {
-      throw new ForbiddenError('You do not have permission to access this recurring expense');
+      throw new ForbiddenError('No tienes permiso para acceder a este gasto recurrente');
     }
     return recurringExpense;
   }
@@ -212,7 +212,7 @@ export class RecurringExpenseService {
       throw new NotFoundError('PaymentMethod', paymentMethodId);
     }
     if (paymentMethod.userId !== userId) {
-      throw new ForbiddenError('You do not have permission to use this payment method');
+      throw new ForbiddenError('No tienes permiso para usar este método de pago');
     }
   }
 }

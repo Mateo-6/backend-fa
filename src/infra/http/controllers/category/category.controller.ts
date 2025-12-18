@@ -22,7 +22,7 @@ export class CategoryController {
    */
   public async create(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) {
-      throw new UnauthorizedError('User not authenticated');
+      throw new UnauthorizedError('Usuario no autenticado');
     }
 
     const createCategoryDto: CreateCategoryDto = req.body;
@@ -41,7 +41,7 @@ export class CategoryController {
    */
   public async getAll(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) {
-      throw new UnauthorizedError('User not authenticated');
+      throw new UnauthorizedError('Usuario no autenticado');
     }
 
     const type = req.query.type as string | undefined;
@@ -75,7 +75,7 @@ export class CategoryController {
    */
   public async update(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) {
-      throw new UnauthorizedError('User not authenticated');
+      throw new UnauthorizedError('Usuario no autenticado');
     }
 
     const { id } = req.params;
@@ -94,7 +94,7 @@ export class CategoryController {
    */
   public async delete(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) {
-      throw new UnauthorizedError('User not authenticated');
+      throw new UnauthorizedError('Usuario no autenticado');
     }
 
     const { id } = req.params;

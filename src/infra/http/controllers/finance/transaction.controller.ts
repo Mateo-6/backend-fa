@@ -26,7 +26,7 @@ export class TransactionController {
    */
   public async createManual(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) {
-      throw new UnauthorizedError('User not authenticated');
+      throw new UnauthorizedError('Usuario no autenticado');
     }
 
     const createTransactionDto: CreateTransactionDto = req.body;
@@ -44,7 +44,7 @@ export class TransactionController {
    */
   public async processRecurringPayment(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) {
-      throw new UnauthorizedError('User not authenticated');
+      throw new UnauthorizedError('Usuario no autenticado');
     }
 
     const { recurringExpenseId } = req.params;
@@ -62,7 +62,7 @@ export class TransactionController {
    */
   public async getHistory(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) {
-      throw new UnauthorizedError('User not authenticated');
+      throw new UnauthorizedError('Usuario no autenticado');
     }
 
     const filters: {
@@ -102,7 +102,7 @@ export class TransactionController {
    */
   public async update(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) {
-      throw new UnauthorizedError('User not authenticated');
+      throw new UnauthorizedError('Usuario no autenticado');
     }
 
     const { id } = req.params;
@@ -121,12 +121,12 @@ export class TransactionController {
    */
   public async delete(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) {
-      throw new UnauthorizedError('User not authenticated');
+      throw new UnauthorizedError('Usuario no autenticado');
     }
 
     const { id } = req.params;
     await this.transactionService.delete(id, req.user.id);
-    sendSuccess(res, { message: 'Transaction deleted successfully' }, 200);
+    sendSuccess(res, { message: 'Transacción eliminada exitosamente' }, 200);
   }
 }
 

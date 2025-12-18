@@ -8,29 +8,29 @@ const creditCardDetailsSchema = z.object({
   cut_off_day: z
     .number()
     .int()
-    .min(1, 'Cut off day must be between 1 and 31')
-    .max(31, 'Cut off day must be between 1 and 31'),
+    .min(1, 'El día de corte debe estar entre 1 y 31')
+    .max(31, 'El día de corte debe estar entre 1 y 31'),
   payment_day: z
     .number()
     .int()
-    .min(1, 'Payment day must be between 1 and 31')
-    .max(31, 'Payment day must be between 1 and 31'),
-  credit_limit: z.number().min(0, 'Credit limit must be a positive number'),
-  current_balance: z.number().min(0, 'Current balance must be a positive number'),
+    .min(1, 'El día de pago debe estar entre 1 y 31')
+    .max(31, 'El día de pago debe estar entre 1 y 31'),
+  credit_limit: z.number().min(0, 'El límite de crédito debe ser un número positivo'),
+  current_balance: z.number().min(0, 'El saldo actual debe ser un número positivo'),
 });
 
 /**
  * Schema for bank account details validation.
  */
 const bankAccountDetailsSchema = z.object({
-  bank_name: z.string().min(1, 'Bank name is required').max(100, 'Bank name must be less than 100 characters'),
+  bank_name: z.string().min(1, 'El nombre del banco es requerido').max(100, 'El nombre del banco debe tener menos de 100 caracteres'),
   account_number: z
     .string()
-    .min(4, 'Account number must have at least 4 digits')
-    .max(4, 'Account number must have exactly 4 digits')
-    .regex(/^\d+$/, 'Account number must contain only digits'),
+    .min(4, 'El número de cuenta debe tener al menos 4 dígitos')
+    .max(4, 'El número de cuenta debe tener exactamente 4 dígitos')
+    .regex(/^\d+$/, 'El número de cuenta debe contener solo dígitos'),
   account_type: z.nativeEnum(BankAccountType, {
-    errorMap: () => ({ message: 'Account type must be SAVINGS or CHECKING' }),
+    errorMap: () => ({ message: 'El tipo de cuenta debe ser SAVINGS o CHECKING' }),
   }),
 });
 
@@ -45,11 +45,11 @@ const cashDetailsSchema = z.object({}).optional().default({});
  */
 export const createPaymentMethodSchema = z
   .object({
-    name: z.string().min(1, 'Name is required').max(100, 'Name must be less than 100 characters'),
+    name: z.string().min(1, 'El nombre es requerido').max(100, 'El nombre debe tener menos de 100 caracteres'),
     type: z.nativeEnum(PaymentMethodType, {
-      errorMap: () => ({ message: 'Type must be CREDIT_CARD, BANK_ACCOUNT, or CASH' }),
+      errorMap: () => ({ message: 'El tipo debe ser CREDIT_CARD, BANK_ACCOUNT o CASH' }),
     }),
-    currency: z.string().min(3, 'Currency must be a valid 3-letter code').max(3, 'Currency must be a valid 3-letter code'),
+    currency: z.string().min(3, 'La moneda debe ser un código válido de 3 letras').max(3, 'La moneda debe ser un código válido de 3 letras'),
     details: z.any(), // Will be validated conditionally based on type
   })
   .superRefine((data, ctx) => {

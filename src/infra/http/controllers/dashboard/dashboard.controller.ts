@@ -27,7 +27,7 @@ export class DashboardController {
    */
   public async getDashboard(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) {
-      throw new UnauthorizedError('User not authenticated');
+      throw new UnauthorizedError('Usuario no autenticado');
     }
 
     const dashboardData = await this.dashboardService.getDashboardData(req.user.id);

@@ -13,19 +13,19 @@ export const updateTransactionSchema: z.ZodType<{
   paymentMethodId?: string;
 }> = z
   .object({
-    amount: z.number().positive('Amount must be positive').optional(),
+    amount: z.number().positive('El monto debe ser positivo').optional(),
     description: z
       .string()
-      .min(1, 'Description is required')
-      .max(500, 'Description must be less than 500 characters')
+      .min(1, 'La descripción es requerida')
+      .max(500, 'La descripción debe tener menos de 500 caracteres')
       .optional(),
     date: z
       .union([z.string(), z.date()])
       .transform((val) => (typeof val === 'string' ? new Date(val) : val))
-      .refine((val) => !isNaN(val.getTime()), { message: 'Invalid date format' })
+      .refine((val) => !isNaN(val.getTime()), { message: 'Formato de fecha inválido' })
       .optional(),
-    categoryId: z.string().min(1, 'Category ID is required').optional(),
-    paymentMethodId: z.string().min(1, 'Payment method ID is required').optional(),
+    categoryId: z.string().min(1, 'El ID de categoría es requerido').optional(),
+    paymentMethodId: z.string().min(1, 'El ID del método de pago es requerido').optional(),
   })
   .refine(
     (data) =>
@@ -34,7 +34,7 @@ export const updateTransactionSchema: z.ZodType<{
       typeof data.date !== 'undefined' ||
       typeof data.categoryId === 'string' ||
       typeof data.paymentMethodId === 'string',
-    'Provide at least one field to update'
+    'Proporciona al menos un campo para actualizar'
   );
 
 export type UpdateTransactionDto = z.infer<typeof updateTransactionSchema>;

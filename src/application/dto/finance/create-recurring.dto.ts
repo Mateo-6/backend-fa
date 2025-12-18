@@ -14,19 +14,19 @@ export const createRecurringSchema: z.ZodType<{
   payDay: number;
   startDate: string | Date;
 }> = z.object({
-  name: z.string().min(1, 'Name is required').max(100, 'Name must be less than 100 characters'),
-  amount: z.number().positive('Amount must be positive'),
-  currency: z.string().min(1, 'Currency is required').max(10, 'Currency code must be less than 10 characters'),
-  categoryId: z.string().min(1, 'Category ID is required'),
-  paymentMethodId: z.string().min(1, 'Payment method ID is required'),
+  name: z.string().min(1, 'El nombre es requerido').max(100, 'El nombre debe tener menos de 100 caracteres'),
+  amount: z.number().positive('El monto debe ser positivo'),
+  currency: z.string().min(1, 'La moneda es requerida').max(10, 'El código de moneda debe tener menos de 10 caracteres'),
+  categoryId: z.string().min(1, 'El ID de categoría es requerido'),
+  paymentMethodId: z.string().min(1, 'El ID del método de pago es requerido'),
   frequency: z.nativeEnum(RecurringFrequency, {
-    errorMap: () => ({ message: 'Frequency must be WEEKLY, MONTHLY, or YEARLY' }),
+    errorMap: () => ({ message: 'La frecuencia debe ser WEEKLY, MONTHLY o YEARLY' }),
   }),
-  payDay: z.number().int('Pay day must be an integer').min(1, 'Pay day must be between 1 and 31').max(31, 'Pay day must be between 1 and 31'),
+  payDay: z.number().int('El día de pago debe ser un número entero').min(1, 'El día de pago debe estar entre 1 y 31').max(31, 'El día de pago debe estar entre 1 y 31'),
   startDate: z
     .union([z.string(), z.date()])
     .transform((val) => (typeof val === 'string' ? new Date(val) : val))
-    .refine((val) => !isNaN(val.getTime()), { message: 'Invalid date format' }),
+    .refine((val) => !isNaN(val.getTime()), { message: 'Formato de fecha inválido' }),
 });
 
 export type CreateRecurringDto = z.infer<typeof createRecurringSchema>;

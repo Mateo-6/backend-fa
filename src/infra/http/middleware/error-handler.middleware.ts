@@ -24,7 +24,7 @@ export const errorHandler = (
 
   // Determine the status code
   let statusCode = 500;
-  let message = 'Internal server error';
+  let message = 'Error interno del servidor';
 
   if (err instanceof AppError) {
     statusCode = err.statusCode;
@@ -32,11 +32,11 @@ export const errorHandler = (
   } else if (err.message) {
     message = err.message;
     // Fallback for common database errors (should be replaced with proper error classes)
-    if (err.message.includes('not found')) {
+    if (err.message.includes('no encontrado') || err.message.includes('not found')) {
       statusCode = 404;
-    } else if (err.message.includes('duplicate')) {
+    } else if (err.message.includes('duplicado') || err.message.includes('duplicate')) {
       statusCode = 409;
-    } else if (err.message.includes('validation')) {
+    } else if (err.message.includes('validación') || err.message.includes('validation')) {
       statusCode = 400;
     }
   }

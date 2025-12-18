@@ -35,7 +35,7 @@ export class AuthController {
     } catch (error) {
       // Re-throw as UnauthorizedError if it's not already an AppError
       if (error instanceof Error && !(error as any).statusCode) {
-        throw new UnauthorizedError(error.message || 'Invalid credentials');
+        throw new UnauthorizedError(error.message || 'Credenciales inválidas');
       }
       throw error;
     }

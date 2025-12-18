@@ -137,7 +137,7 @@ export class CategoryService {
       throw new NotFoundError('Category', categoryId);
     }
     if (category.userId !== userId) {
-      throw new ForbiddenError('You do not have permission to access this category');
+      throw new ForbiddenError('No tienes permiso para acceder a esta categoría');
     }
     return category;
   }

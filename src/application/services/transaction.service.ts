@@ -59,13 +59,13 @@ export class TransactionService {
     }
 
     if (category.userId !== userId) {
-      throw new ForbiddenError('You do not have permission to use this category');
+      throw new ForbiddenError('No tienes permiso para usar esta categoría');
     }
 
     // Validate that category type matches transaction type
     const expectedCategoryType = data.type === TransactionType.INCOME ? CategoryType.INCOME : CategoryType.EXPENSE;
     if (category.type !== expectedCategoryType) {
-      throw new ForbiddenError(`Category type "${category.type}" does not match transaction type "${data.type}"`);
+      throw new ForbiddenError(`El tipo de categoría "${category.type}" no coincide con el tipo de transacción "${data.type}"`);
     }
 
     // Payment method is required only for EXPENSE transactions
@@ -108,11 +108,11 @@ export class TransactionService {
     }
 
     if (recurringExpense.userId !== userId) {
-      throw new ForbiddenError('You do not have permission to access this recurring expense');
+      throw new ForbiddenError('No tienes permiso para acceder a este gasto recurrente');
     }
 
     if (!recurringExpense.isActive) {
-      throw new ForbiddenError('This recurring expense is not active');
+      throw new ForbiddenError('Este gasto recurrente no está activo');
     }
 
     // Get category to create snapshot
@@ -123,7 +123,7 @@ export class TransactionService {
 
     // Validate that category type matches transaction type (recurring expenses are always EXPENSE)
     if (category.type !== CategoryType.EXPENSE) {
-      throw new ForbiddenError(`Category type "${category.type}" does not match transaction type "EXPENSE"`);
+      throw new ForbiddenError(`El tipo de categoría "${category.type}" no coincide con el tipo de transacción "EXPENSE"`);
     }
 
     const categorySnapshot: CategorySnapshot = {
@@ -199,12 +199,12 @@ export class TransactionService {
     }
 
     if (transaction.userId !== userId) {
-      throw new ForbiddenError('You do not have permission to update this transaction');
+      throw new ForbiddenError('No tienes permiso para actualizar esta transacción');
     }
 
     // Only INCOME transactions can be updated
     if (transaction.type !== TransactionType.INCOME) {
-      throw new ForbiddenError('Only INCOME transactions can be updated');
+      throw new ForbiddenError('Solo las transacciones de tipo INCOME pueden ser actualizadas');
     }
 
     // Prepare update data
@@ -227,11 +227,11 @@ export class TransactionService {
         throw new NotFoundError('Category', data.categoryId);
       }
       if (category.userId !== userId) {
-        throw new ForbiddenError('You do not have permission to use this category');
+        throw new ForbiddenError('No tienes permiso para usar esta categoría');
       }
       // Validate that category type matches transaction type (only INCOME transactions can be updated)
       if (category.type !== CategoryType.INCOME) {
-        throw new ForbiddenError(`Category type "${category.type}" does not match transaction type "INCOME"`);
+        throw new ForbiddenError(`El tipo de categoría "${category.type}" no coincide con el tipo de transacción "INCOME"`);
       }
       updateData.category = {
         id: category.id!,
@@ -274,7 +274,7 @@ export class TransactionService {
       throw new NotFoundError('Transaction', id);
     }
     if (transaction.userId !== userId) {
-      throw new ForbiddenError('You do not have permission to delete this transaction');
+      throw new ForbiddenError('No tienes permiso para eliminar esta transacción');
     }
     await this.transactionRepository.delete(id);
   }
@@ -346,7 +346,7 @@ export class TransactionService {
       throw new NotFoundError('PaymentMethod', paymentMethodId);
     }
     if (paymentMethod.userId !== userId) {
-      throw new ForbiddenError('You do not have permission to use this payment method');
+      throw new ForbiddenError('No tienes permiso para usar este método de pago');
     }
   }
 }
