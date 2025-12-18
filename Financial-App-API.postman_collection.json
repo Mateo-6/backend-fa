@@ -853,14 +853,14 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Visa Credit Card\",\n    \"type\": \"CREDIT_CARD\",\n    \"currency\": \"USD\",\n    \"details\": {\n        \"cut_off_day\": 15,\n        \"payment_day\": 5,\n        \"credit_limit\": 5000.00,\n        \"current_balance\": 1250.50\n    }\n}"
+							"raw": "{\n    \"name\": \"Visa Credit Card\",\n    \"type\": \"CREDIT_CARD\",\n    \"currency\": \"USD\",\n    \"details\": {\n        \"card_number\": \"1234\",\n        \"cut_off_day\": 15,\n        \"payment_day\": 5,\n        \"credit_limit\": 5000.00,\n        \"current_balance\": 1250.50\n    }\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/payment-methods",
 							"host": ["{{base_url}}"],
 							"path": ["payment-methods"]
 						},
-						"description": "Create a credit card payment method. cut_off_day (1-31): Day when statement closes. payment_day (1-31): Payment due date."
+						"description": "Create a credit card payment method. card_number (required): Last 4 digits of the credit card (exactly 4 digits). cut_off_day (1-31): Day when statement closes. payment_day (1-31): Payment due date."
 					},
 					"response": []
 				},
@@ -939,14 +939,14 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Cash Wallet\",\n    \"type\": \"CASH\",\n    \"currency\": \"USD\",\n    \"details\": {}\n}"
+							"raw": "{\n    \"name\": \"Cash Wallet\",\n    \"type\": \"CASH\",\n    \"currency\": \"USD\",\n    \"details\": {\n        \"amount\": 500.00\n    }\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/payment-methods",
 							"host": ["{{base_url}}"],
 							"path": ["payment-methods"]
 						},
-						"description": "Create a cash payment method. Details can be an empty object or omitted."
+						"description": "Create a cash payment method. amount (required): Current cash amount (must be a positive number)."
 					},
 					"response": []
 				},
@@ -966,6 +966,138 @@
 							"path": ["payment-methods"]
 						},
 						"description": "Get all payment methods for the authenticated user."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Payment Method (Credit Card)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Visa Credit Card\",\n    \"currency\": \"EUR\",\n    \"details\": {\n        \"card_number\": \"5678\",\n        \"cut_off_day\": 20,\n        \"payment_day\": 10,\n        \"credit_limit\": 6000.00,\n        \"current_balance\": 2000.00\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/payment-methods/:id",
+							"host": ["{{base_url}}"],
+							"path": ["payment-methods", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{payment_method_id}}"
+								}
+							]
+						},
+						"description": "Update a credit card payment method. All fields (name, type, currency, details) are optional, but at least one field must be provided. If updating details without type, they will be merged with existing details. For credit cards, details can include: card_number (last 4 digits, required when changing type to CREDIT_CARD), cut_off_day (1-31), payment_day (1-31), credit_limit, current_balance."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Payment Method (Bank Account)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Chase Checking Account\",\n    \"currency\": \"USD\",\n    \"details\": {\n        \"bank_name\": \"Chase Bank Updated\",\n        \"account_number\": \"5678\",\n        \"account_type\": \"SAVINGS\"\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/payment-methods/:id",
+							"host": ["{{base_url}}"],
+							"path": ["payment-methods", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{payment_method_id}}"
+								}
+							]
+						},
+						"description": "Update a bank account payment method. All fields (name, type, currency, details) are optional, but at least one field must be provided. If updating details without type, they will be merged with existing details. For bank accounts, details can include: bank_name, account_number (exactly 4 digits), account_type (SAVINGS or CHECKING)."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Payment Method (Cash)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Cash Wallet\",\n    \"currency\": \"USD\",\n    \"details\": {\n        \"amount\": 750.00\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/payment-methods/:id",
+							"host": ["{{base_url}}"],
+							"path": ["payment-methods", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{payment_method_id}}"
+								}
+							]
+						},
+						"description": "Update a cash payment method. All fields (name, type, currency, details) are optional, but at least one field must be provided. If updating details without type, they will be merged with existing details. For cash, details can include: amount (current cash amount, required when changing type to CASH)."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Payment Method (Partial Update)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Payment Method Name\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/payment-methods/:id",
+							"host": ["{{base_url}}"],
+							"path": ["payment-methods", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{payment_method_id}}"
+								}
+							]
+						},
+						"description": "Update only specific fields of a payment method. You can update just the name, currency, or specific details fields. If updating details without providing type, the details will be merged with existing details based on the current payment method type."
 					},
 					"response": []
 				},

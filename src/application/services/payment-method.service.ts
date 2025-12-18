@@ -1,6 +1,7 @@
 import { PaymentMethodRepository } from '../../domain/payment-method/repositories/payment-method.repository';
 import { UserRepository } from '../../domain/user/repositories/user.repository';
 import { CreatePaymentMethodDto } from '../dto/payment-method/create-payment-method.dto';
+import { UpdatePaymentMethodDto } from '../dto/payment-method/update-payment-method.dto';
 import { PaymentMethod, PaymentMethodType, CreditCardDetails } from '../../domain/payment-method/types/payment-method.types';
 import { NotFoundError, ForbiddenError } from '../../domain/errors/app-error';
 
@@ -39,6 +40,33 @@ export class PaymentMethodService {
   async findAllByUser(userId: string): Promise<PaymentMethod[]> {
     await this.ensureUserExists(userId);
     return this.paymentMethodRepository.findAllByUser(userId);
+  }
+
+  /**
+   * Updates an existing payment method.
+   * Validates that the payment method belongs to the specified user.
+   * If details are provided without type, merges them with existing details.
+   *
+   * @param {string} id Payment method identifier.
+   * @param {UpdatePaymentMethodDto} updateData Partial payment method data to update.
+   * @param {string} userId User identifier to verify ownership.
+   * @returns {Promise<PaymentMethod>} Updated payment method.
+   * @throws {NotFoundError} If the payment method does not exist.
+   * @throws {ForbiddenError} If the payment method does not belong to the user.
+   */
+  async update(id: string, updateData: UpdatePaymentMethodDto, userId: string): Promise<PaymentMethod> {
+    const existingPaymentMethod = await this.ensurePaymentMethodOwnership(id, userId);
+    
+    // If details are provided without type, merge with existing details
+    const finalUpdateData = { ...updateData };
+    if (updateData.details !== undefined && updateData.type === undefined) {
+      finalUpdateData.details = {
+        ...existingPaymentMethod.details,
+        ...updateData.details,
+      };
+    }
+    
+    return this.paymentMethodRepository.update(id, finalUpdateData);
   }
 
   /**

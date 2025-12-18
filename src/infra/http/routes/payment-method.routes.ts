@@ -5,6 +5,7 @@ import { PaymentMethodMongooseRepository } from '../../repositories/payment-meth
 import { UserMongooseRepository } from '../../repositories/user-mongoose.repository';
 import { validate } from '../middleware/validation.middleware';
 import { createPaymentMethodSchema } from '../../../application/dto/payment-method/create-payment-method.dto';
+import { updatePaymentMethodSchema } from '../../../application/dto/payment-method/update-payment-method.dto';
 import { asyncHandler } from '../middleware/async-handler.middleware';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { JwtTokenService } from '../../services/jwt-token.service';
@@ -34,6 +35,12 @@ router.get(
   '/:id/calculate-due-date',
   authMiddleware(tokenService),
   asyncHandler(paymentMethodController.calculatePaymentDueDate.bind(paymentMethodController))
+);
+router.put(
+  '/:id',
+  authMiddleware(tokenService),
+  validate(updatePaymentMethodSchema),
+  asyncHandler(paymentMethodController.update.bind(paymentMethodController))
 );
 router.delete(
   '/:id',

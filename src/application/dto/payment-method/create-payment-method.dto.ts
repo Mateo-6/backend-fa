@@ -5,6 +5,11 @@ import { PaymentMethodType, BankAccountType } from '../../../domain/payment-meth
  * Schema for credit card details validation.
  */
 const creditCardDetailsSchema = z.object({
+  card_number: z
+    .string()
+    .min(4, 'El número de tarjeta debe tener al menos 4 dígitos')
+    .max(4, 'El número de tarjeta debe tener exactamente 4 dígitos')
+    .regex(/^\d+$/, 'El número de tarjeta debe contener solo dígitos'),
   cut_off_day: z
     .number()
     .int()
@@ -37,7 +42,9 @@ const bankAccountDetailsSchema = z.object({
 /**
  * Schema for cash details validation.
  */
-const cashDetailsSchema = z.object({}).optional().default({});
+const cashDetailsSchema = z.object({
+  amount: z.number().min(0, 'El monto debe ser un número positivo'),
+});
 
 /**
  * Main schema for payment method creation with polymorphic details validation.
@@ -76,9 +83,15 @@ export const createPaymentMethodSchema = z
         });
       }
     } else if (data.type === PaymentMethodType.CASH) {
-      // Cash details are optional and default to empty object
-      if (data.details === undefined || data.details === null) {
-        data.details = {};
+      const result = cashDetailsSchema.safeParse(data.details);
+      if (!result.success) {
+        result.error.errors.forEach((err) => {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: err.message,
+            path: ['details', ...err.path],
+          });
+        });
       }
     }
   });

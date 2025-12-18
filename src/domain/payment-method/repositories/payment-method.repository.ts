@@ -29,6 +29,15 @@ export interface PaymentMethodRepository {
   findById(id: string): Promise<PaymentMethod | null>;
 
   /**
+   * Updates an existing payment method.
+   *
+   * @param {string} id Payment method identifier.
+   * @param {Partial<Omit<PaymentMethod, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>} updateData Partial payment method data to update.
+   * @returns {Promise<PaymentMethod>} Updated payment method.
+   */
+  update(id: string, updateData: Partial<Omit<PaymentMethod, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>): Promise<PaymentMethod>;
+
+  /**
    * Removes a payment method by identifier.
    *
    * @param {string} id Payment method identifier.

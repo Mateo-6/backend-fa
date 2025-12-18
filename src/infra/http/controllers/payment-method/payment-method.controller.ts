@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { PaymentMethodService } from '../../../../application/services/payment-method.service';
 import { CreatePaymentMethodDto } from '../../../../application/dto/payment-method/create-payment-method.dto';
+import { UpdatePaymentMethodDto } from '../../../../application/dto/payment-method/update-payment-method.dto';
 import { AuthenticatedRequest } from '../../types/request.types';
 import { UnauthorizedError, NotFoundError } from '../../../../domain/errors/app-error';
 import { sendSuccess } from '../../utils/response.util';
@@ -75,6 +76,25 @@ export class PaymentMethodController {
 
     const dueDate = await this.paymentMethodService.calculatePaymentDueDate(id, date);
     sendSuccess(res, { dueDate });
+  }
+
+  /**
+   * Updates an existing payment method.
+   * Validates that the payment method belongs to the authenticated user.
+   *
+   * @param {AuthenticatedRequest} req Express request containing the identifier parameter and validated body.
+   * @param {Response} res Express response used to send the updated payment method.
+   * @returns {Promise<void>} Resolves when the response is dispatched.
+   */
+  public async update(req: AuthenticatedRequest, res: Response): Promise<void> {
+    if (!req.user?.id) {
+      throw new UnauthorizedError('Usuario no autenticado');
+    }
+
+    const { id } = req.params;
+    const updatePaymentMethodDto: UpdatePaymentMethodDto = req.body;
+    const paymentMethod = await this.paymentMethodService.update(id, updatePaymentMethodDto, req.user.id);
+    sendSuccess(res, paymentMethod);
   }
 
   /**

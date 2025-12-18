@@ -55,6 +55,28 @@ export class PaymentMethodMongooseRepository implements PaymentMethodRepository 
   }
 
   /**
+   * Updates an existing payment method.
+   *
+   * @param {string} id Payment method identifier.
+   * @param {Partial<Omit<PaymentMethod, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>} updateData Partial payment method data to update.
+   * @returns {Promise<PaymentMethod>} Updated payment method mapped to the domain type.
+   */
+  async update(id: string, updateData: Partial<Omit<PaymentMethod, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>): Promise<PaymentMethod> {
+    await getMongooseInstance();
+    const updatedPaymentMethod = await PaymentMethodModel.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).exec();
+
+    if (!updatedPaymentMethod) {
+      throw new Error(`Payment method with id ${id} not found`);
+    }
+
+    return this.toDomain(updatedPaymentMethod);
+  }
+
+  /**
    * Deletes a payment method by identifier.
    *
    * @param {string} id Payment method identifier.
