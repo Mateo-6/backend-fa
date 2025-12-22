@@ -1,21 +1,7 @@
 /**
- * Category type enumeration.
+ * Re-export Category interface and CategoryType enum from fa-contracts package.
+ * This file maintains backward compatibility with existing imports.
  */
-export enum CategoryType {
-  INCOME = 'income',
-  EXPENSE = 'expense',
-}
-
-/**
- * Category entity representing a classification for transactions.
- */
-export interface Category {
-  id?: string;
-  name: string;
-  description?: string | null;
-  type: CategoryType;
-  userId: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
+export type { Category } from 'fa-contracts';
+export { CategoryType } from 'fa-contracts';
 
