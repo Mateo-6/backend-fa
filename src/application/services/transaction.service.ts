@@ -79,11 +79,14 @@ export class TransactionService {
       icon: undefined, // Add icon field to Category type if needed
     };
 
+    // Ensure date is a Date object (Zod transforms string to Date)
+    const transactionDate = data.date instanceof Date ? data.date : new Date(data.date);
+
     return this.transactionRepository.create({
       userId,
       amount: data.amount,
       description: data.description,
-      date: data.date,
+      date: transactionDate,
       type: data.type,
       category: categorySnapshot,
       paymentMethodId: data.paymentMethodId,

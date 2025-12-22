@@ -20,7 +20,7 @@ export const createRecurringSchema: z.ZodType<{
   categoryId: z.string().min(1, 'El ID de categoría es requerido'),
   paymentMethodId: z.string().min(1, 'El ID del método de pago es requerido'),
   frequency: z.nativeEnum(RecurringFrequency, {
-    errorMap: () => ({ message: 'La frecuencia debe ser WEEKLY, MONTHLY o YEARLY' }),
+    message: 'La frecuencia debe ser WEEKLY, MONTHLY o YEARLY',
   }),
   payDay: z.number().int('El día de pago debe ser un número entero').min(1, 'El día de pago debe estar entre 1 y 31').max(31, 'El día de pago debe estar entre 1 y 31'),
   startDate: z

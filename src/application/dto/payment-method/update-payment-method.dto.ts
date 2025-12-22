@@ -44,7 +44,7 @@ const bankAccountDetailsSchema = z.object({
     .optional(),
   account_type: z
     .nativeEnum(BankAccountType, {
-      errorMap: () => ({ message: 'El tipo de cuenta debe ser SAVINGS o CHECKING' }),
+      message: 'El tipo de cuenta debe ser SAVINGS o CHECKING',
     })
     .optional(),
 });
@@ -71,7 +71,7 @@ export const updatePaymentMethodSchema: z.ZodType<{
     name: z.string().min(1, 'El nombre es requerido').max(100, 'El nombre debe tener menos de 100 caracteres').optional(),
     type: z
       .nativeEnum(PaymentMethodType, {
-        errorMap: () => ({ message: 'El tipo debe ser CREDIT_CARD, BANK_ACCOUNT o CASH' }),
+        message: 'El tipo debe ser CREDIT_CARD, BANK_ACCOUNT o CASH',
       })
       .optional(),
     currency: z
@@ -110,7 +110,7 @@ export const updatePaymentMethodSchema: z.ZodType<{
         });
         const result = strictCreditCardSchema.safeParse(data.details);
         if (!result.success) {
-          result.error.errors.forEach((err) => {
+          result.error.issues.forEach((err) => {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               message: err.message,
@@ -139,13 +139,13 @@ export const updatePaymentMethodSchema: z.ZodType<{
             .regex(/^\d+$/, 'El número de cuenta debe contener solo dígitos'),
           account_type: z
             .nativeEnum(BankAccountType, {
-              errorMap: () => ({ message: 'El tipo de cuenta debe ser SAVINGS o CHECKING' }),
+              message: 'El tipo de cuenta debe ser SAVINGS o CHECKING',
             })
             .optional(),
         });
         const result = strictBankAccountSchema.safeParse(data.details);
         if (!result.success) {
-          result.error.errors.forEach((err) => {
+          result.error.issues.forEach((err) => {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               message: err.message,
@@ -166,7 +166,7 @@ export const updatePaymentMethodSchema: z.ZodType<{
         });
         const result = strictCashSchema.safeParse(data.details);
         if (!result.success) {
-          result.error.errors.forEach((err) => {
+          result.error.issues.forEach((err) => {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               message: err.message,

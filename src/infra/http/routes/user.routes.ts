@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { UserController } from '../controllers/user/user.controller';
 import { UserService } from '../../../application/services/user.service';
-import { UserPrismaRepository } from '../../repositories/user-prisma.repository';
 import { validate } from '../middleware/validation.middleware';
 import { createUserSchema } from '../../../application/dto/user/create-user.dto';
 import { updateUserSchema } from '../../../application/dto/user/update-user.dto';

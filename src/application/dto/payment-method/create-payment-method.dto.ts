@@ -35,7 +35,7 @@ const bankAccountDetailsSchema = z.object({
     .max(4, 'El número de cuenta debe tener exactamente 4 dígitos')
     .regex(/^\d+$/, 'El número de cuenta debe contener solo dígitos'),
   account_type: z.nativeEnum(BankAccountType, {
-    errorMap: () => ({ message: 'El tipo de cuenta debe ser SAVINGS o CHECKING' }),
+    message: 'El tipo de cuenta debe ser SAVINGS o CHECKING',
   }),
 });
 
@@ -54,7 +54,7 @@ export const createPaymentMethodSchema = z
   .object({
     name: z.string().min(1, 'El nombre es requerido').max(100, 'El nombre debe tener menos de 100 caracteres'),
     type: z.nativeEnum(PaymentMethodType, {
-      errorMap: () => ({ message: 'El tipo debe ser CREDIT_CARD, BANK_ACCOUNT o CASH' }),
+      message: 'El tipo debe ser CREDIT_CARD, BANK_ACCOUNT o CASH',
     }),
     currency: z.string().min(3, 'La moneda debe ser un código válido de 3 letras').max(3, 'La moneda debe ser un código válido de 3 letras'),
     details: z.any(), // Will be validated conditionally based on type
@@ -63,7 +63,7 @@ export const createPaymentMethodSchema = z
     if (data.type === PaymentMethodType.CREDIT_CARD) {
       const result = creditCardDetailsSchema.safeParse(data.details);
       if (!result.success) {
-        result.error.errors.forEach((err) => {
+        result.error.issues.forEach((err) => {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: err.message,
@@ -74,7 +74,7 @@ export const createPaymentMethodSchema = z
     } else if (data.type === PaymentMethodType.BANK_ACCOUNT) {
       const result = bankAccountDetailsSchema.safeParse(data.details);
       if (!result.success) {
-        result.error.errors.forEach((err) => {
+        result.error.issues.forEach((err) => {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: err.message,
@@ -85,7 +85,7 @@ export const createPaymentMethodSchema = z
     } else if (data.type === PaymentMethodType.CASH) {
       const result = cashDetailsSchema.safeParse(data.details);
       if (!result.success) {
-        result.error.errors.forEach((err) => {
+        result.error.issues.forEach((err) => {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: err.message,
