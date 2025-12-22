@@ -68,5 +68,21 @@ export class AuthService {
       user: userWithoutPassword,
     };
   }
+
+  /**
+   * Handles user logout.
+   * In a stateless JWT system, logout is primarily handled client-side.
+   * This method provides a server-side confirmation endpoint.
+   *
+   * @param {string} userId User ID from the authenticated request.
+   * @returns {Promise<{ message: string }>} Success message confirming logout.
+   */
+  async logout(userId: string): Promise<{ message: string }> {
+    // In a stateless JWT system, logout is handled client-side
+    // This endpoint provides confirmation and can be extended for token blacklisting
+    return {
+      message: 'Logout successful',
+    };
+  }
 }
 

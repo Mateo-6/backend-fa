@@ -3,6 +3,7 @@ import { AuthService } from '../../../../application/services/auth.service';
 import { LoginDto } from '../../../../application/dto/auth/login.dto';
 import { UnauthorizedError } from '../../../../domain/errors/app-error';
 import { sendSuccess } from '../../utils/response.util';
+import { AuthenticatedRequest } from '../../types/request.types';
 
 /**
  * Controller for handling authentication-related HTTP requests.
@@ -39,6 +40,27 @@ export class AuthController {
       }
       throw error;
     }
+  }
+
+  /**
+   * Handles user logout requests.
+   * Returns a success message confirming logout.
+   * The client should remove the token from storage.
+   *
+   * @param {Request} req Express request containing authenticated user info.
+   * @param {Response} res Express response used to return the logout confirmation.
+   * @returns {Promise<void>} Resolves when the response is sent.
+   */
+  public async logout(req: Request, res: Response): Promise<void> {
+    const authenticatedReq = req as AuthenticatedRequest;
+    const userId = authenticatedReq.user?.id;
+
+    if (!userId) {
+      throw new UnauthorizedError('User not authenticated');
+    }
+
+    const result = await this.authService.logout(userId);
+    sendSuccess(res, result);
   }
 }
 

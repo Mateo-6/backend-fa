@@ -59,6 +59,7 @@ export class RecurringExpenseService {
   /**
    * Updates a recurring expense.
    * Validates that the recurring expense belongs to the specified user.
+   * Automatically recalculates nextPaymentDate when payDay is updated.
    *
    * @param {string} id Recurring expense identifier.
    * @param {Partial<Omit<RecurringExpense, 'id'>>} data Partial payload with the updated fields.
@@ -68,7 +69,22 @@ export class RecurringExpenseService {
    * @throws {ForbiddenError} If the recurring expense does not belong to the user.
    */
   async update(id: string, data: Partial<Omit<RecurringExpense, 'id'>>, userId: string): Promise<RecurringExpense> {
-    await this.ensureRecurringExpenseOwnership(id, userId);
+    const existingRecurringExpense = await this.ensureRecurringExpenseOwnership(id, userId);
+    
+    // If payDay is being updated, recalculate nextPaymentDate
+    if (typeof data.payDay === 'number') {
+      // Use updated values if provided, otherwise use existing values
+      const startDate = data.startDate instanceof Date 
+        ? data.startDate 
+        : (typeof data.startDate === 'string' ? new Date(data.startDate) : existingRecurringExpense.startDate);
+      const frequency = data.frequency || existingRecurringExpense.frequency;
+      const payDay = data.payDay;
+      
+      // Recalculate nextPaymentDate with the new payDay
+      const nextPaymentDate = this.calculateNextPaymentDate(startDate, payDay, frequency);
+      data.nextPaymentDate = nextPaymentDate;
+    }
+    
     const updated = await this.recurringExpenseRepository.update(id, data);
     if (!updated) {
       throw new NotFoundError('RecurringExpense', id);
@@ -117,6 +133,7 @@ export class RecurringExpenseService {
       case RecurringFrequency.MONTHLY:
         // For monthly, use the pay day of the month
         if (startDate > now) {
+          // Start date is in the future, use it as base
           nextDate = new Date(startDate);
           nextDate.setDate(payDay);
           // If the adjusted date is before start date, move to next month
@@ -125,9 +142,15 @@ export class RecurringExpenseService {
             nextDate.setDate(payDay);
           }
         } else {
+          // Start date is today or in the past, check if payDay of current month is still upcoming
           nextDate = new Date(now);
-          nextDate.setMonth(now.getMonth() + 1);
           nextDate.setDate(payDay);
+          
+          // If payDay of current month has already passed or is before startDate, use next month
+          if (nextDate < now || nextDate < startDate) {
+            nextDate.setMonth(now.getMonth() + 1);
+            nextDate.setDate(payDay);
+          }
         }
         // Handle months with fewer days (e.g., Feb 31 -> Feb 28/29)
         if (nextDate.getDate() !== payDay) {
@@ -136,8 +159,9 @@ export class RecurringExpenseService {
         break;
 
       case RecurringFrequency.YEARLY:
-        // For yearly, use the pay day of the month in the next year
+        // For yearly, use the pay day of the month
         if (startDate > now) {
+          // Start date is in the future, use it as base
           nextDate = new Date(startDate);
           nextDate.setDate(payDay);
           // If the adjusted date is before start date, move to next year
@@ -146,9 +170,15 @@ export class RecurringExpenseService {
             nextDate.setDate(payDay);
           }
         } else {
+          // Start date is today or in the past, check if payDay of current year is still upcoming
           nextDate = new Date(now);
-          nextDate.setFullYear(now.getFullYear() + 1);
           nextDate.setDate(payDay);
+          
+          // If payDay of current year has already passed or is before startDate, use next year
+          if (nextDate < now || nextDate < startDate) {
+            nextDate.setFullYear(now.getFullYear() + 1);
+            nextDate.setDate(payDay);
+          }
         }
         // Handle leap years and months with fewer days
         if (nextDate.getDate() !== payDay) {
