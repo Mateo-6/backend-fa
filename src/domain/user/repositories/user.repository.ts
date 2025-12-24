@@ -48,4 +48,13 @@ export interface UserRepository {
    * @returns {Promise<void>} Resolves when the user is deleted.
    */
   delete(id: string): Promise<void>;
+
+  /**
+   * Adds a push token to the user's expoPushTokens array using $addToSet to avoid duplicates.
+   *
+   * @param {string} id User identifier.
+   * @param {string} token Expo push token to add.
+   * @returns {Promise<User | null>} Updated user or null if not found.
+   */
+  addPushToken(id: string, token: string): Promise<User | null>;
 }

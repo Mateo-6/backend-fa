@@ -81,7 +81,7 @@ export class UserMongooseRepository implements UserRepository {
   * @returns {User} Domain user.
   */
   private toDomain(doc: IUserDocument): User {
-    return {
+    const user: any = {
       id: doc.id,
       username: doc.username,
       name: doc.name,
@@ -90,6 +90,13 @@ export class UserMongooseRepository implements UserRepository {
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt
     };
+
+    // Include expoPushTokens if available in the document
+    if (doc.expoPushTokens && Array.isArray(doc.expoPushTokens)) {
+      user.expoPushTokens = doc.expoPushTokens;
+    }
+
+    return user as User;
   }
 
   /**
@@ -148,5 +155,29 @@ export class UserMongooseRepository implements UserRepository {
     await getMongooseInstance();
 
     await UserModel.findByIdAndDelete(id).exec();
+  }
+
+  /**
+   * Adds a push token to the user's expoPushTokens array using $addToSet to avoid duplicates.
+   *
+   * @param {string} id User identifier.
+   * @param {string} token Expo push token to add.
+   * @returns {Promise<User | null>} Updated user or null if not found.
+   */
+  async addPushToken(id: string, token: string): Promise<User | null> {
+    // Ensure Mongoose is connected
+    await getMongooseInstance();
+
+    const user = await UserModel.findByIdAndUpdate(
+      id,
+      { $addToSet: { expoPushTokens: token } },
+      { new: true }
+    ).exec();
+
+    if (!user) {
+      return null;
+    }
+
+    return this.toDomain(user);
   }
 }

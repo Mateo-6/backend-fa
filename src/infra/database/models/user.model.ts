@@ -4,6 +4,7 @@ import { User } from '../../../domain/user/types/user.types';
 // Interface for MongoDB document - extends User to maintain consistency
 export interface IUserDocument extends User, Document {
   categories: Types.ObjectId[];
+  expoPushTokens: string[];
   _id: Types.ObjectId;
 }
 
@@ -39,6 +40,10 @@ const UserSchema = new Schema<IUserDocument>(
           ref: 'Category',
         },
       ],
+      default: [],
+    },
+    expoPushTokens: {
+      type: [String],
       default: [],
     },
   },

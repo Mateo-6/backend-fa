@@ -7,6 +7,7 @@ import transactionRoutes from './routes/transaction.routes';
 import recurringExpenseRoutes from './routes/recurring-expense.routes';
 import paymentMethodRoutes from './routes/payment-method.routes';
 import dashboardRoutes from './routes/dashboard.routes';
+import notificationRoutes from './routes/notification.routes';
 import { env } from '../config/env';
 import { errorHandler } from './middleware/error-handler.middleware';
 
@@ -48,8 +49,14 @@ export class Server {
     this.app.use('/recurring-expenses', recurringExpenseRoutes);
     this.app.use('/payment-methods', paymentMethodRoutes);
     this.app.use('/dashboard', dashboardRoutes);
+    this.app.use('/notifications', notificationRoutes);
   }
 
+  /**
+   * Registers the centralized error handler (must run after routes).
+   *
+   * @returns {void} Error handler registration only.
+   */
   /**
    * Registers the centralized error handler (must run after routes).
    *

@@ -81,4 +81,34 @@ export class UserInMemoryRepository implements UserRepository {
       this.users.splice(userIndex, 1);
     }
   }
+
+  /**
+   * Adds a push token to the user's expoPushTokens array, avoiding duplicates.
+   *
+   * @param {string} id User identifier.
+   * @param {string} token Expo push token to add.
+   * @returns {Promise<User | null>} Updated user or null if not found.
+   */
+  async addPushToken(id: string, token: string): Promise<User | null> {
+    const userIndex = this.users.findIndex((user) => user.id === id);
+    if (userIndex === -1) {
+      return null;
+    }
+
+    const existingUser = this.users[userIndex];
+    const currentTokens = (existingUser as any).expoPushTokens || [];
+    
+    // Use Set to avoid duplicates (similar to $addToSet behavior)
+    const tokenSet = new Set([...currentTokens, token]);
+    const updatedTokens = Array.from(tokenSet);
+
+    const updatedUser = {
+      ...existingUser,
+      expoPushTokens: updatedTokens,
+      updatedAt: new Date(),
+    } as User;
+
+    this.users[userIndex] = updatedUser;
+    return updatedUser;
+  }
 }
