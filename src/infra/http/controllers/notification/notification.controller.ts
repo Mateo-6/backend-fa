@@ -38,5 +38,67 @@ export class NotificationController {
     
     sendSuccess(res, { message: 'Token registrado exitosamente', user: updatedUser }, 200);
   }
+
+  /**
+   * Retrieves paginated notifications for the authenticated user.
+   * The userId is obtained from the JWT token.
+   * Notifications are ordered by createdAt descending (newest first).
+   *
+   * @param {AuthenticatedRequest} req Express request containing query parameters for pagination (limit, offset).
+   * @param {Response} res Express response used to send the paginated notifications.
+   * @returns {Promise<void>} Resolves when the response is dispatched.
+   */
+  public async getNotifications(req: AuthenticatedRequest, res: Response): Promise<void> {
+    if (!req.user?.id) {
+      throw new UnauthorizedError('Usuario no autenticado');
+    }
+
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+    const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
+
+    const paginatedNotifications = await this.notificationService.getNotifications(req.user.id, {
+      limit,
+      offset,
+    });
+
+    sendSuccess(res, paginatedNotifications);
+  }
+
+  /**
+   * Marks a notification as read.
+   * Validates that the notification belongs to the authenticated user.
+   *
+   * @param {AuthenticatedRequest} req Express request containing the notification ID parameter.
+   * @param {Response} res Express response used to send the updated notification.
+   * @returns {Promise<void>} Resolves when the response is dispatched.
+   */
+  public async markAsRead(req: AuthenticatedRequest, res: Response): Promise<void> {
+    if (!req.user?.id) {
+      throw new UnauthorizedError('Usuario no autenticado');
+    }
+
+    const { id } = req.params;
+    const updatedNotification = await this.notificationService.markNotificationAsRead(id, req.user.id);
+
+    sendSuccess(res, updatedNotification);
+  }
+
+  /**
+   * Gets the count of unread notifications for the authenticated user.
+   * The userId is obtained from the JWT token.
+   *
+   * @param {AuthenticatedRequest} req Express request containing the authenticated user from JWT.
+   * @param {Response} res Express response used to send the unread count.
+   * @returns {Promise<void>} Resolves when the response is dispatched.
+   */
+  public async getUnreadCount(req: AuthenticatedRequest, res: Response): Promise<void> {
+    if (!req.user?.id) {
+      throw new UnauthorizedError('Usuario no autenticado');
+    }
+
+    const count = await this.notificationService.getUnreadCount(req.user.id);
+
+    sendSuccess(res, { count });
+  }
 }
 

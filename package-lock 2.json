@@ -1064,8 +1064,8 @@
       }
     },
     "node_modules/fa-contracts": {
-      "version": "1.2.0",
-      "resolved": "git+ssh://git@github.com/Mateo-6/fa-contracts.git#6b79f3c2be5e64663ba8299d60423ac146ce5afa",
+      "version": "1.0.0",
+      "resolved": "git+ssh://git@github.com/Mateo-6/fa-contracts.git#db1cdec255db7c5690a8439f6f412a7b1a1a4c73",
       "license": "ISC"
     },
     "node_modules/fast-fifo": {

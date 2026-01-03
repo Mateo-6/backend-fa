@@ -1222,6 +1222,116 @@
 						"description": "Register an Expo push token for the authenticated user. The token will be added to the user's expoPushTokens array. Duplicate tokens are automatically prevented using MongoDB's $addToSet operation. Requires authentication via JWT token."
 					},
 					"response": []
+				},
+				{
+					"name": "Get Notifications",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.notifications && response.data.notifications.length > 0) {",
+									"        pm.environment.set('notification_id', response.data.notifications[0].id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/notifications?limit=20&offset=0",
+							"host": ["{{base_url}}"],
+							"path": ["notifications"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Maximum number of notifications to return (default: 20)"
+								},
+								{
+									"key": "offset",
+									"value": "0",
+									"description": "Number of notifications to skip for pagination (default: 0)"
+								}
+							]
+						},
+						"description": "Get paginated notifications for the authenticated user. Notifications are ordered by createdAt descending (newest first). Both limit and offset query parameters are optional. Returns a paginated response with notifications array, total count, limit, and offset. The first notification ID will be automatically saved to the 'notification_id' environment variable."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Notifications (First Page)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/notifications",
+							"host": ["{{base_url}}"],
+							"path": ["notifications"]
+						},
+						"description": "Get notifications without pagination parameters. Uses default values (limit: 20, offset: 0). Notifications are ordered by createdAt descending (newest first)."
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Notification as Read",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/notifications/:id/read",
+							"host": ["{{base_url}}"],
+							"path": ["notifications", ":id", "read"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{notification_id}}"
+								}
+							]
+						},
+						"description": "Mark a notification as read. Validates that the notification belongs to the authenticated user. Returns the updated notification with isRead set to true. Requires authentication via JWT token."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Unread Count",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/notifications/unread-count",
+							"host": ["{{base_url}}"],
+							"path": ["notifications", "unread-count"]
+						},
+						"description": "Get the count of unread notifications for the authenticated user. Returns a simple object with the count property. Useful for displaying a badge with the number of unread notifications. Requires authentication via JWT token."
+					},
+					"response": []
 				}
 			]
 		}
@@ -1259,6 +1369,11 @@
 		},
 		{
 			"key": "payment_method_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "notification_id",
 			"value": "",
 			"type": "string"
 		}
