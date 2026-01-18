@@ -31,22 +31,30 @@ export class MongooseClientSingleton {
    * @returns {Promise<void>} Resolves once the connection is established.
    */
   public static async connect(): Promise<void> {
-    if (MongooseClientSingleton.isConnected) {
+    // Check if already connected by verifying actual connection state
+    // readyState: 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+    const readyState = mongoose.connection.readyState;
+    if (readyState === 1) {
+      MongooseClientSingleton.isConnected = true;
       return;
     }
 
     try {
+      console.log('Attempting to connect to MongoDB with URL:', env.MONGO_URL ? `${env.MONGO_URL.substring(0, 20)}...` : 'NOT SET');
+      
       await mongoose.connect(env.MONGO_URL, {
-        // Recommended connection options
+        serverSelectionTimeoutMS: 10000, // Timeout after 10 seconds
+        socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+        connectTimeoutMS: 10000, // Give up initial connection after 10 seconds
       });
 
-      MongooseClientSingleton.isConnected = true;
+      MongooseClientSingleton.isConnected = mongoose.connection.readyState === 1;
       
-      if (process.env.NODE_ENV === 'development') {
-        console.log('✅ Connected to MongoDB');
-      }
+      console.log('✅ Connected to MongoDB. Connection state:', mongoose.connection.readyState);
+      console.log('Database name:', mongoose.connection.db?.databaseName);
     } catch (error) {
       console.error('❌ Error connecting to MongoDB:', error);
+      MongooseClientSingleton.isConnected = false;
       throw error;
     }
   }
@@ -73,7 +81,8 @@ export class MongooseClientSingleton {
    * @returns {boolean} True when the connection is active.
    */
   public static isConnectedToDatabase(): boolean {
-    return MongooseClientSingleton.isConnected && mongoose.connection.readyState === 1;
+    const readyState = mongoose.connection.readyState;
+    return MongooseClientSingleton.isConnected && readyState === 1;
   }
 }
 

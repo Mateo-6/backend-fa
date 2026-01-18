@@ -1,0 +1,14 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "ami-api-s3"
+resolve_s3 = true
+s3_prefix = "ami-api-s3"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+disable_rollback = true
+image_repositories = []
+template_file = "template-s3.yaml"
+
+[default.global.parameters]
+region = "us-east-1"
