@@ -3,6 +3,7 @@ import { RecurringExpenseRepository } from '../../domain/finance/repositories/re
 import { CategoryRepository } from '../../domain/category/repositories/category.repository';
 import { UserRepository } from '../../domain/user/repositories/user.repository';
 import { PaymentMethodRepository } from '../../domain/payment-method/repositories/payment-method.repository';
+import { PaymentMethodService } from './payment-method.service';
 import { CreateTransactionDto } from '../dto/finance/create-transaction.dto';
 import { UpdateTransactionDto } from '../dto/finance/update-transaction.dto';
 import { Transaction, TransactionType, CategorySnapshot } from '../../domain/finance/types/transaction.types';
@@ -30,13 +31,15 @@ export class TransactionService {
    * @param {CategoryRepository} categoryRepository Repository for category lookups.
    * @param {UserRepository} userRepository Repository used to validate the owner existence.
    * @param {PaymentMethodRepository} paymentMethodRepository Repository used to validate payment method existence.
+   * @param {PaymentMethodService} paymentMethodService Service used to update credit card balance.
    */
   constructor(
     private readonly transactionRepository: TransactionRepository,
     private readonly recurringExpenseRepository: RecurringExpenseRepository,
     private readonly categoryRepository: CategoryRepository,
     private readonly userRepository: UserRepository,
-    private readonly paymentMethodRepository: PaymentMethodRepository
+    private readonly paymentMethodRepository: PaymentMethodRepository,
+    private readonly paymentMethodService: PaymentMethodService
   ) {}
 
   /**
@@ -82,7 +85,7 @@ export class TransactionService {
     // Ensure date is a Date object (Zod transforms string to Date)
     const transactionDate = data.date instanceof Date ? data.date : new Date(data.date);
 
-    return this.transactionRepository.create({
+    const transaction = await this.transactionRepository.create({
       userId,
       amount: data.amount,
       description: data.description,
@@ -92,6 +95,18 @@ export class TransactionService {
       paymentMethodId: data.paymentMethodId,
       isRecurring: false,
     });
+
+    // Update credit card balance if payment method is provided
+    if (data.paymentMethodId) {
+      const isExpense = data.type === TransactionType.EXPENSE;
+      await this.paymentMethodService.updateCreditCardBalance(
+        data.paymentMethodId,
+        data.amount,
+        isExpense
+      );
+    }
+
+    return transaction;
   }
 
   /**
@@ -158,6 +173,15 @@ export class TransactionService {
       recurringExpense.frequency
     );
     await this.recurringExpenseRepository.updateNextPaymentDate(recurringExpenseId, nextPaymentDate);
+
+    // Update credit card balance (recurring expenses are always EXPENSE transactions)
+    if (recurringExpense.paymentMethodId) {
+      await this.paymentMethodService.updateCreditCardBalance(
+        recurringExpense.paymentMethodId,
+        recurringExpense.amount,
+        true // Recurring expenses are always expenses
+      );
+    }
 
     return transaction;
   }

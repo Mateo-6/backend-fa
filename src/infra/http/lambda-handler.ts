@@ -91,19 +91,20 @@ const categoryService = new CategoryService(categoryRepository, userRepository);
 const transactionRepository = new TransactionMongooseRepository();
 const recurringExpenseRepository = new RecurringExpenseMongooseRepository();
 const paymentMethodRepository = new PaymentMethodMongooseRepository();
+const paymentMethodService = new PaymentMethodService(paymentMethodRepository, userRepository);
 const transactionService = new TransactionService(
   transactionRepository,
   recurringExpenseRepository,
   categoryRepository,
   userRepository,
-  paymentMethodRepository
+  paymentMethodRepository,
+  paymentMethodService
 );
 const recurringExpenseService = new RecurringExpenseService(
   recurringExpenseRepository,
   userRepository,
   paymentMethodRepository
 );
-const paymentMethodService = new PaymentMethodService(paymentMethodRepository, userRepository);
 const dashboardService = new DashboardService(transactionRepository, recurringExpenseRepository);
 const notificationRepository = new NotificationMongooseRepository();
 const notificationService = new NotificationService(userRepository, notificationRepository);

@@ -21,8 +21,7 @@
     "aws:fix:stack": "node scripts/fix-stack.js",
     "aws:infra:s3": "node scripts/deploy-s3-infra.js",
     "aws:update:lambda": "node scripts/update-lambda-code.js",
-    "aws:logs": "sam logs -n AmiFunction --tail --stack-name ami-api-lambda",
-    "deploy:web": "expo export --platform web && aws s3 sync dist/ s3://$(aws cloudformation describe-stacks --stack-name ${AWS_STACK_NAME:-ami-api-s3} --query 'Stacks[0].Outputs[?OutputKey==`AmiWebBucketName`].OutputValue' --output text 2>/dev/null || echo 'Error: Stack not found. Set AWS_STACK_NAME environment variable or ensure stack name is ami-api-s3') --delete"
+    "aws:logs": "sam logs -n AmiFunction --tail --stack-name ami-api-lambda"
   },
   "keywords": [],
   "author": "",
