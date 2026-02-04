@@ -5,6 +5,7 @@ import { validate } from '../middleware/validation.middleware';
 import { createUserSchema } from '../../../application/dto/user/create-user.dto';
 import { updateUserSchema } from '../../../application/dto/user/update-user.dto';
 import { UserMongooseRepository } from '../../repositories/user-mongoose.repository';
+import { CategoryMongooseRepository } from '../../repositories/category-mongoose.repository';
 import { asyncHandler } from '../middleware/async-handler.middleware';
 import { BcryptPasswordService } from '../../services/bcrypt-password.service';
 
@@ -12,8 +13,9 @@ const router = Router();
 
 // Dependency injection setup
 const userRepository = new UserMongooseRepository();
+const categoryRepository = new CategoryMongooseRepository();
 const passwordService = new BcryptPasswordService();
-const userService = new UserService(userRepository, passwordService);
+const userService = new UserService(userRepository, passwordService, categoryRepository);
 const userController = new UserController(userService);
 
 router.post('/', validate(createUserSchema), asyncHandler(userController.create.bind(userController)));

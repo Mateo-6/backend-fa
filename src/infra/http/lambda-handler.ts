@@ -85,8 +85,8 @@ const passwordService = new BcryptPasswordService();
 
 // Services
 const authService = new AuthService(userRepository, tokenService, passwordService);
-const userService = new UserService(userRepository, passwordService);
 const categoryRepository = new CategoryMongooseRepository();
+const userService = new UserService(userRepository, passwordService, categoryRepository);
 const categoryService = new CategoryService(categoryRepository, userRepository);
 const transactionRepository = new TransactionMongooseRepository();
 const recurringExpenseRepository = new RecurringExpenseMongooseRepository();
