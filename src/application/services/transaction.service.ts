@@ -208,16 +208,16 @@ export class TransactionService {
   }
 
   /**
-   * Updates an INCOME transaction by identifier.
-   * Validates that the transaction belongs to the specified user and is of type INCOME.
-   * Only INCOME transactions can be updated.
+   * Updates an INCOME or EXPENSE transaction by identifier.
+   * Validates that the transaction belongs to the specified user.
+   * For EXPENSE transactions, credit card balance is adjusted when amount or payment method changes.
    *
    * @param {string} id Transaction identifier.
    * @param {UpdateTransactionDto} data Partial payload with the updated fields.
    * @param {string} userId User identifier to verify ownership.
    * @returns {Promise<Transaction>} Updated transaction.
    * @throws {NotFoundError} If the transaction does not exist.
-   * @throws {ForbiddenError} If the transaction does not belong to the user or is not an INCOME transaction.
+   * @throws {ForbiddenError} If the transaction does not belong to the user.
    */
   async update(id: string, data: UpdateTransactionDto, userId: string): Promise<Transaction> {
     const transaction = await this.transactionRepository.findById(id);
@@ -229,10 +229,7 @@ export class TransactionService {
       throw new ForbiddenError('No tienes permiso para actualizar esta transacción');
     }
 
-    // Only INCOME transactions can be updated
-    if (transaction.type !== TransactionType.INCOME) {
-      throw new ForbiddenError('Solo las transacciones de tipo INCOME pueden ser actualizadas');
-    }
+    const expectedCategoryType = transaction.type === TransactionType.INCOME ? CategoryType.INCOME : CategoryType.EXPENSE;
 
     // Prepare update data
     const updateData: Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>> = {};
@@ -256,9 +253,8 @@ export class TransactionService {
       if (category.userId !== userId) {
         throw new ForbiddenError('No tienes permiso para usar esta categoría');
       }
-      // Validate that category type matches transaction type (only INCOME transactions can be updated)
-      if (category.type !== CategoryType.INCOME) {
-        throw new ForbiddenError(`El tipo de categoría "${category.type}" no coincide con el tipo de transacción "INCOME"`);
+      if (category.type !== expectedCategoryType) {
+        throw new ForbiddenError(`El tipo de categoría "${category.type}" no coincide con el tipo de transacción "${transaction.type}"`);
       }
       updateData.category = {
         id: category.id!,
@@ -267,7 +263,7 @@ export class TransactionService {
       };
     }
 
-    // Handle payment method update (optional for INCOME transactions)
+    // Handle payment method update
     if (data.paymentMethodId !== undefined) {
       if (data.paymentMethodId) {
         await this.ensurePaymentMethodExists(data.paymentMethodId, userId);
@@ -277,9 +273,38 @@ export class TransactionService {
       }
     }
 
+    const finalAmount = typeof data.amount === 'number' ? data.amount : transaction.amount;
+    const finalPaymentMethodId = data.paymentMethodId !== undefined ? data.paymentMethodId : transaction.paymentMethodId;
+
+    // For EXPENSE transactions: reverse old credit card effect before update, then apply new effect after
+    if (transaction.type === TransactionType.EXPENSE && transaction.paymentMethodId) {
+      await this.paymentMethodService.updateCreditCardBalance(
+        transaction.paymentMethodId,
+        transaction.amount,
+        false // Reverse: subtract the original expense from the balance
+      );
+    }
+
     const updatedTransaction = await this.transactionRepository.update(id, updateData);
     if (!updatedTransaction) {
+      // Rollback: re-apply the old credit card effect we reversed
+      if (transaction.type === TransactionType.EXPENSE && transaction.paymentMethodId) {
+        await this.paymentMethodService.updateCreditCardBalance(
+          transaction.paymentMethodId,
+          transaction.amount,
+          true
+        );
+      }
       throw new NotFoundError('Transaction', id);
+    }
+
+    // Apply new credit card effect for EXPENSE transactions
+    if (transaction.type === TransactionType.EXPENSE && finalPaymentMethodId) {
+      await this.paymentMethodService.updateCreditCardBalance(
+        finalPaymentMethodId,
+        finalAmount,
+        true // Apply: add the (possibly updated) expense to the balance
+      );
     }
 
     return updatedTransaction;
