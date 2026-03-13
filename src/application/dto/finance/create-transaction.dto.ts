@@ -11,7 +11,11 @@ export const createTransactionSchema = z
     description: z.string().min(1, 'La descripción es requerida').max(500, 'La descripción debe tener menos de 500 caracteres'),
     date: z
       .union([z.string(), z.date()])
-      .transform((val) => (typeof val === 'string' ? new Date(val) : val))
+      .transform((val) => {
+        // Extract only the YYYY-MM-DD portion to avoid timezone shift when storing in UTC
+        const dateStr = typeof val === 'string' ? val.split('T')[0] : val.toISOString().split('T')[0];
+        return new Date(`${dateStr}T00:00:00.000Z`);
+      })
       .refine((val) => !isNaN(val.getTime()), { message: 'Formato de fecha inválido' }),
     type: z.nativeEnum(TransactionType, {
       message: 'El tipo debe ser INCOME o EXPENSE',

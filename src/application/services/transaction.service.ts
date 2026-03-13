@@ -3,6 +3,7 @@ import { RecurringExpenseRepository } from '../../domain/finance/repositories/re
 import { CategoryRepository } from '../../domain/category/repositories/category.repository';
 import { UserRepository } from '../../domain/user/repositories/user.repository';
 import { PaymentMethodRepository } from '../../domain/payment-method/repositories/payment-method.repository';
+import { PaymentMethodService } from './payment-method.service';
 import { CreateTransactionDto } from '../dto/finance/create-transaction.dto';
 import { UpdateTransactionDto } from '../dto/finance/update-transaction.dto';
 import { Transaction, TransactionType, CategorySnapshot } from '../../domain/finance/types/transaction.types';
@@ -30,13 +31,15 @@ export class TransactionService {
    * @param {CategoryRepository} categoryRepository Repository for category lookups.
    * @param {UserRepository} userRepository Repository used to validate the owner existence.
    * @param {PaymentMethodRepository} paymentMethodRepository Repository used to validate payment method existence.
+   * @param {PaymentMethodService} paymentMethodService Service used to update credit card balance.
    */
   constructor(
     private readonly transactionRepository: TransactionRepository,
     private readonly recurringExpenseRepository: RecurringExpenseRepository,
     private readonly categoryRepository: CategoryRepository,
     private readonly userRepository: UserRepository,
-    private readonly paymentMethodRepository: PaymentMethodRepository
+    private readonly paymentMethodRepository: PaymentMethodRepository,
+    private readonly paymentMethodService: PaymentMethodService
   ) {}
 
   /**
@@ -82,7 +85,7 @@ export class TransactionService {
     // Ensure date is a Date object (Zod transforms string to Date)
     const transactionDate = data.date instanceof Date ? data.date : new Date(data.date);
 
-    return this.transactionRepository.create({
+    const transaction = await this.transactionRepository.create({
       userId,
       amount: data.amount,
       description: data.description,
@@ -92,6 +95,18 @@ export class TransactionService {
       paymentMethodId: data.paymentMethodId,
       isRecurring: false,
     });
+
+    // Update credit card balance if payment method is provided
+    if (data.paymentMethodId) {
+      const isExpense = data.type === TransactionType.EXPENSE;
+      await this.paymentMethodService.updateCreditCardBalance(
+        data.paymentMethodId,
+        data.amount,
+        isExpense
+      );
+    }
+
+    return transaction;
   }
 
   /**
@@ -159,11 +174,22 @@ export class TransactionService {
     );
     await this.recurringExpenseRepository.updateNextPaymentDate(recurringExpenseId, nextPaymentDate);
 
+    // Update credit card balance (recurring expenses are always EXPENSE transactions)
+    if (recurringExpense.paymentMethodId) {
+      await this.paymentMethodService.updateCreditCardBalance(
+        recurringExpense.paymentMethodId,
+        recurringExpense.amount,
+        true // Recurring expenses are always expenses
+      );
+    }
+
     return transaction;
   }
 
   /**
    * Retrieves transaction history for a user with optional filters.
+   * When `startDate` is not provided, defaults to the first day of the current month at 00:00:00.
+   * When `endDate` is not provided, defaults to the current day at 23:59:59.999.
    *
    * @param {string} userId User identifier.
    * @param {TransactionHistoryFilters} filters Optional filters for date range, type, category.
@@ -173,9 +199,13 @@ export class TransactionService {
   async getHistory(userId: string, filters?: TransactionHistoryFilters): Promise<Transaction[]> {
     await this.ensureUserExists(userId);
 
+    const now = new Date();
+    const defaultStartDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const defaultEndDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
     const repositoryFilters = {
-      startDate: filters?.startDate,
-      endDate: filters?.endDate,
+      startDate: filters?.startDate ?? defaultStartDate,
+      endDate: filters?.endDate ?? defaultEndDate,
       type: filters?.type,
       categoryId: filters?.categoryId,
     };
@@ -184,16 +214,16 @@ export class TransactionService {
   }
 
   /**
-   * Updates an INCOME transaction by identifier.
-   * Validates that the transaction belongs to the specified user and is of type INCOME.
-   * Only INCOME transactions can be updated.
+   * Updates an INCOME or EXPENSE transaction by identifier.
+   * Validates that the transaction belongs to the specified user.
+   * For EXPENSE transactions, credit card balance is adjusted when amount or payment method changes.
    *
    * @param {string} id Transaction identifier.
    * @param {UpdateTransactionDto} data Partial payload with the updated fields.
    * @param {string} userId User identifier to verify ownership.
    * @returns {Promise<Transaction>} Updated transaction.
    * @throws {NotFoundError} If the transaction does not exist.
-   * @throws {ForbiddenError} If the transaction does not belong to the user or is not an INCOME transaction.
+   * @throws {ForbiddenError} If the transaction does not belong to the user.
    */
   async update(id: string, data: UpdateTransactionDto, userId: string): Promise<Transaction> {
     const transaction = await this.transactionRepository.findById(id);
@@ -205,10 +235,7 @@ export class TransactionService {
       throw new ForbiddenError('No tienes permiso para actualizar esta transacción');
     }
 
-    // Only INCOME transactions can be updated
-    if (transaction.type !== TransactionType.INCOME) {
-      throw new ForbiddenError('Solo las transacciones de tipo INCOME pueden ser actualizadas');
-    }
+    const expectedCategoryType = transaction.type === TransactionType.INCOME ? CategoryType.INCOME : CategoryType.EXPENSE;
 
     // Prepare update data
     const updateData: Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>> = {};
@@ -232,9 +259,8 @@ export class TransactionService {
       if (category.userId !== userId) {
         throw new ForbiddenError('No tienes permiso para usar esta categoría');
       }
-      // Validate that category type matches transaction type (only INCOME transactions can be updated)
-      if (category.type !== CategoryType.INCOME) {
-        throw new ForbiddenError(`El tipo de categoría "${category.type}" no coincide con el tipo de transacción "INCOME"`);
+      if (category.type !== expectedCategoryType) {
+        throw new ForbiddenError(`El tipo de categoría "${category.type}" no coincide con el tipo de transacción "${transaction.type}"`);
       }
       updateData.category = {
         id: category.id!,
@@ -243,7 +269,7 @@ export class TransactionService {
       };
     }
 
-    // Handle payment method update (optional for INCOME transactions)
+    // Handle payment method update
     if (data.paymentMethodId !== undefined) {
       if (data.paymentMethodId) {
         await this.ensurePaymentMethodExists(data.paymentMethodId, userId);
@@ -253,9 +279,38 @@ export class TransactionService {
       }
     }
 
+    const finalAmount = typeof data.amount === 'number' ? data.amount : transaction.amount;
+    const finalPaymentMethodId = data.paymentMethodId !== undefined ? data.paymentMethodId : transaction.paymentMethodId;
+
+    // For EXPENSE transactions: reverse old credit card effect before update, then apply new effect after
+    if (transaction.type === TransactionType.EXPENSE && transaction.paymentMethodId) {
+      await this.paymentMethodService.updateCreditCardBalance(
+        transaction.paymentMethodId,
+        transaction.amount,
+        false // Reverse: subtract the original expense from the balance
+      );
+    }
+
     const updatedTransaction = await this.transactionRepository.update(id, updateData);
     if (!updatedTransaction) {
+      // Rollback: re-apply the old credit card effect we reversed
+      if (transaction.type === TransactionType.EXPENSE && transaction.paymentMethodId) {
+        await this.paymentMethodService.updateCreditCardBalance(
+          transaction.paymentMethodId,
+          transaction.amount,
+          true
+        );
+      }
       throw new NotFoundError('Transaction', id);
+    }
+
+    // Apply new credit card effect for EXPENSE transactions
+    if (transaction.type === TransactionType.EXPENSE && finalPaymentMethodId) {
+      await this.paymentMethodService.updateCreditCardBalance(
+        finalPaymentMethodId,
+        finalAmount,
+        true // Apply: add the (possibly updated) expense to the balance
+      );
     }
 
     return updatedTransaction;

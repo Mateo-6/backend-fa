@@ -1,0 +1,72 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Ami - Personal Finance App API - Lambda Only
+  
+  Serverless API using AWS Lambda and API Gateway
+
+Parameters:
+  MongoUri:
+    Type: String
+    Description: MongoDB Atlas connection string
+    NoEcho: true
+    MinLength: 1
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: nodejs22.x
+    Architectures:
+      - x86_64
+
+Resources:
+  AmiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../..
+      Handler: dist/infra/http/lambda-handler.handler
+      Environment:
+        Variables:
+          MONGO_URI: !Ref MongoUri
+          NODE_ENV: production
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AmiHttpApi
+            Path: /{proxy+}
+            Method: ANY
+            PayloadFormatVersion: '2.0'
+
+  AmiHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+          - X-Amz-Date
+          - X-Api-Key
+          - X-Amz-Security-Token
+        MaxAge: 3600
+
+Outputs:
+  AmiApi:
+    Description: "API Gateway endpoint URL for Ami Function"
+    Value: !Sub "https://${AmiHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
+  AmiFunctionArn:
+    Description: "Ami Lambda Function ARN"
+    Value: !GetAtt AmiFunction.Arn
+  AmiApiId:
+    Description: "API Gateway HTTP API ID"
+    Value: !Ref AmiHttpApi

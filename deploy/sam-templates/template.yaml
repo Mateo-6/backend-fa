@@ -1,0 +1,163 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Ami - Personal Finance App API
+  
+  Serverless API using AWS Lambda and API Gateway
+
+Parameters:
+  MongoUri:
+    Type: String
+    Description: MongoDB Atlas connection string
+    NoEcho: true
+    MinLength: 1
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 256
+    Runtime: nodejs22.x
+    Architectures:
+      - x86_64
+
+Resources:
+  AmiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../..
+      Handler: dist/infra/http/lambda-handler.handler
+      Environment:
+        Variables:
+          MONGO_URI: !Ref MongoUri
+          NODE_ENV: production
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AmiHttpApi
+            Path: /{proxy+}
+            Method: ANY
+            PayloadFormatVersion: '2.0'
+
+  AmiHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+          - X-Amz-Date
+          - X-Api-Key
+          - X-Amz-Security-Token
+        MaxAge: 3600
+
+  AmiWebBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-ami-web-bucket"
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+
+  AmiWebBucketOAC:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub "${AWS::StackName}-ami-web-oac"
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  AmiWebBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    DependsOn:
+      - AmiWebBucket
+      - AmiWebDistribution
+    Properties:
+      Bucket: !Ref AmiWebBucket
+      PolicyDocument:
+        Statement:
+          - Sid: AllowCloudFrontServicePrincipal
+            Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "${AmiWebBucket}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${AmiWebDistribution}"
+
+  AmiWebDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt AmiWebBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: ""
+            OriginAccessControlId: !GetAtt AmiWebBucketOAC.Id
+        Enabled: true
+        DefaultRootObject: index.html
+        Comment: !Sub "CloudFront distribution for ${AWS::StackName} web app"
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - DELETE
+            - GET
+            - HEAD
+            - OPTIONS
+            - PATCH
+            - POST
+            - PUT
+          CachedMethods:
+            - GET
+            - HEAD
+          Compress: true
+          ForwardedValues:
+            QueryString: false
+          MinTTL: 0
+          DefaultTTL: 86400
+          MaxTTL: 31536000
+        CustomErrorResponses:
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+
+Outputs:
+  AmiApi:
+    Description: "API Gateway endpoint URL for Ami Function"
+    Value: !Sub "https://${AmiHttpApi}.execute-api.${AWS::Region}.amazonaws.com/"
+  AmiFunctionArn:
+    Description: "Ami Lambda Function ARN"
+    Value: !GetAtt AmiFunction.Arn
+  AmiApiId:
+    Description: "API Gateway HTTP API ID"
+    Value: !Ref AmiHttpApi
+  AmiWebBucketName:
+    Description: "S3 Bucket name for web hosting"
+    Value: !Ref AmiWebBucket
+  AmiWebCloudFrontURL:
+    Description: "CloudFront distribution URL for web app"
+    Value: !GetAtt AmiWebDistribution.DomainName
+  AmiWebCloudFrontDistributionId:
+    Description: "CloudFront distribution ID"
+    Value: !Ref AmiWebDistribution

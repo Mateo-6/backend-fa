@@ -73,10 +73,12 @@ export class TransactionController {
     } = {};
 
     if (req.query.startDate) {
-      filters.startDate = new Date(req.query.startDate as string);
+      const startDateStr = req.query.startDate as string;
+      filters.startDate = new Date(startDateStr.includes('T') ? startDateStr : `${startDateStr}T00:00:00.000Z`);
     }
     if (req.query.endDate) {
-      filters.endDate = new Date(req.query.endDate as string);
+      const endDateStr = req.query.endDate as string;
+      filters.endDate = new Date(endDateStr.includes('T') ? endDateStr : `${endDateStr}T23:59:59.999Z`);
     }
     if (req.query.type) {
       const typeValue = (req.query.type as string).toUpperCase();

@@ -8,7 +8,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
     "build:clean": "rm -rf dist && npm run build",
-    "deploy": "npm run build:clean && node scripts/deploy.js"
+    "start": "node dist/index.js"
   },
   "keywords": [],
   "author": "",
@@ -26,10 +26,10 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.159",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.5",
     "@types/jsonwebtoken": "^9.0.10",
-    "archiver": "^7.0.1",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"
   }

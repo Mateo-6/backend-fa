@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { TransactionController } from '../controllers/finance/transaction.controller';
 import { TransactionService } from '../../../application/services/transaction.service';
+import { PaymentMethodService } from '../../../application/services/payment-method.service';
 import { TransactionMongooseRepository } from '../../repositories/transaction-mongoose.repository';
 import { RecurringExpenseMongooseRepository } from '../../repositories/recurring-expense-mongoose.repository';
 import { CategoryMongooseRepository } from '../../repositories/category-mongoose.repository';
@@ -21,12 +22,14 @@ const recurringExpenseRepository = new RecurringExpenseMongooseRepository();
 const categoryRepository = new CategoryMongooseRepository();
 const userRepository = new UserMongooseRepository();
 const paymentMethodRepository = new PaymentMethodMongooseRepository();
+const paymentMethodService = new PaymentMethodService(paymentMethodRepository, userRepository);
 const transactionService = new TransactionService(
   transactionRepository,
   recurringExpenseRepository,
   categoryRepository,
   userRepository,
-  paymentMethodRepository
+  paymentMethodRepository,
+  paymentMethodService
 );
 const transactionController = new TransactionController(transactionService);
 const tokenService = new JwtTokenService();

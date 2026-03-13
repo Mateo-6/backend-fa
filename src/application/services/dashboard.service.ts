@@ -37,15 +37,22 @@ export class DashboardService {
 
   /**
    * Retrieves complete dashboard data for a user.
-   * Calculates financial summary, recent transactions, and upcoming payments.
+   * Transactions are scoped to the current month (from day 1 to today) to reflect
+   * the current period's financial performance. Upcoming payments are not date-filtered.
    *
    * @param {string} userId User identifier.
    * @returns {Promise<DashboardData>} Complete dashboard data including summary, recent transactions, and upcoming payments.
    */
   async getDashboardData(userId: string): Promise<DashboardData> {
-    // Fetch all transactions and recurring expenses for dashboard calculations
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
     const [allTransactions, allRecurringExpenses] = await Promise.all([
-      this.transactionRepository.findAllByUser(userId),
+      this.transactionRepository.findAllByUser(userId, {
+        startDate: startOfMonth,
+        endDate: endOfToday,
+      }),
       this.recurringExpenseRepository.findAllByUser(userId),
     ]);
 

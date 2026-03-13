@@ -3,7 +3,9 @@ import { User } from '../../domain/user/types/user.types';
 import { CreateUserDto } from '../dto/user/create-user.dto';
 import { UpdateUserDto } from '../dto/user/update-user.dto';
 import { IPasswordService } from '../../domain/auth/services/password-service.interface';
+import { CategoryRepository } from '../../domain/category/repositories/category.repository';
 import { NotFoundError } from '../../domain/errors/app-error';
+import { DEFAULT_CATEGORIES } from '../constants/default-categories';
 
 /**
  * Service for managing users.
@@ -13,14 +15,16 @@ export class UserService {
   /**
    * @param {UserRepository} userRepository Repository implementation handling persistence.
    * @param {IPasswordService} passwordService Service for password hashing.
+   * @param {CategoryRepository} categoryRepository Repository for creating default categories on registration.
    */
   constructor(
     private userRepository: UserRepository,
-    private passwordService: IPasswordService
+    private passwordService: IPasswordService,
+    private categoryRepository: CategoryRepository
   ) {}
 
   /**
-   * Creates a user after hashing the provided password.
+   * Creates a user after hashing the provided password and assigns default categories.
    *
    * @param {CreateUserDto} data Raw user data coming from the controller.
    * @returns {Promise<User>} Persisted user entity.
@@ -28,7 +32,26 @@ export class UserService {
   async create(data: CreateUserDto): Promise<User> {
     const hashedPassword = await this.passwordService.hash(data.password!);
     const userWithHashedPassword = { ...data, password: hashedPassword };
-    return this.userRepository.create(userWithHashedPassword);
+    const user = await this.userRepository.create(userWithHashedPassword);
+    await this.createDefaultCategoriesForUser(user.id!);
+    return user;
+  }
+
+  /**
+   * Creates the default categories (income and expense) for a newly registered user.
+   *
+   * @param {string} userId Owner identifier.
+   * @returns {Promise<void>} Resolves when all default categories are created.
+   */
+  private async createDefaultCategoriesForUser(userId: string): Promise<void> {
+    for (const entry of DEFAULT_CATEGORIES) {
+      await this.categoryRepository.create({
+        name: entry.name,
+        description: entry.description,
+        type: entry.type,
+        userId,
+      });
+    }
   }
 
   /**

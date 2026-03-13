@@ -1,0 +1,15 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "ami-api-lambda"
+s3_bucket = "sam-cli-deployments-us-east-1"
+s3_prefix = "ami-api-lambda"
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM"
+disable_rollback = true
+image_repositories = []
+template_file = "sam-templates/template-lambda.yaml"
+fail_on_empty_changeset = false
+
+[default.global.parameters]
+region = "us-east-1"

@@ -2,9 +2,13 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+const DEPLOY_DIR = path.resolve(__dirname, '..');
+const PROJECT_ROOT = path.resolve(DEPLOY_DIR, '..');
+
 /**
- * Deploys the application to AWS
- * Supports multiple deployment targets: Elastic Beanstalk, ECS, Lambda, or S3
+ * Deploys the application to AWS.
+ * Supports multiple deployment targets: Elastic Beanstalk, ECS, Lambda, or S3.
+ * All paths are resolved relative to the deploy/ folder.
  * 
  * @param {string} deploymentType - Type of AWS deployment (eb, ecs, lambda, s3)
  * @param {Object} options - Deployment options (region, appName, etc.)
@@ -22,15 +26,14 @@ async function deploy(deploymentType = 'lambda', options = {}) {
   console.log(`📦 Deployment Type: ${deploymentType}`);
   console.log(`🌍 Region: ${region}`);
   console.log(`📱 App Name: ${appName}`);
+  console.log(`📂 Project Root: ${PROJECT_ROOT}`);
 
-  // Check if dist directory exists
-  const distPath = path.join(process.cwd(), 'dist');
+  const distPath = path.join(PROJECT_ROOT, 'dist');
   if (!fs.existsSync(distPath)) {
-    console.error('❌ Error: dist directory not found. Please run "npm run build" first.');
+    console.error('❌ Error: dist directory not found. Please run "npm run build" from the project root first.');
     process.exit(1);
   }
 
-  // Check AWS CLI installation
   try {
     execSync('aws --version', { stdio: 'ignore' });
   } catch (error) {
@@ -39,16 +42,14 @@ async function deploy(deploymentType = 'lambda', options = {}) {
     process.exit(1);
   }
 
-  // Create deployment package
   const zipFileName = `${appName}-${Date.now()}.zip`;
-  const zipPath = path.join(process.cwd(), zipFileName);
+  const zipPath = path.join(DEPLOY_DIR, zipFileName);
 
   try {
     console.log('📦 Creating deployment package...');
-    createDeploymentPackage(distPath, zipPath);
+    await createDeploymentPackage(distPath, zipPath);
     console.log(`✅ Package created: ${zipFileName}`);
 
-    // Deploy based on type
     switch (deploymentType.toLowerCase()) {
       case 'eb':
         deployToElasticBeanstalk(zipPath, appName, environment, region, profile);
@@ -68,7 +69,6 @@ async function deploy(deploymentType = 'lambda', options = {}) {
         process.exit(1);
     }
 
-    // Clean up zip file
     if (fs.existsSync(zipPath)) {
       fs.unlinkSync(zipPath);
       console.log('🧹 Cleaned up deployment package');
@@ -77,9 +77,7 @@ async function deploy(deploymentType = 'lambda', options = {}) {
     console.log('✅ Deployment completed successfully!');
   } catch (error) {
     console.error('❌ Deployment failed:', error.message);
-    if (fs.existsSync(zipPath)) {
-      fs.unlinkSync(zipPath);
-    }
+    if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
     process.exit(1);
   }
 }
@@ -89,7 +87,7 @@ async function deploy(deploymentType = 'lambda', options = {}) {
  * 
  * @param {string} distPath - Path to the dist directory
  * @param {string} zipPath - Path where the zip file will be created
- * @returns {void}
+ * @returns {Promise<void>} Resolves when zip is created
  */
 function createDeploymentPackage(distPath, zipPath) {
   const archiver = require('archiver');
@@ -104,23 +102,16 @@ function createDeploymentPackage(distPath, zipPath) {
 
     archive.on('error', (err) => reject(err));
     archive.pipe(output);
-
-    // Add dist files
     archive.directory(distPath, false);
     
-    // Add package.json (for production dependencies)
-    if (fs.existsSync('package.json')) {
-      archive.file('package.json', { name: 'package.json' });
+    const packageJsonPath = path.join(PROJECT_ROOT, 'package.json');
+    if (fs.existsSync(packageJsonPath)) {
+      archive.file(packageJsonPath, { name: 'package.json' });
     }
 
-    // Add package-lock.json if exists
-    if (fs.existsSync('package-lock.json')) {
-      archive.file('package-lock.json', { name: 'package-lock.json' });
-    }
-
-    // Add .env.example if exists (for reference)
-    if (fs.existsSync('.env.example')) {
-      archive.file('.env.example', { name: '.env.example' });
+    const packageLockPath = path.join(PROJECT_ROOT, 'package-lock.json');
+    if (fs.existsSync(packageLockPath)) {
+      archive.file(packageLockPath, { name: 'package-lock.json' });
     }
 
     archive.finalize();
@@ -139,38 +130,16 @@ function createDeploymentPackage(distPath, zipPath) {
  */
 function deployToElasticBeanstalk(zipPath, appName, environment, region, profile) {
   console.log('🌱 Deploying to Elastic Beanstalk...');
-  
   const s3Bucket = `${appName}-deployments-${region}`;
   const s3Key = `versions/${path.basename(zipPath)}`;
 
-  // Upload to S3
-  console.log('📤 Uploading to S3...');
+  execSync(`aws s3 cp ${zipPath} s3://${s3Bucket}/${s3Key} --region ${region} --profile ${profile}`, { stdio: 'inherit' });
   execSync(
-    `aws s3 cp ${zipPath} s3://${s3Bucket}/${s3Key} --region ${region} --profile ${profile}`,
+    `aws elasticbeanstalk create-application-version --application-name ${appName} --version-label ${Date.now()} --source-bundle S3Bucket=${s3Bucket},S3Key=${s3Key} --region ${region} --profile ${profile}`,
     { stdio: 'inherit' }
   );
-
-  // Create application version
-  console.log('📝 Creating application version...');
   execSync(
-    `aws elasticbeanstalk create-application-version ` +
-    `--application-name ${appName} ` +
-    `--version-label ${Date.now()} ` +
-    `--source-bundle S3Bucket=${s3Bucket},S3Key=${s3Key} ` +
-    `--region ${region} ` +
-    `--profile ${profile}`,
-    { stdio: 'inherit' }
-  );
-
-  // Update environment
-  console.log('🔄 Updating environment...');
-  execSync(
-    `aws elasticbeanstalk update-environment ` +
-    `--application-name ${appName} ` +
-    `--environment-name ${environment} ` +
-    `--version-label ${Date.now()} ` +
-    `--region ${region} ` +
-    `--profile ${profile}`,
+    `aws elasticbeanstalk update-environment --application-name ${appName} --environment-name ${environment} --version-label ${Date.now()} --region ${region} --profile ${profile}`,
     { stdio: 'inherit' }
   );
 }
@@ -187,9 +156,6 @@ function deployToElasticBeanstalk(zipPath, appName, environment, region, profile
 function deployToECS(zipPath, appName, region, profile) {
   console.log('🐳 Deploying to ECS...');
   console.log('⚠️  Note: ECS deployment requires Docker. Please ensure you have a Dockerfile.');
-  
-  // This is a placeholder - ECS typically requires Docker images
-  // You would need to build and push a Docker image to ECR
   console.log('💡 For ECS deployment, consider using:');
   console.log('   1. Build Docker image: docker build -t ' + appName + ' .');
   console.log('   2. Push to ECR: aws ecr get-login-password | docker login ...');
@@ -207,17 +173,9 @@ function deployToECS(zipPath, appName, region, profile) {
  */
 function deployToLambda(zipPath, appName, region, profile) {
   console.log('⚡ Deploying to Lambda...');
-  console.log('⚠️  Note: Lambda deployment requires serverless configuration.');
-  
   const functionName = `${appName}-handler`;
-  
-  // Update Lambda function code
   execSync(
-    `aws lambda update-function-code ` +
-    `--function-name ${functionName} ` +
-    `--zip-file fileb://${zipPath} ` +
-    `--region ${region} ` +
-    `--profile ${profile}`,
+    `aws lambda update-function-code --function-name ${functionName} --zip-file fileb://${zipPath} --region ${region} --profile ${profile}`,
     { stdio: 'inherit' }
   );
 }
@@ -233,16 +191,9 @@ function deployToLambda(zipPath, appName, region, profile) {
  */
 function deployToS3(zipPath, appName, region, profile) {
   console.log('☁️  Deploying to S3...');
-  
   const s3Bucket = `${appName}-deployments-${region}`;
   const s3Key = `versions/${path.basename(zipPath)}`;
-
-  // Upload to S3
-  execSync(
-    `aws s3 cp ${zipPath} s3://${s3Bucket}/${s3Key} --region ${region} --profile ${profile}`,
-    { stdio: 'inherit' }
-  );
-
+  execSync(`aws s3 cp ${zipPath} s3://${s3Bucket}/${s3Key} --region ${region} --profile ${profile}`, { stdio: 'inherit' });
   console.log(`✅ Package uploaded to: s3://${s3Bucket}/${s3Key}`);
 }
 
@@ -252,11 +203,9 @@ function deployToS3(zipPath, appName, region, profile) {
  * @returns {Object|null} Configuration object or null if file doesn't exist
  */
 function loadConfig() {
-  const configPath = path.join(process.cwd(), 'aws-deploy.config.js');
+  const configPath = path.join(DEPLOY_DIR, 'aws-deploy.config.js');
   if (fs.existsSync(configPath)) {
-    try {
-      return require(configPath);
-    } catch (error) {
+    try { return require(configPath); } catch (error) {
       console.warn('⚠️  Warning: Could not load aws-deploy.config.js:', error.message);
       return null;
     }
@@ -272,10 +221,7 @@ const appName = process.argv[4] || process.env.AWS_APP_NAME || config?.appName |
 const environment = process.argv[5] || process.env.AWS_ENVIRONMENT || config?.environment || 'production';
 const profile = process.argv[6] || process.env.AWS_PROFILE || config?.profile || 'default';
 
-// Check if archiver is installed
-try {
-  require.resolve('archiver');
-} catch (error) {
+try { require.resolve('archiver'); } catch (error) {
   console.error('❌ Error: archiver package is required for deployment.');
   console.error('   Please install it: npm install --save-dev archiver');
   process.exit(1);

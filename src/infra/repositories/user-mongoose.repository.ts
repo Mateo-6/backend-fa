@@ -12,12 +12,26 @@ export class UserMongooseRepository implements UserRepository {
    * @returns {Promise<User>} The stored user document.
    */
   async create(user: User): Promise<User> {
-    // Ensure Mongoose is connected
-    await getMongooseInstance();
+    try {
+      // Ensure Mongoose is connected
+      const mongooseInstance = await getMongooseInstance();
+      
+      // readyState: 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+      const readyState = mongooseInstance.connection.readyState;
+      if (readyState !== 1) {
+        console.error('MongoDB connection is not ready. State:', readyState);
+        throw new Error('MongoDB connection is not established');
+      }
 
-    const createdUser: IUserDocument = await UserModel.create(user);
+      console.log('Creating user with data:', { ...user, password: '[REDACTED]' });
+      const createdUser: IUserDocument = await UserModel.create(user);
+      console.log('User created successfully with ID:', createdUser._id);
 
-    return this.toDomain(createdUser);
+      return this.toDomain(createdUser);
+    } catch (error) {
+      console.error('Error creating user in repository:', error);
+      throw error;
+    }
   }
 
   /**

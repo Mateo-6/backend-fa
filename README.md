@@ -353,9 +353,6 @@ The project follows **Clean Architecture** with clear separation of responsibili
 - **ts-node-dev** - Hot reload in development
 - **dotenv** - Environment variable management
 
-### Containers
-- **Docker Compose** - Local MongoDB and MySQL
-
 ---
 
 ## Requirements
@@ -442,9 +439,6 @@ npm install
 # Set up environment variables
 cp .env.example .env
 # Edit .env with your configuration
-
-# Start MongoDB (if using Docker Compose)
-docker-compose up -d
 
 # Build the project
 npm run build
@@ -779,60 +773,33 @@ api/
 │   │   │   ├── auth/
 │   │   │   ├── category/
 │   │   │   ├── finance/
+│   │   │   ├── notification/
 │   │   │   ├── payment-method/
 │   │   │   └── user/
+│   │   ├── constants/            # Default data
 │   │   └── services/             # Application services
-│   │       ├── auth.service.ts
-│   │       ├── category.service.ts
-│   │       ├── payment-method.service.ts
-│   │       ├── recurring-expense.service.ts
-│   │       ├── transaction.service.ts
-│   │       └── user.service.ts
 │   │
 │   ├── domain/                   # Domain Layer
-│   │   ├── auth/
-│   │   │   └── services/         # Service interfaces
-│   │   ├── category/
-│   │   │   ├── repositories/     # Repository interfaces
-│   │   │   └── types/            # Domain types
+│   │   ├── auth/services/        # Service interfaces
+│   │   ├── category/             # Repository interfaces & types
 │   │   ├── errors/               # Custom errors
-│   │   ├── finance/
-│   │   │   ├── repositories/
-│   │   │   └── types/
-│   │   ├── health/
-│   │   ├── payment-method/
-│   │   │   ├── repositories/
-│   │   │   └── types/
-│   │   └── user/
-│   │       ├── repositories/
-│   │       └── types/
+│   │   ├── finance/              # Repositories & types
+│   │   ├── health/               # Health service
+│   │   ├── notification/         # Repositories & types
+│   │   ├── payment-method/       # Repositories & types
+│   │   └── user/                 # Repositories & types
 │   │
 │   ├── infra/                    # Infrastructure Layer
 │   │   ├── config/               # Configuration
-│   │   ├── database/             # Database clients
-│   │   │   ├── models/           # Mongoose models
-│   │   │   ├── mongoose-client.ts
-│   │   │   └── prisma-client.ts
-│   │   ├── http/                 # HTTP Layer
-│   │   │   ├── controllers/      # Controllers
-│   │   │   ├── middleware/       # Middleware
-│   │   │   ├── routes/           # Routes
-│   │   │   ├── types/            # HTTP types
-│   │   │   ├── utils/            # HTTP utilities
-│   │   │   └── server.ts         # Express server
+│   │   ├── database/             # Database clients & models
+│   │   ├── http/                 # HTTP Layer (controllers, routes, middleware)
 │   │   ├── repositories/         # Repository implementations
 │   │   └── services/             # Service implementations
-│   │       ├── bcrypt-password.service.ts
-│   │       └── jwt-token.service.ts
 │   │
 │   └── index.ts                  # Entry point
 │
-├── prisma/                       # Prisma ORM
-│   ├── migrations/               # Migrations
-│   └── schema.prisma             # Prisma schema
-│
+├── deploy/                       # Deployment configs, scripts & instructions
 ├── mockups/                      # HTML mockups
-├── docker-compose.yml            # Docker services
 ├── package.json                  # Dependencies
 ├── tsconfig.json                 # TypeScript configuration
 └── README.md                     # This file
