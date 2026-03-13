@@ -8,20 +8,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
     "build:clean": "rm -rf dist && npm run build",
-    "deploy": "npm run build:clean && node scripts/deploy.js",
-    "aws:build": "npm run build && sam build",
-    "aws:build:lambda": "npm run build && sam build --template template-lambda.yaml",
-    "aws:build:s3": "sam build --template template-s3.yaml",
-    "aws:deploy": "npm run build && sam deploy --guided",
-    "aws:deploy:lambda": "npm run build && sam build --template template-lambda.yaml && sam deploy --config-file samconfig-lambda.toml --guided",
-    "aws:deploy:s3": "sam build --template template-s3.yaml && sam deploy --config-file samconfig-s3.toml --guided",
-    "aws:infra:lambda": "node scripts/deploy-lambda-infra.js",
-    "aws:infra:lambda:simple": "npm run build && sam build --template template-lambda.yaml && sam deploy --guided --template template-lambda.yaml --s3-bucket sam-cli-deployments-us-east-1",
-    "aws:infra:lambda:direct": "npm run build && sam build --template template-lambda.yaml && sam deploy --config-file samconfig-lambda.toml --parameter-overrides MongoUri=${MONGO_URI}",
-    "aws:fix:stack": "node scripts/fix-stack.js",
-    "aws:infra:s3": "node scripts/deploy-s3-infra.js",
-    "aws:update:lambda": "node scripts/update-lambda-code.js",
-    "aws:logs": "sam logs -n AmiFunction --tail --stack-name ami-api-lambda"
+    "start": "node dist/index.js"
   },
   "keywords": [],
   "author": "",
@@ -43,8 +30,6 @@
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.5",
     "@types/jsonwebtoken": "^9.0.10",
-    "archiver": "^7.0.1",
-    "esbuild": "^0.19.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3"
   }

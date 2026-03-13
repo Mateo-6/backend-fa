@@ -8,7 +8,7 @@ confirm_changeset = false
 capabilities = "CAPABILITY_IAM"
 disable_rollback = true
 image_repositories = []
-template_file = "template-s3.yaml"
+template_file = "sam-templates/template-s3.yaml"
 fail_on_empty_changeset = false
 
 [default.global.parameters]

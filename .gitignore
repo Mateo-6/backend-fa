@@ -1,14 +1,21 @@
 node_modules
-# Keep environment variables out of version control
+
+# Environment variables
 .env
-env.json
+deploy/lambda-local/env.json
 
 # Build output
 dist
 
-# Deployment packages
+# Deployment artifacts
 *.zip
-
 .aws-sam
-.ebextensions
+deploy/.aws-sam
+deploy/.lambda-update-*.zip
+
+# IDE
 .cursor
+.vscode
+
+# OS
+.DS_Store

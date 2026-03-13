@@ -24,7 +24,7 @@ Resources:
   AmiFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .
+      CodeUri: ../..
       Handler: dist/infra/http/lambda-handler.handler
       Environment:
         Variables:

@@ -2,17 +2,21 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+const DEPLOY_DIR = path.resolve(__dirname, '..');
+const PROJECT_ROOT = path.resolve(DEPLOY_DIR, '..');
+
 /**
  * Checks if all prerequisites for AWS deployment are met.
+ * All paths are resolved relative to the deploy/ folder.
  * 
  * @returns {Promise<void>} Resolves when all checks complete
  */
 async function checkPrerequisites() {
-  console.log('🔍 Checking prerequisites for AWS deployment...\n');
+  console.log('🔍 Checking prerequisites for AWS deployment...');
+  console.log(`📂 Project Root: ${PROJECT_ROOT}\n`);
   
   const checks = [];
   
-  // Check Node.js
   try {
     const nodeVersion = execSync('node --version', { encoding: 'utf-8' }).trim();
     console.log(`✅ Node.js: ${nodeVersion}`);
@@ -22,7 +26,6 @@ async function checkPrerequisites() {
     checks.push({ name: 'Node.js', status: false });
   }
   
-  // Check npm
   try {
     const npmVersion = execSync('npm --version', { encoding: 'utf-8' }).trim();
     console.log(`✅ npm: ${npmVersion}`);
@@ -32,7 +35,6 @@ async function checkPrerequisites() {
     checks.push({ name: 'npm', status: false });
   }
   
-  // Check AWS CLI
   try {
     const awsVersion = execSync('aws --version', { encoding: 'utf-8' }).trim();
     console.log(`✅ AWS CLI: ${awsVersion}`);
@@ -43,7 +45,16 @@ async function checkPrerequisites() {
     checks.push({ name: 'AWS CLI', status: false });
   }
   
-  // Check AWS credentials
+  try {
+    const samVersion = execSync('sam --version', { encoding: 'utf-8' }).trim();
+    console.log(`✅ SAM CLI: ${samVersion}`);
+    checks.push({ name: 'SAM CLI', status: true });
+  } catch (error) {
+    console.log('❌ SAM CLI: Not installed');
+    console.log('   Install: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html');
+    checks.push({ name: 'SAM CLI', status: false });
+  }
+  
   try {
     execSync('aws sts get-caller-identity', { stdio: 'ignore' });
     const identity = JSON.parse(execSync('aws sts get-caller-identity', { encoding: 'utf-8' }));
@@ -55,39 +66,25 @@ async function checkPrerequisites() {
     checks.push({ name: 'AWS Credentials', status: false });
   }
   
-  // Check Docker (for ECS)
   try {
     const dockerVersion = execSync('docker --version', { encoding: 'utf-8' }).trim();
     console.log(`✅ Docker: ${dockerVersion}`);
     checks.push({ name: 'Docker', status: true });
   } catch (error) {
     console.log('⚠️  Docker: Not installed (required for ECS deployment)');
-    console.log('   Install: https://docs.docker.com/get-docker/');
     checks.push({ name: 'Docker', status: false });
   }
   
-  // Check if dist directory exists
-  const distPath = path.join(process.cwd(), 'dist');
+  const distPath = path.join(PROJECT_ROOT, 'dist');
   if (fs.existsSync(distPath)) {
     console.log('✅ Build directory: dist/ exists');
     checks.push({ name: 'Build directory', status: true });
   } else {
-    console.log('⚠️  Build directory: dist/ not found (run npm run build first)');
+    console.log('⚠️  Build directory: dist/ not found (run "npm run build" from project root)');
     checks.push({ name: 'Build directory', status: false });
   }
   
-  // Check if Dockerfile exists
-  const dockerfilePath = path.join(process.cwd(), 'Dockerfile');
-  if (fs.existsSync(dockerfilePath)) {
-    console.log('✅ Dockerfile: Exists');
-    checks.push({ name: 'Dockerfile', status: true });
-  } else {
-    console.log('⚠️  Dockerfile: Not found (required for ECS deployment)');
-    checks.push({ name: 'Dockerfile', status: false });
-  }
-  
-  // Check if package.json exists
-  const packageJsonPath = path.join(process.cwd(), 'package.json');
+  const packageJsonPath = path.join(PROJECT_ROOT, 'package.json');
   if (fs.existsSync(packageJsonPath)) {
     console.log('✅ package.json: Exists');
     checks.push({ name: 'package.json', status: true });
@@ -96,11 +93,10 @@ async function checkPrerequisites() {
     checks.push({ name: 'package.json', status: false });
   }
   
-  // Summary
   console.log('\n📊 Summary:');
   const passed = checks.filter(c => c.status).length;
   const total = checks.length;
-  const critical = ['Node.js', 'npm', 'AWS CLI', 'AWS Credentials', 'package.json'];
+  const critical = ['Node.js', 'npm', 'AWS CLI', 'SAM CLI', 'AWS Credentials', 'package.json'];
   const criticalFailed = checks.filter(c => critical.includes(c.name) && !c.status);
   
   if (criticalFailed.length > 0) {

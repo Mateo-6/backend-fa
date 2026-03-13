@@ -188,6 +188,8 @@ export class TransactionService {
 
   /**
    * Retrieves transaction history for a user with optional filters.
+   * When `startDate` is not provided, defaults to the first day of the current month at 00:00:00.
+   * When `endDate` is not provided, defaults to the current day at 23:59:59.999.
    *
    * @param {string} userId User identifier.
    * @param {TransactionHistoryFilters} filters Optional filters for date range, type, category.
@@ -197,9 +199,13 @@ export class TransactionService {
   async getHistory(userId: string, filters?: TransactionHistoryFilters): Promise<Transaction[]> {
     await this.ensureUserExists(userId);
 
+    const now = new Date();
+    const defaultStartDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const defaultEndDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
     const repositoryFilters = {
-      startDate: filters?.startDate,
-      endDate: filters?.endDate,
+      startDate: filters?.startDate ?? defaultStartDate,
+      endDate: filters?.endDate ?? defaultEndDate,
       type: filters?.type,
       categoryId: filters?.categoryId,
     };

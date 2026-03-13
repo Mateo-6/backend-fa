@@ -24,7 +24,6 @@ async function fixStack(stackName, region, profile) {
     if (status === 'UPDATE_ROLLBACK_FAILED' || status === 'UPDATE_FAILED') {
       console.log('\n⚠️  Stack is in a failed state. Attempting to continue rollback...');
       
-      // Get failed resources
       const failedResources = execSync(
         `aws cloudformation describe-stack-resources --stack-name ${stackName} --region ${region} ${profileArg} --query "StackResources[?ResourceStatus=='UPDATE_ROLLBACK_FAILED' || ResourceStatus=='CREATE_FAILED'].LogicalResourceId" --output text`,
         { encoding: 'utf-8', stdio: 'pipe' }
@@ -40,9 +39,8 @@ async function fixStack(stackName, region, profile) {
         );
         
         console.log('⏳ Waiting for rollback to complete (this may take a few minutes)...');
-        // Wait and check status
         for (let i = 0; i < 30; i++) {
-          await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds
+          await new Promise(resolve => setTimeout(resolve, 10000));
           try {
             const newStatus = execSync(
               `aws cloudformation describe-stacks --stack-name ${stackName} --region ${region} ${profileArg} --query "Stacks[0].StackStatus" --output text`,
@@ -50,18 +48,15 @@ async function fixStack(stackName, region, profile) {
             ).trim();
             
             console.log(`   Status: ${newStatus}`);
-            
             if (!newStatus.includes('FAILED') && !newStatus.includes('ROLLBACK')) {
               console.log(`✅ Stack is now in state: ${newStatus}`);
               return;
             }
           } catch (error) {
-            // Stack might have been deleted
             console.log('✅ Stack appears to have been deleted or resolved');
             return;
           }
         }
-        
         console.log('⚠️  Rollback is taking longer than expected. You may need to delete the stack manually.');
       } else {
         console.log('❌ Could not identify failed resources. Deleting stack...');
