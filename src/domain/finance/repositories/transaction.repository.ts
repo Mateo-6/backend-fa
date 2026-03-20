@@ -8,6 +8,12 @@ export interface TransactionFilters {
   endDate?: Date;
   type?: string;
   categoryId?: string;
+  /** Filter by the payment method ObjectId (stringified). */
+  paymentMethodId?: string;
+  /** Filter by transaction subtype (e.g. 'CARD_PAYMENT'). Pass null to fetch only regular transactions. */
+  subtype?: string | null;
+  /** When true, excludes CARD_PAYMENT subtypes from results. */
+  excludeCardPayments?: boolean;
 }
 
 /**

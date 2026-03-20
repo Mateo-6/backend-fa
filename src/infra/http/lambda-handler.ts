@@ -33,6 +33,8 @@ import { PaymentMethodService } from '../../application/services/payment-method.
 
 import { DashboardController } from './controllers/dashboard/dashboard.controller';
 import { DashboardService } from '../../application/services/dashboard.service';
+import { CreditCardService } from '../../application/services/credit-card.service';
+import { CreditCardController } from './controllers/credit-card/credit-card.controller';
 
 import { NotificationController } from './controllers/notification/notification.controller';
 import { NotificationService } from '../../application/services/notification.service';
@@ -105,7 +107,8 @@ const recurringExpenseService = new RecurringExpenseService(
   userRepository,
   paymentMethodRepository
 );
-const dashboardService = new DashboardService(transactionRepository, recurringExpenseRepository);
+const creditCardService = new CreditCardService(paymentMethodRepository, transactionRepository);
+const dashboardService = new DashboardService(transactionRepository, recurringExpenseRepository, creditCardService);
 const notificationRepository = new NotificationMongooseRepository();
 const notificationService = new NotificationService(userRepository, notificationRepository);
 const healthService = new HealthService();
@@ -120,6 +123,7 @@ const recurringExpenseController = new RecurringExpenseController(recurringExpen
 const paymentMethodController = new PaymentMethodController(paymentMethodService);
 const dashboardController = new DashboardController(dashboardService);
 const notificationController = new NotificationController(notificationService);
+const creditCardController = new CreditCardController(creditCardService);
 
 /**
  * Type for route handler function
@@ -372,6 +376,14 @@ const routes: RouteConfig[] = [
   { method: 'GET', path: '/notifications', handler: notificationController.getNotifications.bind(notificationController), authRequired: true },
   { method: 'PATCH', path: '/notifications/:id/read', handler: notificationController.markAsRead.bind(notificationController), authRequired: true },
   { method: 'GET', path: '/notifications/unread-count', handler: notificationController.getUnreadCount.bind(notificationController), authRequired: true },
+
+  // Credit card routes (all require auth)
+  { method: 'GET', path: '/credit-cards', handler: creditCardController.getAllCards.bind(creditCardController), authRequired: true },
+  { method: 'GET', path: '/credit-cards/:id', handler: creditCardController.getCardDetail.bind(creditCardController), authRequired: true },
+  { method: 'GET', path: '/credit-cards/:id/statements', handler: creditCardController.getStatements.bind(creditCardController), authRequired: true },
+  { method: 'GET', path: '/credit-cards/:id/statements/:periodStart', handler: creditCardController.getStatementDetail.bind(creditCardController), authRequired: true },
+  { method: 'POST', path: '/credit-cards/:id/pay', handler: creditCardController.payCard.bind(creditCardController), authRequired: true },
+  { method: 'GET', path: '/credit-cards/:id/payments', handler: creditCardController.getPaymentHistory.bind(creditCardController), authRequired: true },
 ];
 
 /**

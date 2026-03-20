@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "financial-app-api-collection",
 		"name": "Financial App API",
-		"description": "Complete API collection for Financial App - Health, Auth, Dashboard, Users, Categories, Transactions, Recurring Expenses, Payment Methods, and Notifications",
+		"description": "Complete API collection for Financial App - Health, Auth, Dashboard, Users, Categories, Transactions, Recurring Expenses, Payment Methods, Credit Cards, and Notifications",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -1194,6 +1194,200 @@
 			]
 		},
 		{
+			"name": "Credit Cards",
+			"item": [
+				{
+					"name": "Get All Credit Cards",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/credit-cards",
+							"host": ["{{base_url}}"],
+							"path": ["credit-cards"]
+						},
+						"description": "Get all credit cards for the authenticated user with summary info (name, last 4 digits, credit limit, current balance, cut-off day, payment day)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Credit Card Detail",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/credit-cards/:id",
+							"host": ["{{base_url}}"],
+							"path": ["credit-cards", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{credit_card_id}}"
+								}
+							]
+						},
+						"description": "Get full detail for a single credit card, including all fields and current balance information."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Card Statements",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.length > 0) {",
+									"        pm.environment.set('period_start', response.data[0].periodStart);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/credit-cards/:id/statements",
+							"host": ["{{base_url}}"],
+							"path": ["credit-cards", ":id", "statements"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{credit_card_id}}"
+								}
+							]
+						},
+						"description": "Returns the last 12 billing period statements for a credit card. Each statement includes totals, dates, and a summary. The first statement's periodStart will be automatically saved to the 'period_start' environment variable."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Statement Detail",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/credit-cards/:id/statements/:periodStart",
+							"host": ["{{base_url}}"],
+							"path": ["credit-cards", ":id", "statements", ":periodStart"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{credit_card_id}}"
+								},
+								{
+									"key": "periodStart",
+									"value": "{{period_start}}",
+									"description": "ISO 8601 date string for the start of the billing period (e.g. 2024-01-15)"
+								}
+							]
+						},
+						"description": "Returns the detailed view for a single billing period, including individual transactions and a category breakdown. The periodStart must be a valid ISO 8601 date string."
+					},
+					"response": []
+				},
+				{
+					"name": "Pay Credit Card",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.id) {",
+									"        pm.environment.set('transaction_id', response.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"sourceAccountId\": \"{{payment_method_id}}\",\n    \"amount\": 500.00,\n    \"date\": \"2024-01-20T10:00:00Z\",\n    \"billingPeriodStart\": \"2023-12-16T00:00:00Z\",\n    \"billingPeriodEnd\": \"2024-01-15T23:59:59Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/credit-cards/:id/pay",
+							"host": ["{{base_url}}"],
+							"path": ["credit-cards", ":id", "pay"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{credit_card_id}}"
+								}
+							]
+						},
+						"description": "Registers a credit card payment from a bank account. Atomically creates an EXPENSE transaction and reduces the card's current balance. Fields: sourceAccountId (bank account payment method ID), amount (positive number), date (ISO 8601), billingPeriodStart (ISO 8601), billingPeriodEnd (ISO 8601, must be after billingPeriodStart). Returns the created transaction."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Card Payment History",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/credit-cards/:id/payments",
+							"host": ["{{base_url}}"],
+							"path": ["credit-cards", ":id", "payments"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{credit_card_id}}"
+								}
+							]
+						},
+						"description": "Returns the full payment history for a specific credit card, listing all payments made against this card."
+					},
+					"response": []
+				}
+			]
+		},
+		{
 			"name": "Notifications",
 			"item": [
 				{
@@ -1374,6 +1568,16 @@
 		},
 		{
 			"key": "notification_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "credit_card_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "period_start",
 			"value": "",
 			"type": "string"
 		}

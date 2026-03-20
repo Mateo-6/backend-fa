@@ -2,6 +2,7 @@ import { TransactionRepository, TransactionFilters } from '../../domain/finance/
 import { Transaction } from '../../domain/finance/types/transaction.types';
 import { TransactionModel, ITransactionDocument } from '../database/models/transaction.model';
 import { getMongooseInstance } from '../database/mongoose-client';
+import { TransactionSubtype } from 'fa-contracts';
 
 /**
  * Mongoose implementation of TransactionRepository.
@@ -20,11 +21,13 @@ export class TransactionMongooseRepository implements TransactionRepository {
       description: transaction.description,
       date: transaction.date,
       type: transaction.type,
+      subtype: transaction.subtype ?? null,
       user: transaction.userId,
       category: transaction.category,
-      paymentMethod: transaction.paymentMethodId || null, // Mongoose will convert string to ObjectId, null for INCOME transactions
+      paymentMethod: transaction.paymentMethodId || null,
       isRecurring: transaction.isRecurring,
       recurringExpense: transaction.recurringExpenseId,
+      cardPaymentDetails: transaction.cardPaymentDetails ?? null,
     });
     return this.toDomain(created);
   }
@@ -51,6 +54,15 @@ export class TransactionMongooseRepository implements TransactionRepository {
     }
     if (filters?.categoryId) {
       query['category.id'] = filters.categoryId;
+    }
+    if (filters?.paymentMethodId) {
+      query.paymentMethod = filters.paymentMethodId;
+    }
+    if (filters?.subtype !== undefined) {
+      query.subtype = filters.subtype;
+    }
+    if (filters?.excludeCardPayments) {
+      query.subtype = { $ne: TransactionSubtype.CARD_PAYMENT };
     }
 
     const transactions = await TransactionModel.find(query).sort({ date: -1 }).exec();
@@ -143,10 +155,19 @@ export class TransactionMongooseRepository implements TransactionRepository {
       description: doc.description,
       date: doc.date,
       type: doc.type,
+      subtype: doc.subtype ?? null,
       category: doc.category,
       paymentMethodId: doc.paymentMethod?.toString() || undefined,
       isRecurring: doc.isRecurring,
       recurringExpenseId: doc.recurringExpense?.toString(),
+      cardPaymentDetails: doc.cardPaymentDetails
+        ? {
+            creditCardId: doc.cardPaymentDetails.creditCardId,
+            isFullPayment: doc.cardPaymentDetails.isFullPayment,
+            billingPeriodStart: doc.cardPaymentDetails.billingPeriodStart,
+            billingPeriodEnd: doc.cardPaymentDetails.billingPeriodEnd,
+          }
+        : null,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
     };

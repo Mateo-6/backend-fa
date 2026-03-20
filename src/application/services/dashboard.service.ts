@@ -1,7 +1,10 @@
 import { TransactionRepository } from '../../domain/finance/repositories/transaction.repository';
 import { RecurringExpenseRepository } from '../../domain/finance/repositories/recurring-expense.repository';
+import { PaymentMethodRepository } from '../../domain/payment-method/repositories/payment-method.repository';
 import { Transaction, TransactionType } from '../../domain/finance/types/transaction.types';
 import { RecurringExpense } from '../../domain/finance/types/recurring-expense.types';
+import { TransactionSubtype } from 'fa-contracts';
+import { CreditCardService, CreditCardSummary } from './credit-card.service';
 
 /**
  * Dashboard summary data with financial metrics.
@@ -19,6 +22,8 @@ export interface DashboardData {
   summary: DashboardSummary;
   recentTransactions: Transaction[];
   upcomingPayments: RecurringExpense[];
+  /** Up to 3 credit cards sorted by daysUntilPayment (most urgent first). */
+  creditCards: CreditCardSummary[];
 }
 
 /**
@@ -29,10 +34,12 @@ export class DashboardService {
   /**
    * @param {TransactionRepository} transactionRepository Repository for transaction data access.
    * @param {RecurringExpenseRepository} recurringExpenseRepository Repository for recurring expense data access.
+   * @param {CreditCardService} creditCardService Service for credit card summary data.
    */
   constructor(
     private readonly transactionRepository: TransactionRepository,
-    private readonly recurringExpenseRepository: RecurringExpenseRepository
+    private readonly recurringExpenseRepository: RecurringExpenseRepository,
+    private readonly creditCardService: CreditCardService
   ) {}
 
   /**
@@ -48,15 +55,17 @@ export class DashboardService {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
     const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-    const [allTransactions, allRecurringExpenses] = await Promise.all([
+    const [allTransactions, allRecurringExpenses, creditCards] = await Promise.all([
       this.transactionRepository.findAllByUser(userId, {
         startDate: startOfMonth,
         endDate: endOfToday,
+        excludeCardPayments: true,
       }),
       this.recurringExpenseRepository.findAllByUser(userId),
+      this.creditCardService.getAllCards(userId),
     ]);
 
-    // Calculate financial summary
+    // Calculate financial summary (CARD_PAYMENT transactions excluded to avoid double-counting)
     const summary = this.calculateSummary(allTransactions);
 
     // Get recent transactions (last 10, ordered by date descending)
@@ -72,6 +81,7 @@ export class DashboardService {
       summary,
       recentTransactions,
       upcomingPayments,
+      creditCards: creditCards.slice(0, 3),
     };
   }
 
@@ -87,6 +97,7 @@ export class DashboardService {
     let totalExpenses = 0;
 
     transactions.forEach((transaction) => {
+      // CARD_PAYMENT transactions are already excluded at the repository level (excludeCardPayments filter)
       if (transaction.type === TransactionType.INCOME) {
         totalIncome += transaction.amount;
       } else if (transaction.type === TransactionType.EXPENSE) {

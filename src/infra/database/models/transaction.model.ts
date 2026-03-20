@@ -1,13 +1,26 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 import { Transaction, TransactionType, CategorySnapshot } from '../../../domain/finance/types/transaction.types';
+import { TransactionSubtype } from 'fa-contracts';
+
+/**
+ * Embedded sub-document for card payment details.
+ */
+export interface ICardPaymentDetails {
+  creditCardId: string;
+  isFullPayment: boolean;
+  billingPeriodStart: Date;
+  billingPeriodEnd: Date;
+}
 
 /**
  * Mongoose document interface for Transaction.
  */
-export interface ITransactionDocument extends Omit<Transaction, 'userId' | 'recurringExpenseId' | 'paymentMethodId'>, Document {
+export interface ITransactionDocument extends Omit<Transaction, 'userId' | 'recurringExpenseId' | 'paymentMethodId' | 'subtype' | 'cardPaymentDetails'>, Document {
   user: Types.ObjectId;
   recurringExpense?: Types.ObjectId;
   paymentMethod?: Types.ObjectId;
+  subtype?: TransactionSubtype | null;
+  cardPaymentDetails?: ICardPaymentDetails | null;
 }
 
 /**
@@ -31,6 +44,19 @@ const CategorySnapshotSchema = new Schema<CategorySnapshot>(
   {
     _id: false,
   }
+);
+
+/**
+ * Schema for embedded card payment details.
+ */
+const CardPaymentDetailsSchema = new Schema<ICardPaymentDetails>(
+  {
+    creditCardId: { type: String, required: true },
+    isFullPayment: { type: Boolean, required: true },
+    billingPeriodStart: { type: Date, required: true },
+    billingPeriodEnd: { type: Date, required: true },
+  },
+  { _id: false }
 );
 
 /**
@@ -58,6 +84,12 @@ const TransactionSchema = new Schema<ITransactionDocument>(
       required: true,
       index: true,
     },
+    subtype: {
+      type: String,
+      enum: [...Object.values(TransactionSubtype), null],
+      default: null,
+      index: true,
+    },
     user: {
       type: Schema.Types.ObjectId,
       ref: 'User',
@@ -83,6 +115,10 @@ const TransactionSchema = new Schema<ITransactionDocument>(
     recurringExpense: {
       type: Schema.Types.ObjectId,
       ref: 'RecurringExpense',
+      default: null,
+    },
+    cardPaymentDetails: {
+      type: CardPaymentDetailsSchema,
       default: null,
     },
   },
@@ -137,6 +173,9 @@ const TransactionSchema = new Schema<ITransactionDocument>(
 TransactionSchema.index({ user: 1, date: -1 });
 TransactionSchema.index({ user: 1, type: 1, date: -1 });
 TransactionSchema.index({ user: 1, 'category.id': 1, date: -1 });
+TransactionSchema.index({ user: 1, paymentMethod: 1, date: -1 });
+TransactionSchema.index({ user: 1, subtype: 1, date: -1 });
+TransactionSchema.index({ 'cardPaymentDetails.creditCardId': 1, date: -1 });
 
 export const TransactionModel =
   mongoose.models.Transaction || mongoose.model<ITransactionDocument>('Transaction', TransactionSchema);

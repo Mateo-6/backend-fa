@@ -70,6 +70,9 @@ export class TransactionController {
       endDate?: Date;
       type?: TransactionType;
       categoryId?: string;
+      paymentMethodId?: string;
+      subtype?: string | null;
+      excludeCardPayments?: boolean;
     } = {};
 
     if (req.query.startDate) {
@@ -88,6 +91,15 @@ export class TransactionController {
     }
     if (req.query.categoryId) {
       filters.categoryId = req.query.categoryId as string;
+    }
+    if (req.query.paymentMethodId) {
+      filters.paymentMethodId = req.query.paymentMethodId as string;
+    }
+    if (req.query.subtype) {
+      filters.subtype = (req.query.subtype as string).toUpperCase();
+    }
+    if (req.query.excludeCardPayments === 'true') {
+      filters.excludeCardPayments = true;
     }
 
     const transactions = await this.transactionService.getHistory(req.user.id, filters);

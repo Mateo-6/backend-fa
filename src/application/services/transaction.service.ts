@@ -10,6 +10,7 @@ import { Transaction, TransactionType, CategorySnapshot } from '../../domain/fin
 import { RecurringExpense, RecurringFrequency } from '../../domain/finance/types/recurring-expense.types';
 import { CategoryType } from '../../domain/category/types/category.types';
 import { NotFoundError, ForbiddenError } from '../../domain/errors/app-error';
+import { TransactionSubtype } from 'fa-contracts';
 
 /**
  * Filter options for querying transactions.
@@ -19,6 +20,12 @@ export interface TransactionHistoryFilters {
   endDate?: Date;
   type?: TransactionType;
   categoryId?: string;
+  /** Filter by payment method identifier. */
+  paymentMethodId?: string;
+  /** Filter by transaction subtype. */
+  subtype?: string | null;
+  /** When true, excludes CARD_PAYMENT transactions. */
+  excludeCardPayments?: boolean;
 }
 
 /**
@@ -208,6 +215,9 @@ export class TransactionService {
       endDate: filters?.endDate ?? defaultEndDate,
       type: filters?.type,
       categoryId: filters?.categoryId,
+      paymentMethodId: filters?.paymentMethodId,
+      subtype: filters?.subtype,
+      excludeCardPayments: filters?.excludeCardPayments,
     };
 
     return this.transactionRepository.findAllByUser(userId, repositoryFilters);
@@ -334,6 +344,22 @@ export class TransactionService {
     if (transaction.userId !== userId) {
       throw new ForbiddenError('No tienes permiso para eliminar esta transacción');
     }
+
+    // Reverse credit card balance effect before deleting
+    if (transaction.subtype === TransactionSubtype.CARD_PAYMENT && transaction.cardPaymentDetails) {
+      // CARD_PAYMENT is an EXPENSE recorded against a bank account but reduces the card balance.
+      // Reversing: increase the card's current_balance back by the payment amount.
+      const cardId = transaction.cardPaymentDetails.creditCardId;
+      await this.paymentMethodService.updateCreditCardBalance(cardId, transaction.amount, true);
+    } else if (transaction.type === TransactionType.EXPENSE && transaction.paymentMethodId) {
+      // Regular expense reversal: subtract from credit card balance
+      await this.paymentMethodService.updateCreditCardBalance(
+        transaction.paymentMethodId,
+        transaction.amount,
+        false
+      );
+    }
+
     await this.transactionRepository.delete(id);
   }
 
