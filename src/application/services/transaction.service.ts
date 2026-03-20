@@ -4,6 +4,7 @@ import { CategoryRepository } from '../../domain/category/repositories/category.
 import { UserRepository } from '../../domain/user/repositories/user.repository';
 import { PaymentMethodRepository } from '../../domain/payment-method/repositories/payment-method.repository';
 import { PaymentMethodService } from './payment-method.service';
+import { BudgetService } from './budget.service';
 import { CreateTransactionDto } from '../dto/finance/create-transaction.dto';
 import { UpdateTransactionDto } from '../dto/finance/update-transaction.dto';
 import { Transaction, TransactionType, CategorySnapshot } from '../../domain/finance/types/transaction.types';
@@ -39,6 +40,7 @@ export class TransactionService {
    * @param {UserRepository} userRepository Repository used to validate the owner existence.
    * @param {PaymentMethodRepository} paymentMethodRepository Repository used to validate payment method existence.
    * @param {PaymentMethodService} paymentMethodService Service used to update credit card balance.
+   * @param {BudgetService} [budgetService] Optional service used to recalculate budget spent on EXPENSE changes.
    */
   constructor(
     private readonly transactionRepository: TransactionRepository,
@@ -46,7 +48,8 @@ export class TransactionService {
     private readonly categoryRepository: CategoryRepository,
     private readonly userRepository: UserRepository,
     private readonly paymentMethodRepository: PaymentMethodRepository,
-    private readonly paymentMethodService: PaymentMethodService
+    private readonly paymentMethodService: PaymentMethodService,
+    private readonly budgetService?: BudgetService
   ) {}
 
   /**
@@ -111,6 +114,11 @@ export class TransactionService {
         data.amount,
         isExpense
       );
+    }
+
+    // Recalculate affected budgets when an EXPENSE is created
+    if (data.type === TransactionType.EXPENSE && this.budgetService) {
+      await this.budgetService.updateBudgetsForTransaction(userId, data.categoryId, transactionDate);
     }
 
     return transaction;
@@ -187,6 +195,15 @@ export class TransactionService {
         recurringExpense.paymentMethodId,
         recurringExpense.amount,
         true // Recurring expenses are always expenses
+      );
+    }
+
+    // Recalculate affected budgets for the recurring EXPENSE
+    if (this.budgetService) {
+      await this.budgetService.updateBudgetsForTransaction(
+        recurringExpense.userId,
+        recurringExpense.categoryId,
+        new Date()
       );
     }
 
@@ -323,6 +340,13 @@ export class TransactionService {
       );
     }
 
+    // Recalculate affected budgets when an EXPENSE is updated
+    if (transaction.type === TransactionType.EXPENSE && this.budgetService) {
+      const updatedCategoryId = updateData.category?.id ?? transaction.category.id;
+      const updatedDate = updateData.date ?? transaction.date;
+      await this.budgetService.updateBudgetsForTransaction(userId, updatedCategoryId, updatedDate);
+    }
+
     return updatedTransaction;
   }
 
@@ -361,6 +385,11 @@ export class TransactionService {
     }
 
     await this.transactionRepository.delete(id);
+
+    // Recalculate affected budgets when an EXPENSE is deleted
+    if (transaction.type === TransactionType.EXPENSE && this.budgetService) {
+      await this.budgetService.updateBudgetsForTransaction(userId, transaction.category.id, transaction.date);
+    }
   }
 
   /**

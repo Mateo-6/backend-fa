@@ -23,6 +23,14 @@ export interface PaginatedNotifications {
  */
 export interface NotificationRepository {
   /**
+   * Persists a new notification.
+   *
+   * @param {Notification} notification Notification data to persist.
+   * @returns {Promise<Notification>} Created notification.
+   */
+  create(notification: Notification): Promise<Notification>;
+
+  /**
    * Retrieves notifications for a user with pagination, ordered by createdAt descending.
    *
    * @param {string} userId Owner identifier.

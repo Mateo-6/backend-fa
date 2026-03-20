@@ -9,6 +9,7 @@ import paymentMethodRoutes from './routes/payment-method.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import notificationRoutes from './routes/notification.routes';
 import creditCardRoutes from './routes/credit-card.routes';
+import budgetRoutes from './routes/budget.routes';
 import { env } from '../config/env';
 import { errorHandler } from './middleware/error-handler.middleware';
 
@@ -52,6 +53,7 @@ export class Server {
     this.app.use('/dashboard', dashboardRoutes);
     this.app.use('/notifications', notificationRoutes);
     this.app.use('/credit-cards', creditCardRoutes);
+    this.app.use('/budgets', budgetRoutes);
   }
 
   /**

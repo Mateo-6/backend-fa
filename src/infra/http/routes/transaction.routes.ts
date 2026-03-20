@@ -2,11 +2,14 @@ import { Router } from 'express';
 import { TransactionController } from '../controllers/finance/transaction.controller';
 import { TransactionService } from '../../../application/services/transaction.service';
 import { PaymentMethodService } from '../../../application/services/payment-method.service';
+import { BudgetService } from '../../../application/services/budget.service';
 import { TransactionMongooseRepository } from '../../repositories/transaction-mongoose.repository';
 import { RecurringExpenseMongooseRepository } from '../../repositories/recurring-expense-mongoose.repository';
 import { CategoryMongooseRepository } from '../../repositories/category-mongoose.repository';
 import { UserMongooseRepository } from '../../repositories/user-mongoose.repository';
 import { PaymentMethodMongooseRepository } from '../../repositories/payment-method-mongoose.repository';
+import { BudgetMongooseRepository } from '../../repositories/budget-mongoose.repository';
+import { NotificationMongooseRepository } from '../../repositories/notification-mongoose.repository';
 import { validate } from '../middleware/validation.middleware';
 import { createTransactionSchema } from '../../../application/dto/finance/create-transaction.dto';
 import { updateTransactionSchema } from '../../../application/dto/finance/update-transaction.dto';
@@ -22,14 +25,23 @@ const recurringExpenseRepository = new RecurringExpenseMongooseRepository();
 const categoryRepository = new CategoryMongooseRepository();
 const userRepository = new UserMongooseRepository();
 const paymentMethodRepository = new PaymentMethodMongooseRepository();
+const budgetRepository = new BudgetMongooseRepository();
+const notificationRepository = new NotificationMongooseRepository();
 const paymentMethodService = new PaymentMethodService(paymentMethodRepository, userRepository);
+const budgetService = new BudgetService(
+  budgetRepository,
+  transactionRepository,
+  notificationRepository,
+  userRepository
+);
 const transactionService = new TransactionService(
   transactionRepository,
   recurringExpenseRepository,
   categoryRepository,
   userRepository,
   paymentMethodRepository,
-  paymentMethodService
+  paymentMethodService,
+  budgetService
 );
 const transactionController = new TransactionController(transactionService);
 const tokenService = new JwtTokenService();
