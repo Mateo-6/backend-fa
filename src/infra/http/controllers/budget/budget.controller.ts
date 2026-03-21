@@ -100,6 +100,19 @@ export class BudgetController {
   }
 
   /**
+   * Forces a recalculation of spent for a budget (e.g. when expenses were created before the budget).
+   *
+   * @param {AuthenticatedRequest} req Express request with id param.
+   * @param {Response} res Express response.
+   * @returns {Promise<void>}
+   */
+  public async recalculate(req: AuthenticatedRequest, res: Response): Promise<void> {
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
+    const budget = await this.budgetService.recalculate(req.params.id, req.user.id);
+    sendSuccess(res, budget);
+  }
+
+  /**
    * Finalizes a budget (sets isActive to false, keeps history).
    *
    * @param {AuthenticatedRequest} req Express request with id param.

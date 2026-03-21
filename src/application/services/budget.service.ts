@@ -78,7 +78,10 @@ export class BudgetService {
       alertsSent: [],
     });
 
-    return this.withProgress(created);
+    // Backfill spent from transactions that already exist in this period
+    await this.recalculateSpent(created.id!);
+    const updated = await this.budgetRepository.findById(created.id!);
+    return this.withProgress(updated ?? created);
   }
 
   /**
@@ -175,6 +178,26 @@ export class BudgetService {
     if (!budget) throw new NotFoundError('Budget', id);
     if (budget.userId !== userId) throw new ForbiddenError('No tienes permiso para finalizar este presupuesto');
     await this.budgetRepository.update(id, { isActive: false });
+  }
+
+  /**
+   * Forces a recalculation of the spent amount for a budget by aggregating all matching
+   * EXPENSE transactions that fall within its date range and category.
+   * Useful when expenses were created before the budget existed.
+   *
+   * @param {string} id Budget identifier.
+   * @param {string} userId User identifier for ownership validation.
+   * @returns {Promise<BudgetWithProgress>} Updated budget with recalculated progress fields.
+   * @throws {NotFoundError} If the budget does not exist.
+   * @throws {ForbiddenError} If the budget does not belong to the user.
+   */
+  async recalculate(id: string, userId: string): Promise<BudgetWithProgress> {
+    const budget = await this.budgetRepository.findById(id);
+    if (!budget) throw new NotFoundError('Budget', id);
+    if (budget.userId !== userId) throw new ForbiddenError('No tienes permiso para recalcular este presupuesto');
+    await this.recalculateSpent(id);
+    const updated = await this.budgetRepository.findById(id);
+    return this.withProgress(updated ?? budget);
   }
 
   /**

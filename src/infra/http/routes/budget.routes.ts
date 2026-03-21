@@ -70,6 +70,12 @@ router.put(
 );
 
 router.patch(
+  '/:id/recalculate',
+  authMiddleware(tokenService),
+  asyncHandler(budgetController.recalculate.bind(budgetController))
+);
+
+router.patch(
   '/:id/finalize',
   authMiddleware(tokenService),
   asyncHandler(budgetController.finalize.bind(budgetController))
