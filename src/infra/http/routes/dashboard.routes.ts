@@ -16,7 +16,7 @@ const transactionRepository = new TransactionMongooseRepository();
 const recurringExpenseRepository = new RecurringExpenseMongooseRepository();
 const paymentMethodRepository = new PaymentMethodMongooseRepository();
 const creditCardService = new CreditCardService(paymentMethodRepository, transactionRepository);
-const dashboardService = new DashboardService(transactionRepository, recurringExpenseRepository, creditCardService);
+const dashboardService = new DashboardService(transactionRepository, recurringExpenseRepository, creditCardService, paymentMethodRepository);
 const dashboardController = new DashboardController(dashboardService);
 const tokenService = new JwtTokenService();
 

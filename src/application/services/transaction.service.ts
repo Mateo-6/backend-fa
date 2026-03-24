@@ -11,7 +11,7 @@ import { Transaction, TransactionType, CategorySnapshot } from '../../domain/fin
 import { RecurringExpense, RecurringFrequency } from '../../domain/finance/types/recurring-expense.types';
 import { CategoryType } from '../../domain/category/types/category.types';
 import { NotFoundError, ForbiddenError } from '../../domain/errors/app-error';
-import { TransactionSubtype } from 'fa-contracts';
+import { TransactionSubtype, PaymentMethodType } from 'fa-contracts';
 
 /**
  * Filter options for querying transactions.
@@ -81,9 +81,17 @@ export class TransactionService {
       throw new ForbiddenError(`El tipo de categoría "${category.type}" no coincide con el tipo de transacción "${data.type}"`);
     }
 
-    // Payment method is required only for EXPENSE transactions
-    if (data.type === TransactionType.EXPENSE && data.paymentMethodId) {
+    // Validate payment method ownership when provided for any transaction type
+    if (data.paymentMethodId) {
       await this.ensurePaymentMethodExists(data.paymentMethodId, userId);
+
+      // INCOME transactions can only be linked to BANK_ACCOUNT or CASH, not CREDIT_CARD
+      if (data.type === TransactionType.INCOME) {
+        const paymentMethod = await this.paymentMethodRepository.findById(data.paymentMethodId);
+        if (paymentMethod && paymentMethod.type === PaymentMethodType.CREDIT_CARD) {
+          throw new ForbiddenError('Los ingresos no pueden asociarse a una tarjeta de crédito');
+        }
+      }
     }
 
     const categorySnapshot: CategorySnapshot = {
@@ -109,7 +117,7 @@ export class TransactionService {
     // Update credit card balance if payment method is provided
     if (data.paymentMethodId) {
       const isExpense = data.type === TransactionType.EXPENSE;
-      await this.paymentMethodService.updateCreditCardBalance(
+      await this.paymentMethodService.updatePaymentMethodBalance(
         data.paymentMethodId,
         data.amount,
         isExpense
@@ -191,7 +199,7 @@ export class TransactionService {
 
     // Update credit card balance (recurring expenses are always EXPENSE transactions)
     if (recurringExpense.paymentMethodId) {
-      await this.paymentMethodService.updateCreditCardBalance(
+      await this.paymentMethodService.updatePaymentMethodBalance(
         recurringExpense.paymentMethodId,
         recurringExpense.amount,
         true // Recurring expenses are always expenses
@@ -309,34 +317,37 @@ export class TransactionService {
     const finalAmount = typeof data.amount === 'number' ? data.amount : transaction.amount;
     const finalPaymentMethodId = data.paymentMethodId !== undefined ? data.paymentMethodId : transaction.paymentMethodId;
 
-    // For EXPENSE transactions: reverse old credit card effect before update, then apply new effect after
-    if (transaction.type === TransactionType.EXPENSE && transaction.paymentMethodId) {
-      await this.paymentMethodService.updateCreditCardBalance(
+    // Reverse old balance effect before update (handles both EXPENSE and INCOME)
+    if (transaction.paymentMethodId) {
+      const isOriginalExpense = transaction.type === TransactionType.EXPENSE;
+      await this.paymentMethodService.updatePaymentMethodBalance(
         transaction.paymentMethodId,
         transaction.amount,
-        false // Reverse: subtract the original expense from the balance
+        !isOriginalExpense // flip to reverse: EXPENSE reversal = false, INCOME reversal = true
       );
     }
 
     const updatedTransaction = await this.transactionRepository.update(id, updateData);
     if (!updatedTransaction) {
-      // Rollback: re-apply the old credit card effect we reversed
-      if (transaction.type === TransactionType.EXPENSE && transaction.paymentMethodId) {
-        await this.paymentMethodService.updateCreditCardBalance(
+      // Rollback: re-apply the old effect we reversed
+      if (transaction.paymentMethodId) {
+        const isOriginalExpense = transaction.type === TransactionType.EXPENSE;
+        await this.paymentMethodService.updatePaymentMethodBalance(
           transaction.paymentMethodId,
           transaction.amount,
-          true
+          isOriginalExpense
         );
       }
       throw new NotFoundError('Transaction', id);
     }
 
-    // Apply new credit card effect for EXPENSE transactions
-    if (transaction.type === TransactionType.EXPENSE && finalPaymentMethodId) {
-      await this.paymentMethodService.updateCreditCardBalance(
+    // Apply new balance effect
+    if (finalPaymentMethodId) {
+      const isExpense = transaction.type === TransactionType.EXPENSE;
+      await this.paymentMethodService.updatePaymentMethodBalance(
         finalPaymentMethodId,
         finalAmount,
-        true // Apply: add the (possibly updated) expense to the balance
+        isExpense
       );
     }
 
@@ -369,18 +380,19 @@ export class TransactionService {
       throw new ForbiddenError('No tienes permiso para eliminar esta transacción');
     }
 
-    // Reverse credit card balance effect before deleting
+    // Reverse balance effect before deleting
     if (transaction.subtype === TransactionSubtype.CARD_PAYMENT && transaction.cardPaymentDetails) {
-      // CARD_PAYMENT is an EXPENSE recorded against a bank account but reduces the card balance.
-      // Reversing: increase the card's current_balance back by the payment amount.
+      // CARD_PAYMENT reduces the card's balance. Reversing: increase the card balance back.
       const cardId = transaction.cardPaymentDetails.creditCardId;
-      await this.paymentMethodService.updateCreditCardBalance(cardId, transaction.amount, true);
-    } else if (transaction.type === TransactionType.EXPENSE && transaction.paymentMethodId) {
-      // Regular expense reversal: subtract from credit card balance
-      await this.paymentMethodService.updateCreditCardBalance(
+      await this.paymentMethodService.updatePaymentMethodBalance(cardId, transaction.amount, true);
+    } else if (transaction.paymentMethodId) {
+      // For EXPENSE: reverse = pass false (undo the balance decrease / debt increase)
+      // For INCOME: reverse = pass true (undo the balance increase)
+      const isOriginalExpense = transaction.type === TransactionType.EXPENSE;
+      await this.paymentMethodService.updatePaymentMethodBalance(
         transaction.paymentMethodId,
         transaction.amount,
-        false
+        !isOriginalExpense
       );
     }
 

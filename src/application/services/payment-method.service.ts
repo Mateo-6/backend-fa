@@ -2,7 +2,7 @@ import { PaymentMethodRepository } from '../../domain/payment-method/repositorie
 import { UserRepository } from '../../domain/user/repositories/user.repository';
 import { CreatePaymentMethodDto } from '../dto/payment-method/create-payment-method.dto';
 import { UpdatePaymentMethodDto } from '../dto/payment-method/update-payment-method.dto';
-import { PaymentMethod, PaymentMethodType, CreditCardDetails } from '../../domain/payment-method/types/payment-method.types';
+import { PaymentMethod, PaymentMethodType, CreditCardDetails, BankAccountDetails, CashDetails } from '../../domain/payment-method/types/payment-method.types';
 import { NotFoundError, ForbiddenError } from '../../domain/errors/app-error';
 
 /**
@@ -143,47 +143,62 @@ export class PaymentMethodService {
   }
 
   /**
-   * Updates the credit card balance based on a transaction.
-   * For EXPENSE transactions: adds the amount to the current balance (increases debt).
-   * For INCOME transactions: subtracts the amount from the current balance (reduces debt).
-   * Only updates if the payment method is a credit card.
+   * Updates the balance of any payment method based on a transaction.
+   *
+   * CREDIT_CARD:
+   *   - isExpense=true  → increases current_balance (more debt)
+   *   - isExpense=false → decreases current_balance (payment reduces debt)
+   *
+   * BANK_ACCOUNT:
+   *   - isExpense=true  → decreases current_balance (money leaves account)
+   *   - isExpense=false → increases current_balance (money enters account)
+   *
+   * CASH:
+   *   - isExpense=true  → decreases amount (cash spent)
+   *   - isExpense=false → increases amount (cash received)
    *
    * @param {string} paymentMethodId Payment method identifier.
    * @param {number} transactionAmount Transaction amount to apply to the balance.
-   * @param {boolean} isExpense Whether this is an expense (true) or income (false) transaction.
+   * @param {boolean} isExpense Whether this is an expense (true) or income/reversal (false).
    * @returns {Promise<void>} Resolves when the balance is updated.
    * @throws {NotFoundError} If the payment method does not exist.
    */
-  async updateCreditCardBalance(paymentMethodId: string, transactionAmount: number, isExpense: boolean): Promise<void> {
+  async updatePaymentMethodBalance(paymentMethodId: string, transactionAmount: number, isExpense: boolean): Promise<void> {
     const paymentMethod = await this.paymentMethodRepository.findById(paymentMethodId);
     if (!paymentMethod) {
       throw new NotFoundError('PaymentMethod', paymentMethodId);
     }
 
-    // Only update balance for credit cards
-    if (paymentMethod.type !== PaymentMethodType.CREDIT_CARD) {
-      return;
+    if (paymentMethod.type === PaymentMethodType.CREDIT_CARD) {
+      const details = paymentMethod.details as CreditCardDetails;
+      const currentBalance = details.current_balance || 0;
+      const newBalance = isExpense
+        ? currentBalance + transactionAmount
+        : Math.max(0, currentBalance - transactionAmount);
+      await this.paymentMethodRepository.update(paymentMethodId, {
+        details: { ...details, current_balance: newBalance },
+      });
+
+    } else if (paymentMethod.type === PaymentMethodType.BANK_ACCOUNT) {
+      const details = paymentMethod.details as BankAccountDetails;
+      const currentBalance = details.current_balance || 0;
+      const newBalance = isExpense
+        ? currentBalance - transactionAmount
+        : currentBalance + transactionAmount;
+      await this.paymentMethodRepository.update(paymentMethodId, {
+        details: { ...details, current_balance: newBalance },
+      });
+
+    } else if (paymentMethod.type === PaymentMethodType.CASH) {
+      const details = paymentMethod.details as CashDetails;
+      const currentAmount = details.amount || 0;
+      const newAmount = isExpense
+        ? currentAmount - transactionAmount
+        : currentAmount + transactionAmount;
+      await this.paymentMethodRepository.update(paymentMethodId, {
+        details: { ...details, amount: newAmount },
+      });
     }
-
-    const details = paymentMethod.details as CreditCardDetails;
-    const currentBalance = details.current_balance || 0;
-
-    // Calculate new balance
-    // For expenses: add to balance (more debt)
-    // For income: subtract from balance (payment to card, reduces debt)
-    const newBalance = isExpense 
-      ? currentBalance + transactionAmount 
-      : Math.max(0, currentBalance - transactionAmount); // Ensure balance doesn't go negative
-
-    // Update the payment method with the new balance
-    const updatedDetails: CreditCardDetails = {
-      ...details,
-      current_balance: newBalance,
-    };
-
-    await this.paymentMethodRepository.update(paymentMethodId, {
-      details: updatedDetails,
-    });
   }
 
   /**

@@ -108,7 +108,7 @@ const recurringExpenseService = new RecurringExpenseService(
   paymentMethodRepository
 );
 const creditCardService = new CreditCardService(paymentMethodRepository, transactionRepository);
-const dashboardService = new DashboardService(transactionRepository, recurringExpenseRepository, creditCardService);
+const dashboardService = new DashboardService(transactionRepository, recurringExpenseRepository, creditCardService, paymentMethodRepository);
 const notificationRepository = new NotificationMongooseRepository();
 const notificationService = new NotificationService(userRepository, notificationRepository);
 const healthService = new HealthService();

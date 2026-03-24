@@ -3,7 +3,7 @@ import { RecurringExpenseRepository } from '../../domain/finance/repositories/re
 import { PaymentMethodRepository } from '../../domain/payment-method/repositories/payment-method.repository';
 import { Transaction, TransactionType } from '../../domain/finance/types/transaction.types';
 import { RecurringExpense } from '../../domain/finance/types/recurring-expense.types';
-import { TransactionSubtype } from 'fa-contracts';
+import { TransactionSubtype, PaymentMethodType, BankAccountDetails, CashDetails } from 'fa-contracts';
 import { CreditCardService, CreditCardSummary } from './credit-card.service';
 
 /**
@@ -13,6 +13,8 @@ export interface DashboardSummary {
   totalBalance: number;
   totalIncome: number;
   totalExpenses: number;
+  /** Sum of current_balance from all BANK_ACCOUNT methods + amount from all CASH methods. */
+  availableBalance: number;
 }
 
 /**
@@ -39,7 +41,8 @@ export class DashboardService {
   constructor(
     private readonly transactionRepository: TransactionRepository,
     private readonly recurringExpenseRepository: RecurringExpenseRepository,
-    private readonly creditCardService: CreditCardService
+    private readonly creditCardService: CreditCardService,
+    private readonly paymentMethodRepository: PaymentMethodRepository
   ) {}
 
   /**
@@ -55,7 +58,7 @@ export class DashboardService {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
     const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-    const [allTransactions, allRecurringExpenses, creditCards] = await Promise.all([
+    const [allTransactions, allRecurringExpenses, creditCards, paymentMethods] = await Promise.all([
       this.transactionRepository.findAllByUser(userId, {
         startDate: startOfMonth,
         endDate: endOfToday,
@@ -63,10 +66,22 @@ export class DashboardService {
       }),
       this.recurringExpenseRepository.findAllByUser(userId),
       this.creditCardService.getAllCards(userId),
+      this.paymentMethodRepository.findAllByUser(userId),
     ]);
 
+    // Calculate available balance from bank accounts and cash
+    const availableBalance = paymentMethods.reduce((total, pm) => {
+      if (pm.type === PaymentMethodType.BANK_ACCOUNT) {
+        return total + ((pm.details as BankAccountDetails).current_balance || 0);
+      }
+      if (pm.type === PaymentMethodType.CASH) {
+        return total + ((pm.details as CashDetails).amount || 0);
+      }
+      return total;
+    }, 0);
+
     // Calculate financial summary (CARD_PAYMENT transactions excluded to avoid double-counting)
-    const summary = this.calculateSummary(allTransactions);
+    const summary = this.calculateSummary(allTransactions, availableBalance);
 
     // Get recent transactions (last 10, ordered by date descending)
     const recentTransactions = allTransactions.slice(0, 10);
@@ -92,7 +107,7 @@ export class DashboardService {
    * @param {Transaction[]} transactions Array of user transactions.
    * @returns {DashboardSummary} Object containing totalBalance, totalIncome, and totalExpenses.
    */
-  private calculateSummary(transactions: Transaction[]): DashboardSummary {
+  private calculateSummary(transactions: Transaction[], availableBalance: number): DashboardSummary {
     let totalIncome = 0;
     let totalExpenses = 0;
 
@@ -111,6 +126,7 @@ export class DashboardService {
       totalBalance,
       totalIncome,
       totalExpenses,
+      availableBalance,
     };
   }
 }

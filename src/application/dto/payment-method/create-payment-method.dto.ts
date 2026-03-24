@@ -37,6 +37,7 @@ const bankAccountDetailsSchema = z.object({
   account_type: z.nativeEnum(BankAccountType, {
     message: 'El tipo de cuenta debe ser SAVINGS o CHECKING',
   }),
+  current_balance: z.number().min(0, 'El saldo actual debe ser un número positivo').optional().default(0),
 });
 
 /**

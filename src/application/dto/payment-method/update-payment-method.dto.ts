@@ -47,6 +47,7 @@ const bankAccountDetailsSchema = z.object({
       message: 'El tipo de cuenta debe ser SAVINGS o CHECKING',
     })
     .optional(),
+  current_balance: z.number().min(0, 'El saldo actual debe ser un número positivo').optional(),
 });
 
 /**
@@ -142,6 +143,7 @@ export const updatePaymentMethodSchema: z.ZodType<{
               message: 'El tipo de cuenta debe ser SAVINGS o CHECKING',
             })
             .optional(),
+          current_balance: z.number().min(0, 'El saldo actual debe ser un número positivo').optional(),
         });
         const result = strictBankAccountSchema.safeParse(data.details);
         if (!result.success) {
