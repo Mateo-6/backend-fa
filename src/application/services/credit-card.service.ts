@@ -1,6 +1,6 @@
 import { PaymentMethodRepository } from '../../domain/payment-method/repositories/payment-method.repository';
 import { TransactionRepository } from '../../domain/finance/repositories/transaction.repository';
-import { PaymentMethod, PaymentMethodType, CreditCardDetails } from '../../domain/payment-method/types/payment-method.types';
+import { PaymentMethod, PaymentMethodType, CreditCardDetails, BankAccountDetails } from '../../domain/payment-method/types/payment-method.types';
 import { Transaction, TransactionType } from '../../domain/finance/types/transaction.types';
 import { TransactionSubtype, CardPaymentDetails } from 'fa-contracts';
 import { NotFoundError, ForbiddenError, ValidationError } from '../../domain/errors/app-error';
@@ -355,6 +355,25 @@ export class CreditCardService {
     } catch (balanceError) {
       await TransactionModel.findByIdAndDelete(doc._id);
       throw balanceError;
+    }
+
+    // Step 3: Deduct the payment amount from the source bank account balance.
+    const bankAccountDetails = sourceAccount.details as BankAccountDetails;
+    const bankCurrentBalance = bankAccountDetails.current_balance ?? 0;
+    const newBankBalance = Math.max(0, bankCurrentBalance - payload.amount);
+    try {
+      await PaymentMethodModel.findByIdAndUpdate(
+        payload.sourceAccountId,
+        { $set: { 'details.current_balance': newBankBalance } }
+      );
+    } catch (bankError) {
+      // Roll back both the transaction and the card balance update
+      await TransactionModel.findByIdAndDelete(doc._id);
+      await PaymentMethodModel.findByIdAndUpdate(
+        cardId,
+        { $set: { 'details.current_balance': currentBalance } }
+      );
+      throw bankError;
     }
 
     return {
