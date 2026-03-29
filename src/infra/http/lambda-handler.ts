@@ -40,6 +40,10 @@ import { NotificationController } from './controllers/notification/notification.
 import { NotificationService } from '../../application/services/notification.service';
 import { NotificationMongooseRepository } from '../repositories/notification-mongoose.repository';
 
+import { BudgetController } from './controllers/budget/budget.controller';
+import { BudgetService } from '../../application/services/budget.service';
+import { BudgetMongooseRepository } from '../repositories/budget-mongoose.repository';
+
 import { AppError, UnauthorizedError } from '../../domain/errors/app-error';
 import { AuthenticatedRequest } from './types/request.types';
 import { SuccessResponse, ErrorResponse } from './types/response.types';
@@ -56,6 +60,8 @@ import { createRecurringSchema } from '../../application/dto/finance/create-recu
 import { createPaymentMethodSchema } from '../../application/dto/payment-method/create-payment-method.dto';
 import { updatePaymentMethodSchema } from '../../application/dto/payment-method/update-payment-method.dto';
 import { registerPushTokenSchema } from '../../application/dto/notification/register-push-token.dto';
+import { createBudgetSchema } from '../../application/dto/budget/create-budget.dto';
+import { updateBudgetSchema } from '../../application/dto/budget/update-budget.dto';
 import { MongooseClientSingleton } from '../database/mongoose-client';
 
 // Initialize MongoDB connection outside handler (warm start optimization)
@@ -111,6 +117,8 @@ const creditCardService = new CreditCardService(paymentMethodRepository, transac
 const dashboardService = new DashboardService(transactionRepository, recurringExpenseRepository, creditCardService, paymentMethodRepository);
 const notificationRepository = new NotificationMongooseRepository();
 const notificationService = new NotificationService(userRepository, notificationRepository);
+const budgetRepository = new BudgetMongooseRepository();
+const budgetService = new BudgetService(budgetRepository, transactionRepository, notificationRepository, userRepository);
 const healthService = new HealthService();
 
 // Controllers
@@ -124,6 +132,7 @@ const paymentMethodController = new PaymentMethodController(paymentMethodService
 const dashboardController = new DashboardController(dashboardService);
 const notificationController = new NotificationController(notificationService);
 const creditCardController = new CreditCardController(creditCardService);
+const budgetController = new BudgetController(budgetService);
 
 /**
  * Type for route handler function
@@ -384,6 +393,17 @@ const routes: RouteConfig[] = [
   { method: 'GET', path: '/credit-cards/:id/statements/:periodStart', handler: creditCardController.getStatementDetail.bind(creditCardController), authRequired: true },
   { method: 'POST', path: '/credit-cards/:id/pay', handler: creditCardController.payCard.bind(creditCardController), authRequired: true },
   { method: 'GET', path: '/credit-cards/:id/payments', handler: creditCardController.getPaymentHistory.bind(creditCardController), authRequired: true },
+
+  // Budget routes — /summary and /history BEFORE /:id to avoid conflicts
+  { method: 'POST', path: '/budgets', handler: budgetController.create.bind(budgetController), authRequired: true, validateSchema: createBudgetSchema },
+  { method: 'GET', path: '/budgets', handler: budgetController.getAll.bind(budgetController), authRequired: true },
+  { method: 'GET', path: '/budgets/summary', handler: budgetController.getSummary.bind(budgetController), authRequired: true },
+  { method: 'GET', path: '/budgets/history', handler: budgetController.getHistory.bind(budgetController), authRequired: true },
+  { method: 'GET', path: '/budgets/:id', handler: budgetController.getById.bind(budgetController), authRequired: true },
+  { method: 'PUT', path: '/budgets/:id', handler: budgetController.update.bind(budgetController), authRequired: true, validateSchema: updateBudgetSchema },
+  { method: 'PATCH', path: '/budgets/:id/recalculate', handler: budgetController.recalculate.bind(budgetController), authRequired: true },
+  { method: 'PATCH', path: '/budgets/:id/finalize', handler: budgetController.finalize.bind(budgetController), authRequired: true },
+  { method: 'DELETE', path: '/budgets/:id', handler: budgetController.permanentDelete.bind(budgetController), authRequired: true },
 ];
 
 /**

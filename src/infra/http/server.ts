@@ -1,4 +1,5 @@
 import express, { Application } from 'express';
+import cors from 'cors';
 import healthRoutes from './routes/health.routes';
 import userRoutes from './routes/user.routes';
 import categoryRoutes from './routes/category.routes';
@@ -34,6 +35,7 @@ export class Server {
    * @returns {void} Middleware registration only.
    */
   private configureMiddlewares(): void {
+    this.app.use(cors());
     this.app.use(express.json());
   }
 
