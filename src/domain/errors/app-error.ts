@@ -31,10 +31,10 @@ export class NotFoundError extends AppError {
    * @param {string} identifier Optional identifier that was searched for.
    */
   constructor(resource: string, identifier?: string) {
-    const message = identifier
-      ? `${resource} con id '${identifier}' no encontrado`
-      : `${resource} no encontrado`;
-    super(message, 404);
+    if (identifier) {
+      console.error(`[NotFoundError] ${resource} con id '${identifier}' no encontrado`);
+    }
+    super(`${resource} no encontrado`, 404);
   }
 }
 

@@ -76,12 +76,30 @@ Throw subclasses of `AppError` (`NotFoundError`, `UnauthorizedError`, `Forbidden
 
 ### Response format
 
-All responses use `sendSuccess(res, data, code)` / `sendError(res, code, message)` from `src/infra/http/utils/response.util.ts`:
+All responses via `sendSuccess()` / `sendError()` from `src/infra/http/utils/response.util.ts`:
 
+**Success:**
 ```json
-{ "status": true,  "code": 200, "data": { ... } }
-{ "status": false, "code": 404, "error": "...", "data": null }
+{
+  "status": true,
+  "code": 200,
+  "message": "Operación exitosa",
+  "data": { ... }
+}
 ```
+
+**Error:**
+```json
+{
+  "status": false,
+  "code": 400,
+  "error": "Human-readable message in Spanish",
+  "data": null,
+  "details": { "stack": "...", "path": "...", "method": "..." }
+}
+```
+
+> `details` only in development. Error messages always in Spanish.```
 
 ### Authentication
 

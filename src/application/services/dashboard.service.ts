@@ -58,7 +58,7 @@ export class DashboardService {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
     const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-    const [allTransactions, allRecurringExpenses, creditCards, paymentMethods] = await Promise.all([
+    const [{ items: allTransactions }, allRecurringExpenses, creditCards, paymentMethods] = await Promise.all([
       this.transactionRepository.findAllByUser(userId, {
         startDate: startOfMonth,
         endDate: endOfToday,

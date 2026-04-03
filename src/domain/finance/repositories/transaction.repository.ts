@@ -14,6 +14,10 @@ export interface TransactionFilters {
   subtype?: string | null;
   /** When true, excludes CARD_PAYMENT subtypes from results. */
   excludeCardPayments?: boolean;
+  /** Maximum number of results to return. */
+  limit?: number;
+  /** Number of results to skip before returning. */
+  offset?: number;
 }
 
 /**
@@ -35,7 +39,7 @@ export interface TransactionRepository {
    * @param {TransactionFilters} filters Optional filters for date range, type, category.
    * @returns {Promise<Transaction[]>} Collection of transactions ordered by date (descending).
    */
-  findAllByUser(userId: string, filters?: TransactionFilters): Promise<Transaction[]>;
+  findAllByUser(userId: string, filters?: TransactionFilters): Promise<{ items: Transaction[]; total: number }>;
 
   /**
    * Finds a transaction by identifier.

@@ -10,7 +10,7 @@ import { UpdateTransactionDto } from '../dto/finance/update-transaction.dto';
 import { Transaction, TransactionType, CategorySnapshot } from '../../domain/finance/types/transaction.types';
 import { RecurringExpense, RecurringFrequency } from '../../domain/finance/types/recurring-expense.types';
 import { CategoryType } from '../../domain/category/types/category.types';
-import { NotFoundError, ForbiddenError } from '../../domain/errors/app-error';
+import { NotFoundError, ForbiddenError, ValidationError } from '../../domain/errors/app-error';
 import { TransactionSubtype, PaymentMethodType } from 'fa-contracts';
 
 /**
@@ -27,6 +27,10 @@ export interface TransactionHistoryFilters {
   subtype?: string | null;
   /** When true, excludes CARD_PAYMENT transactions. */
   excludeCardPayments?: boolean;
+  /** Maximum number of results to return (default 50). */
+  limit?: number;
+  /** Number of results to skip (default 0). */
+  offset?: number;
 }
 
 /**
@@ -228,7 +232,7 @@ export class TransactionService {
    * @returns {Promise<Transaction[]>} Collection of transactions ordered by date (descending).
    * @throws {NotFoundError} If the user does not exist.
    */
-  async getHistory(userId: string, filters?: TransactionHistoryFilters): Promise<Transaction[]> {
+  async getHistory(userId: string, filters?: TransactionHistoryFilters): Promise<{ items: Transaction[]; total: number }> {
     await this.ensureUserExists(userId);
 
     const now = new Date();
@@ -243,6 +247,8 @@ export class TransactionService {
       paymentMethodId: filters?.paymentMethodId,
       subtype: filters?.subtype,
       excludeCardPayments: filters?.excludeCardPayments,
+      limit: filters?.limit,
+      offset: filters?.offset,
     };
 
     return this.transactionRepository.findAllByUser(userId, repositoryFilters);
@@ -270,7 +276,9 @@ export class TransactionService {
       throw new ForbiddenError('No tienes permiso para actualizar esta transacción');
     }
 
-    const expectedCategoryType = transaction.type === TransactionType.INCOME ? CategoryType.INCOME : CategoryType.EXPENSE;
+    // The effective transaction type after the update (may change if data.type is provided)
+    const effectiveType = data.type ?? transaction.type;
+    const expectedCategoryType = effectiveType === TransactionType.INCOME ? CategoryType.INCOME : CategoryType.EXPENSE;
 
     // Prepare update data
     const updateData: Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>> = {};
@@ -284,24 +292,31 @@ export class TransactionService {
     if (data.date instanceof Date) {
       updateData.date = data.date;
     }
+    if (data.type !== undefined) {
+      updateData.type = data.type;
+    }
 
-    // Handle category update
-    if (data.categoryId) {
-      const category = await this.categoryRepository.findById(data.categoryId);
+    // Handle category update — also triggered when only the type changes, to re-validate the existing category
+    const categoryIdToValidate = data.categoryId ?? (data.type !== undefined ? transaction.category.id : undefined);
+    if (categoryIdToValidate) {
+      const category = await this.categoryRepository.findById(categoryIdToValidate);
       if (!category) {
-        throw new NotFoundError('Category', data.categoryId);
+        throw new NotFoundError('Category', categoryIdToValidate);
       }
       if (category.userId !== userId) {
         throw new ForbiddenError('No tienes permiso para usar esta categoría');
       }
       if (category.type !== expectedCategoryType) {
-        throw new ForbiddenError(`El tipo de categoría "${category.type}" no coincide con el tipo de transacción "${transaction.type}"`);
+        throw new ValidationError('La categoría no corresponde al tipo de transacción');
       }
-      updateData.category = {
-        id: category.id!,
-        name: category.name,
-        icon: undefined,
-      };
+      // Only write the snapshot when the caller explicitly changed the category
+      if (data.categoryId) {
+        updateData.category = {
+          id: category.id!,
+          name: category.name,
+          icon: undefined,
+        };
+      }
     }
 
     // Handle payment method update
@@ -341,9 +356,9 @@ export class TransactionService {
       throw new NotFoundError('Transaction', id);
     }
 
-    // Apply new balance effect
+    // Apply new balance effect using the effective (possibly updated) type
     if (finalPaymentMethodId) {
-      const isExpense = transaction.type === TransactionType.EXPENSE;
+      const isExpense = effectiveType === TransactionType.EXPENSE;
       await this.paymentMethodService.updatePaymentMethodBalance(
         finalPaymentMethodId,
         finalAmount,
@@ -351,8 +366,8 @@ export class TransactionService {
       );
     }
 
-    // Recalculate affected budgets when an EXPENSE is updated
-    if (transaction.type === TransactionType.EXPENSE && this.budgetService) {
+    // Recalculate affected budgets when the result is (or was) an EXPENSE
+    if ((transaction.type === TransactionType.EXPENSE || effectiveType === TransactionType.EXPENSE) && this.budgetService) {
       const updatedCategoryId = updateData.category?.id ?? transaction.category.id;
       const updatedDate = updateData.date ?? transaction.date;
       await this.budgetService.updateBudgetsForTransaction(userId, updatedCategoryId, updatedDate);

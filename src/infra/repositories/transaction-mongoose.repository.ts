@@ -3,6 +3,7 @@ import { Transaction } from '../../domain/finance/types/transaction.types';
 import { TransactionModel, ITransactionDocument } from '../database/models/transaction.model';
 import { getMongooseInstance } from '../database/mongoose-client';
 import { TransactionSubtype } from 'fa-contracts';
+import { sanitizeStringValue } from '../utils/sanitize-query';
 
 /**
  * Mongoose implementation of TransactionRepository.
@@ -39,7 +40,7 @@ export class TransactionMongooseRepository implements TransactionRepository {
    * @param {TransactionFilters} filters Optional filters for date range, type, category.
    * @returns {Promise<Transaction[]>} Transactions tied to the user, ordered by date descending.
    */
-  async findAllByUser(userId: string, filters?: TransactionFilters): Promise<Transaction[]> {
+  async findAllByUser(userId: string, filters?: TransactionFilters): Promise<{ items: Transaction[]; total: number }> {
     await getMongooseInstance();
     const query: Record<string, unknown> = { user: userId };
 
@@ -53,20 +54,32 @@ export class TransactionMongooseRepository implements TransactionRepository {
       query.type = filters.type;
     }
     if (filters?.categoryId) {
-      query['category.id'] = filters.categoryId;
+      query['category.id'] = sanitizeStringValue(filters.categoryId);
     }
     if (filters?.paymentMethodId) {
-      query.paymentMethod = filters.paymentMethodId;
+      query.paymentMethod = sanitizeStringValue(filters.paymentMethodId);
     }
-    if (filters?.subtype !== undefined) {
-      query.subtype = filters.subtype;
+    if (filters?.subtype !== undefined && filters.subtype !== null) {
+      query.subtype = sanitizeStringValue(filters.subtype);
+    } else if (filters?.subtype === null) {
+      query.subtype = null;
     }
     if (filters?.excludeCardPayments) {
       query.subtype = { $ne: TransactionSubtype.CARD_PAYMENT };
     }
 
-    const transactions = await TransactionModel.find(query).sort({ date: -1 }).exec();
-    return transactions.map((transaction) => this.toDomain(transaction));
+    const limit = filters?.limit ?? 50;
+    const offset = filters?.offset ?? 0;
+
+    const [transactions, total] = await Promise.all([
+      TransactionModel.find(query).sort({ date: -1 }).skip(offset).limit(limit).exec(),
+      TransactionModel.countDocuments(query).exec(),
+    ]);
+
+    return {
+      items: transactions.map((transaction) => this.toDomain(transaction)),
+      total,
+    };
   }
 
   /**

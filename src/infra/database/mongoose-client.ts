@@ -1,6 +1,9 @@
 import mongoose from 'mongoose';
 import { env } from '../config/env';
 
+// Reject queries that contain MongoDB operators (e.g. { $gt: '' }) to prevent NoSQL injection
+mongoose.set('sanitizeFilter', true);
+
 // Singleton pattern for the Mongoose client
 export class MongooseClientSingleton {
   private static instance: typeof mongoose | null = null;

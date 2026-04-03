@@ -239,7 +239,7 @@ export class BudgetService {
       (filters as any).categoryId = budget.categoryId;
     }
 
-    const transactions = await this.transactionRepository.findAllByUser(budget.userId, filters as any);
+    const { items: transactions } = await this.transactionRepository.findAllByUser(budget.userId, filters as any);
 
     const newSpent = transactions.reduce((sum, t) => sum + t.amount, 0);
 

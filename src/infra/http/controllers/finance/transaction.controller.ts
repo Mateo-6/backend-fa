@@ -73,21 +73,21 @@ export class TransactionController {
       paymentMethodId?: string;
       subtype?: string | null;
       excludeCardPayments?: boolean;
+      limit?: number;
+      offset?: number;
     } = {};
 
+    // Query params are pre-validated by transactionHistoryQuerySchema via validate() middleware
     if (req.query.startDate) {
-      const startDateStr = req.query.startDate as string;
-      filters.startDate = new Date(startDateStr.includes('T') ? startDateStr : `${startDateStr}T00:00:00.000Z`);
+      const s = req.query.startDate as string;
+      filters.startDate = new Date(`${s}T00:00:00.000Z`);
     }
     if (req.query.endDate) {
-      const endDateStr = req.query.endDate as string;
-      filters.endDate = new Date(endDateStr.includes('T') ? endDateStr : `${endDateStr}T23:59:59.999Z`);
+      const e = req.query.endDate as string;
+      filters.endDate = new Date(`${e}T23:59:59.999Z`);
     }
     if (req.query.type) {
-      const typeValue = (req.query.type as string).toUpperCase();
-      if (typeValue === TransactionType.INCOME || typeValue === TransactionType.EXPENSE) {
-        filters.type = typeValue as TransactionType;
-      }
+      filters.type = req.query.type as TransactionType;
     }
     if (req.query.categoryId) {
       filters.categoryId = req.query.categoryId as string;
@@ -101,14 +101,21 @@ export class TransactionController {
     if (req.query.excludeCardPayments === 'true') {
       filters.excludeCardPayments = true;
     }
+    if (req.query.limit !== undefined) {
+      filters.limit = Number(req.query.limit);
+    }
+    if (req.query.offset !== undefined) {
+      filters.offset = Number(req.query.offset);
+    }
 
-    const transactions = await this.transactionService.getHistory(req.user.id, filters);
-    sendSuccess(res, transactions);
+    const result = await this.transactionService.getHistory(req.user.id, filters);
+    sendSuccess(res, result);
   }
 
   /**
-   * Updates an INCOME transaction.
-   * Validates that the transaction belongs to the authenticated user and is of type INCOME.
+   * Updates a transaction (INCOME or EXPENSE).
+   * Validates that the transaction belongs to the authenticated user.
+   * When the type changes, the category is re-validated against the new type.
    *
    * @param {AuthenticatedRequest} req Express request containing the identifier parameter and validated body.
    * @param {Response} res Express response used to send the updated transaction.

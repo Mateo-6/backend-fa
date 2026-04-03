@@ -1,5 +1,6 @@
 import express, { Application } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import healthRoutes from './routes/health.routes';
 import userRoutes from './routes/user.routes';
 import categoryRoutes from './routes/category.routes';
@@ -35,8 +36,13 @@ export class Server {
    * @returns {void} Middleware registration only.
    */
   private configureMiddlewares(): void {
-    this.app.use(cors());
-    this.app.use(express.json());
+    this.app.use(helmet());
+    this.app.use(cors({
+      origin: env.CORS_ORIGIN.split(',').map(o => o.trim()),
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+    }));
+    this.app.use(express.json({ limit: '100kb' }));
   }
 
   /**

@@ -13,6 +13,7 @@ import { NotificationMongooseRepository } from '../../repositories/notification-
 import { validate } from '../middleware/validation.middleware';
 import { createTransactionSchema } from '../../../application/dto/finance/create-transaction.dto';
 import { updateTransactionSchema } from '../../../application/dto/finance/update-transaction.dto';
+import { transactionHistoryQuerySchema } from '../../../application/dto/finance/transaction-history-query.dto';
 import { asyncHandler } from '../middleware/async-handler.middleware';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { JwtTokenService } from '../../services/jwt-token.service';
@@ -61,6 +62,7 @@ router.post(
 router.get(
   '/history',
   authMiddleware(tokenService),
+  validate(transactionHistoryQuerySchema, 'query'),
   asyncHandler(transactionController.getHistory.bind(transactionController))
 );
 router.put(

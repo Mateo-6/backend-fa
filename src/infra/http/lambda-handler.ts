@@ -11,6 +11,7 @@ import { AuthService } from '../../application/services/auth.service';
 import { UserMongooseRepository } from '../repositories/user-mongoose.repository';
 import { JwtTokenService } from '../services/jwt-token.service';
 import { BcryptPasswordService } from '../services/bcrypt-password.service';
+import { RefreshTokenMongooseRepository } from '../repositories/refresh-token-mongoose.repository';
 
 import { UserController } from './controllers/user/user.controller';
 import { UserService } from '../../application/services/user.service';
@@ -90,9 +91,10 @@ async function ensureMongoConnection(): Promise<void> {
 const userRepository = new UserMongooseRepository();
 const tokenService = new JwtTokenService();
 const passwordService = new BcryptPasswordService();
+const refreshTokenRepository = new RefreshTokenMongooseRepository();
 
 // Services
-const authService = new AuthService(userRepository, tokenService, passwordService);
+const authService = new AuthService(userRepository, tokenService, passwordService, refreshTokenRepository);
 const categoryRepository = new CategoryMongooseRepository();
 const userService = new UserService(userRepository, passwordService, categoryRepository);
 const categoryService = new CategoryService(categoryRepository, userRepository);
