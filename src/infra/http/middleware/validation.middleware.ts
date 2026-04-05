@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodSchema } from 'zod';
-import qs from 'qs';
 
 /**
  * Validates the request body (default) or query params against the provided Zod schema
@@ -27,7 +26,13 @@ export const validate = (schema: ZodSchema, target: 'body' | 'query' = 'body') =
     }
 
     if (target === 'query') {
-      req.query = validationResult.data as qs.ParsedQs;
+      const parsed = validationResult.data;
+      const query = req.query;
+      // Clear existing keys and assign validated data onto the existing query object
+      for (const key of Object.keys(query)) {
+        delete query[key];
+      }
+      Object.assign(query, parsed);
     } else {
       req.body = validationResult.data;
     }

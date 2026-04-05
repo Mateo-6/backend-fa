@@ -3,6 +3,7 @@ import { Transaction } from '../../domain/finance/types/transaction.types';
 import { TransactionModel, ITransactionDocument } from '../database/models/transaction.model';
 import { getMongooseInstance } from '../database/mongoose-client';
 import { TransactionSubtype } from 'fa-contracts';
+import mongoose from 'mongoose';
 import { sanitizeStringValue } from '../utils/sanitize-query';
 
 /**
@@ -44,11 +45,15 @@ export class TransactionMongooseRepository implements TransactionRepository {
     await getMongooseInstance();
     const query: Record<string, unknown> = { user: userId };
 
+    const dateFilter: Record<string, Date> = {};
     if (filters?.startDate) {
-      query.date = { ...(query.date as Record<string, unknown> || {}), $gte: filters.startDate };
+      dateFilter.$gte = filters.startDate;
     }
     if (filters?.endDate) {
-      query.date = { ...(query.date as Record<string, unknown> || {}), $lte: filters.endDate };
+      dateFilter.$lte = filters.endDate;
+    }
+    if (Object.keys(dateFilter).length > 0) {
+      query.date = mongoose.trusted(dateFilter);
     }
     if (filters?.type) {
       query.type = filters.type;
@@ -65,7 +70,7 @@ export class TransactionMongooseRepository implements TransactionRepository {
       query.subtype = null;
     }
     if (filters?.excludeCardPayments) {
-      query.subtype = { $ne: TransactionSubtype.CARD_PAYMENT };
+      query.subtype = mongoose.trusted({ $ne: TransactionSubtype.CARD_PAYMENT });
     }
 
     const limit = filters?.limit ?? 50;

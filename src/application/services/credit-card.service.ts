@@ -132,7 +132,7 @@ export class CreditCardService {
     const summary = this.buildCardSummary(card, now);
     const currentPeriod = this.computeCurrentPeriod(details.cut_off_day, now);
 
-    const [periodTransactions, allPayments] = await Promise.all([
+    const [periodTransactionsResult, allPaymentsResult] = await Promise.all([
       this.transactionRepository.findAllByUser(userId, {
         startDate: currentPeriod.startDate,
         endDate: currentPeriod.endDate,
@@ -142,6 +142,8 @@ export class CreditCardService {
         subtype: TransactionSubtype.CARD_PAYMENT,
       }),
     ]);
+    const periodTransactions = periodTransactionsResult.items;
+    const allPayments = allPaymentsResult.items;
 
     const cardPayments = allPayments.filter(
       (t) => t.cardPaymentDetails?.creditCardId === cardId
@@ -220,7 +222,7 @@ export class CreditCardService {
 
     const periodEnd = this.computePeriodEnd(periodStart, details.cut_off_day);
 
-    const [transactions, allPayments] = await Promise.all([
+    const [transactionsResult, allPaymentsResult] = await Promise.all([
       this.transactionRepository.findAllByUser(userId, {
         startDate: periodStart,
         endDate: periodEnd,
@@ -230,6 +232,8 @@ export class CreditCardService {
         subtype: TransactionSubtype.CARD_PAYMENT,
       }),
     ]);
+    const transactions = transactionsResult.items;
+    const allPayments = allPaymentsResult.items;
 
     const cardPayments = allPayments.filter(
       (t) => t.cardPaymentDetails?.creditCardId === cardId
@@ -412,9 +416,10 @@ export class CreditCardService {
   async getPaymentHistory(userId: string, cardId: string): Promise<Transaction[]> {
     await this.ensureCardOwnership(cardId, userId);
 
-    const allCardPayments = await this.transactionRepository.findAllByUser(userId, {
+    const ObjectResult = await this.transactionRepository.findAllByUser(userId, {
       subtype: TransactionSubtype.CARD_PAYMENT,
     });
+    const allCardPayments = ObjectResult.items;
 
     return allCardPayments.filter((t) => t.cardPaymentDetails?.creditCardId === cardId);
   }
@@ -577,9 +582,10 @@ export class CreditCardService {
     now: Date,
     count: number = 12
   ): Promise<BillingPeriod[]> {
-    const allPayments = await this.transactionRepository.findAllByUser(userId, {
+    const allPaymentsResult = await this.transactionRepository.findAllByUser(userId, {
       subtype: TransactionSubtype.CARD_PAYMENT,
     });
+    const allPayments = allPaymentsResult.items;
     const cardPayments = allPayments.filter((t) => t.cardPaymentDetails?.creditCardId === cardId);
 
     const periods: BillingPeriod[] = [];
@@ -592,11 +598,12 @@ export class CreditCardService {
       const periodStartForQuery = new Date(startDate);
       const periodEndForQuery = new Date(endDate);
 
-      const transactions = await this.transactionRepository.findAllByUser(userId, {
+      const transactionsResult = await this.transactionRepository.findAllByUser(userId, {
         startDate: periodStartForQuery,
         endDate: periodEndForQuery,
         paymentMethodId: cardId,
       });
+      const transactions = transactionsResult.items;
 
       const totalSpent = transactions.reduce((sum, t) => sum + t.amount, 0);
 

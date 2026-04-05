@@ -80,13 +80,21 @@ export class TransactionService {
     }
 
     // Validate that category type matches transaction type
-    const expectedCategoryType = data.type === TransactionType.INCOME ? CategoryType.INCOME : CategoryType.EXPENSE;
+    let expectedCategoryType: CategoryType;
+    if (data.type === TransactionType.INCOME) {
+      expectedCategoryType = CategoryType.INCOME;
+    } else if (data.type === TransactionType.EXPENSE) {
+      expectedCategoryType = CategoryType.EXPENSE;
+    } else {
+      expectedCategoryType = CategoryType.TRANSFER;
+    }
+
     if (category.type !== expectedCategoryType) {
       throw new ForbiddenError(`El tipo de categoría "${category.type}" no coincide con el tipo de transacción "${data.type}"`);
     }
 
-    // Validate payment method ownership when provided for any transaction type
-    if (data.paymentMethodId) {
+    // Validate payment method ownership when provided for INCOME/EXPENSE transactions
+    if (data.type !== TransactionType.TRANSFER && data.paymentMethodId) {
       await this.ensurePaymentMethodExists(data.paymentMethodId, userId);
 
       // INCOME transactions can only be linked to BANK_ACCOUNT or CASH, not CREDIT_CARD
@@ -95,6 +103,31 @@ export class TransactionService {
         if (paymentMethod && paymentMethod.type === PaymentMethodType.CREDIT_CARD) {
           throw new ForbiddenError('Los ingresos no pueden asociarse a una tarjeta de crédito');
         }
+      }
+    }
+
+    // Validate TRANSFER-specific rules
+    if (data.type === TransactionType.TRANSFER) {
+      const sourceId = data.sourcePaymentMethodId!;
+      const destinationId = data.destinationPaymentMethodId!;
+
+      if (sourceId === destinationId) {
+        throw new ValidationError('El método de pago origen y destino deben ser diferentes');
+      }
+
+      await this.ensurePaymentMethodExists(sourceId, userId);
+      await this.ensurePaymentMethodExists(destinationId, userId);
+
+      const [source, destination] = await Promise.all([
+        this.paymentMethodRepository.findById(sourceId),
+        this.paymentMethodRepository.findById(destinationId),
+      ]);
+
+      if (source?.type === PaymentMethodType.CREDIT_CARD) {
+        throw new ValidationError('El método de pago origen no puede ser una tarjeta de crédito');
+      }
+      if (destination?.type === PaymentMethodType.CREDIT_CARD) {
+        throw new ValidationError('El método de pago destino no puede ser una tarjeta de crédito');
       }
     }
 
@@ -115,20 +148,22 @@ export class TransactionService {
       type: data.type,
       category: categorySnapshot,
       paymentMethodId: data.paymentMethodId,
+      sourcePaymentMethodId: data.sourcePaymentMethodId,
+      destinationPaymentMethodId: data.destinationPaymentMethodId,
       isRecurring: false,
     });
 
-    // Update credit card balance if payment method is provided
-    if (data.paymentMethodId) {
+    if (data.type === TransactionType.TRANSFER) {
+      // Decrease source balance, increase destination balance
+      await this.paymentMethodService.updatePaymentMethodBalance(data.sourcePaymentMethodId!, data.amount, true);
+      await this.paymentMethodService.updatePaymentMethodBalance(data.destinationPaymentMethodId!, data.amount, false);
+    } else if (data.paymentMethodId) {
+      // Update credit card balance if payment method is provided for INCOME/EXPENSE
       const isExpense = data.type === TransactionType.EXPENSE;
-      await this.paymentMethodService.updatePaymentMethodBalance(
-        data.paymentMethodId,
-        data.amount,
-        isExpense
-      );
+      await this.paymentMethodService.updatePaymentMethodBalance(data.paymentMethodId, data.amount, isExpense);
     }
 
-    // Recalculate affected budgets when an EXPENSE is created
+    // Recalculate affected budgets when an EXPENSE is created (not for TRANSFER)
     if (data.type === TransactionType.EXPENSE && this.budgetService) {
       await this.budgetService.updateBudgetsForTransaction(userId, data.categoryId, transactionDate);
     }
@@ -276,8 +311,86 @@ export class TransactionService {
       throw new ForbiddenError('No tienes permiso para actualizar esta transacción');
     }
 
+    // TRANSFER transactions cannot change type, and non-TRANSFER transactions cannot become TRANSFER
+    if (
+      (transaction.type === TransactionType.TRANSFER && data.type !== undefined && data.type !== TransactionType.TRANSFER) ||
+      (transaction.type !== TransactionType.TRANSFER && data.type === TransactionType.TRANSFER)
+    ) {
+      throw new ValidationError('No se puede cambiar el tipo de una transferencia');
+    }
+
     // The effective transaction type after the update (may change if data.type is provided)
     const effectiveType = data.type ?? transaction.type;
+
+    // Block unsupported update paths for TRANSFER transactions
+    if (effectiveType === TransactionType.TRANSFER) {
+      // For transfers, only allow updating amount, description, and date
+      if (data.categoryId || data.paymentMethodId) {
+        throw new ValidationError('No se puede cambiar la categoría o método de pago de una transferencia');
+      }
+      // Handle sourcePaymentMethodId and destinationPaymentMethodId updates for TRANSFER
+      const updateData: Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>> = {};
+      if (typeof data.amount === 'number') updateData.amount = data.amount;
+      if (typeof data.description === 'string') updateData.description = data.description;
+      if (data.date instanceof Date) updateData.date = data.date;
+      if (data.sourcePaymentMethodId) {
+        await this.ensurePaymentMethodExists(data.sourcePaymentMethodId, userId);
+        const source = await this.paymentMethodRepository.findById(data.sourcePaymentMethodId);
+        if (source?.type === PaymentMethodType.CREDIT_CARD) {
+          throw new ValidationError('El método de pago origen no puede ser una tarjeta de crédito');
+        }
+        updateData.sourcePaymentMethodId = data.sourcePaymentMethodId;
+      }
+      if (data.destinationPaymentMethodId) {
+        await this.ensurePaymentMethodExists(data.destinationPaymentMethodId, userId);
+        const destination = await this.paymentMethodRepository.findById(data.destinationPaymentMethodId);
+        if (destination?.type === PaymentMethodType.CREDIT_CARD) {
+          throw new ValidationError('El método de pago destino no puede ser una tarjeta de crédito');
+        }
+        updateData.destinationPaymentMethodId = data.destinationPaymentMethodId;
+      }
+
+      const finalSourceId = updateData.sourcePaymentMethodId ?? transaction.sourcePaymentMethodId;
+      const finalDestinationId = updateData.destinationPaymentMethodId ?? transaction.destinationPaymentMethodId;
+      if (finalSourceId && finalDestinationId && finalSourceId === finalDestinationId) {
+        throw new ValidationError('El método de pago origen y destino deben ser diferentes');
+      }
+
+      const finalAmount = typeof data.amount === 'number' ? data.amount : transaction.amount;
+
+      // Reverse old transfer balance effects
+      if (transaction.sourcePaymentMethodId) {
+        await this.paymentMethodService.updatePaymentMethodBalance(transaction.sourcePaymentMethodId, transaction.amount, false);
+      }
+      if (transaction.destinationPaymentMethodId) {
+        await this.paymentMethodService.updatePaymentMethodBalance(transaction.destinationPaymentMethodId, transaction.amount, true);
+      }
+
+      const updatedTransaction = await this.transactionRepository.update(id, updateData);
+      if (!updatedTransaction) {
+        // Rollback: re-apply old effects
+        if (transaction.sourcePaymentMethodId) {
+          await this.paymentMethodService.updatePaymentMethodBalance(transaction.sourcePaymentMethodId, transaction.amount, true);
+        }
+        if (transaction.destinationPaymentMethodId) {
+          await this.paymentMethodService.updatePaymentMethodBalance(transaction.destinationPaymentMethodId, transaction.amount, false);
+        }
+        throw new NotFoundError('Transaction', id);
+      }
+
+      // Apply new transfer balance effects
+      const newSourceId = finalSourceId ?? transaction.sourcePaymentMethodId;
+      const newDestinationId = finalDestinationId ?? transaction.destinationPaymentMethodId;
+      if (newSourceId) {
+        await this.paymentMethodService.updatePaymentMethodBalance(newSourceId, finalAmount, true);
+      }
+      if (newDestinationId) {
+        await this.paymentMethodService.updatePaymentMethodBalance(newDestinationId, finalAmount, false);
+      }
+
+      return updatedTransaction;
+    }
+
     const expectedCategoryType = effectiveType === TransactionType.INCOME ? CategoryType.INCOME : CategoryType.EXPENSE;
 
     // Prepare update data
@@ -396,7 +509,15 @@ export class TransactionService {
     }
 
     // Reverse balance effect before deleting
-    if (transaction.subtype === TransactionSubtype.CARD_PAYMENT && transaction.cardPaymentDetails) {
+    if (transaction.type === TransactionType.TRANSFER) {
+      // Reverse: increase source balance back, decrease destination balance back
+      if (transaction.sourcePaymentMethodId) {
+        await this.paymentMethodService.updatePaymentMethodBalance(transaction.sourcePaymentMethodId, transaction.amount, false);
+      }
+      if (transaction.destinationPaymentMethodId) {
+        await this.paymentMethodService.updatePaymentMethodBalance(transaction.destinationPaymentMethodId, transaction.amount, true);
+      }
+    } else if (transaction.subtype === TransactionSubtype.CARD_PAYMENT && transaction.cardPaymentDetails) {
       // CARD_PAYMENT reduces the card's balance. Reversing: increase the card balance back.
       const cardId = transaction.cardPaymentDetails.creditCardId;
       await this.paymentMethodService.updatePaymentMethodBalance(cardId, transaction.amount, true);

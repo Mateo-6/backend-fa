@@ -2,6 +2,7 @@ import { BudgetRepository, BudgetFilters, BudgetHistoryFilters } from '../../dom
 import { Budget } from '../../domain/budget/types/budget.types';
 import { BudgetModel, IBudgetDocument } from '../database/models/budget.model';
 import { getMongooseInstance } from '../database/mongoose-client';
+import mongoose from 'mongoose';
 
 /**
  * Mongoose implementation of BudgetRepository.
@@ -103,14 +104,18 @@ export class BudgetMongooseRepository implements BudgetRepository {
     const now = new Date();
     const query: Record<string, unknown> = {
       user: userId,
-      $or: [{ isActive: false }, { endDate: { $lt: now } }],
+      $or: mongoose.trusted([{ isActive: false }, { endDate: mongoose.trusted({ $lt: now }) }]),
     };
 
+    const endDateFilter: Record<string, Date> = {};
     if (filters?.startDate) {
-      query.endDate = { ...(query.endDate as Record<string, unknown> || {}), $gte: filters.startDate };
+      endDateFilter.$gte = filters.startDate;
     }
     if (filters?.endDate) {
-      query.endDate = { ...(query.endDate as Record<string, unknown> || {}), $lte: filters.endDate };
+      endDateFilter.$lte = filters.endDate;
+    }
+    if (Object.keys(endDateFilter).length > 0) {
+      query.endDate = mongoose.trusted(endDateFilter);
     }
     if (filters?.categoryId !== undefined) {
       query.categoryId = filters.categoryId;
@@ -163,9 +168,9 @@ export class BudgetMongooseRepository implements BudgetRepository {
     const docs = await BudgetModel.find({
       user: userId,
       isActive: true,
-      startDate: { $lte: date },
-      endDate: { $gte: date },
-      $or: [{ categoryId: categoryId }, { categoryId: null }],
+      startDate: mongoose.trusted({ $lte: date }),
+      endDate: mongoose.trusted({ $gte: date }),
+      $or: mongoose.trusted([{ categoryId: categoryId }, { categoryId: null }]),
     }).exec();
     return docs.map((doc) => this.toDomain(doc));
   }

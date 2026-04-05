@@ -15,10 +15,12 @@ export interface ICardPaymentDetails {
 /**
  * Mongoose document interface for Transaction.
  */
-export interface ITransactionDocument extends Omit<Transaction, 'userId' | 'recurringExpenseId' | 'paymentMethodId' | 'subtype' | 'cardPaymentDetails'>, Document {
+export interface ITransactionDocument extends Omit<Transaction, 'userId' | 'recurringExpenseId' | 'paymentMethodId' | 'sourcePaymentMethodId' | 'destinationPaymentMethodId' | 'subtype' | 'cardPaymentDetails'>, Document {
   user: Types.ObjectId;
   recurringExpense?: Types.ObjectId;
   paymentMethod?: Types.ObjectId;
+  sourcePaymentMethod?: Types.ObjectId | null;
+  destinationPaymentMethod?: Types.ObjectId | null;
   subtype?: TransactionSubtype | null;
   cardPaymentDetails?: ICardPaymentDetails | null;
 }
@@ -117,6 +119,18 @@ const TransactionSchema = new Schema<ITransactionDocument>(
       ref: 'RecurringExpense',
       default: null,
     },
+    sourcePaymentMethod: {
+      type: Schema.Types.ObjectId,
+      ref: 'PaymentMethod',
+      required: false,
+      default: null,
+    },
+    destinationPaymentMethod: {
+      type: Schema.Types.ObjectId,
+      ref: 'PaymentMethod',
+      required: false,
+      default: null,
+    },
     cardPaymentDetails: {
       type: CardPaymentDetailsSchema,
       default: null,
@@ -139,10 +153,14 @@ const TransactionSchema = new Schema<ITransactionDocument>(
         ret.userId = ret.user?.toString();
         ret.paymentMethodId = ret.paymentMethod?.toString() || undefined;
         ret.recurringExpenseId = ret.recurringExpense?.toString() || undefined;
+        ret.sourcePaymentMethodId = ret.sourcePaymentMethod?.toString() || undefined;
+        ret.destinationPaymentMethodId = ret.destinationPaymentMethod?.toString() || undefined;
         delete ret._id;
         delete ret.user;
         delete ret.paymentMethod;
         delete ret.recurringExpense;
+        delete ret.sourcePaymentMethod;
+        delete ret.destinationPaymentMethod;
         return ret;
       },
     },
@@ -159,10 +177,14 @@ const TransactionSchema = new Schema<ITransactionDocument>(
         ret.userId = ret.user?.toString();
         ret.paymentMethodId = ret.paymentMethod?.toString() || undefined;
         ret.recurringExpenseId = ret.recurringExpense?.toString() || undefined;
+        ret.sourcePaymentMethodId = ret.sourcePaymentMethod?.toString() || undefined;
+        ret.destinationPaymentMethodId = ret.destinationPaymentMethod?.toString() || undefined;
         delete ret._id;
         delete ret.user;
         delete ret.paymentMethod;
         delete ret.recurringExpense;
+        delete ret.sourcePaymentMethod;
+        delete ret.destinationPaymentMethod;
         return ret;
       },
     },

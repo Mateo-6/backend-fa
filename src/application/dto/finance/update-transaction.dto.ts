@@ -13,6 +13,8 @@ export const updateTransactionSchema: z.ZodType<{
   type?: TransactionType;
   categoryId?: string;
   paymentMethodId?: string;
+  sourcePaymentMethodId?: string;
+  destinationPaymentMethodId?: string;
 }> = z
   .object({
     amount: z.number().positive('El monto debe ser positivo').optional(),
@@ -33,6 +35,8 @@ export const updateTransactionSchema: z.ZodType<{
     type: z.nativeEnum(TransactionType, { message: 'Tipo de transacción inválido' }).optional(),
     categoryId: z.string().min(1, 'El ID de categoría es requerido').optional(),
     paymentMethodId: z.string().min(1, 'El ID del método de pago es requerido').optional(),
+    sourcePaymentMethodId: z.string().min(1, 'El ID del método de pago origen es requerido').optional(),
+    destinationPaymentMethodId: z.string().min(1, 'El ID del método de pago destino es requerido').optional(),
   })
   .refine(
     (data) =>
@@ -41,7 +45,9 @@ export const updateTransactionSchema: z.ZodType<{
       typeof data.date !== 'undefined' ||
       typeof data.type === 'string' ||
       typeof data.categoryId === 'string' ||
-      typeof data.paymentMethodId === 'string',
+      typeof data.paymentMethodId === 'string' ||
+      typeof data.sourcePaymentMethodId === 'string' ||
+      typeof data.destinationPaymentMethodId === 'string',
     'Proporciona al menos un campo para actualizar'
   );
 

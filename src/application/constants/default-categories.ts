@@ -88,4 +88,10 @@ export const DEFAULT_CATEGORIES: DefaultCategoryEntry[] = [
     description: 'Dinero destinado al ahorro o inversión',
     type: CategoryType.EXPENSE,
   },
+  // Transfer
+  {
+    name: 'Transferencias',
+    description: 'Movimientos entre cuentas propias',
+    type: CategoryType.TRANSFER,
+  },
 ];
