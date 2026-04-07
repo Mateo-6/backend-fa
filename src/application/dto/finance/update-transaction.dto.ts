@@ -25,11 +25,7 @@ export const updateTransactionSchema: z.ZodType<{
       .optional(),
     date: z
       .union([z.string(), z.date()])
-      .transform((val) => {
-        // Extract only the YYYY-MM-DD portion to avoid timezone shift when storing in UTC
-        const dateStr = typeof val === 'string' ? val.split('T')[0] : val.toISOString().split('T')[0];
-        return new Date(`${dateStr}T00:00:00.000Z`);
-      })
+      .transform((val) => (val instanceof Date ? val : new Date(val)))
       .refine((val) => !isNaN(val.getTime()), { message: 'Formato de fecha inválido' })
       .optional(),
     type: z.nativeEnum(TransactionType, { message: 'Tipo de transacción inválido' }).optional(),

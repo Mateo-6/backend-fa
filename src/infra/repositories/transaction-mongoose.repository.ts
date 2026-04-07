@@ -77,7 +77,7 @@ export class TransactionMongooseRepository implements TransactionRepository {
     const offset = filters?.offset ?? 0;
 
     const [transactions, total] = await Promise.all([
-      TransactionModel.find(query).sort({ date: -1 }).skip(offset).limit(limit).exec(),
+      TransactionModel.find(query).sort({ date: -1, createdAt: -1 }).skip(offset).limit(limit).exec(),
       TransactionModel.countDocuments(query).exec(),
     ]);
 

@@ -1,6 +1,7 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { Request, Response } from 'express';
 import { ZodSchema, ZodError } from 'zod';
+import { env } from '../config/env';
 
 // Dependency Injection - Initialize outside handler for warm start
 import { HealthController } from './controllers/health.controller';
@@ -439,11 +440,14 @@ function findRoute(method: string, path: string): RouteConfig | null {
  *
  * @returns {Record<string, string>} CORS headers object
  */
-function getCorsHeaders(): Record<string, string> {
+function getCorsHeaders(origin?: string): Record<string, string> {
+  const allowedOrigins = env.CORS_ORIGIN.split(',').map(o => o.trim());
+  const resolvedOrigin = origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+
   return {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': resolvedOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Amz-Date, X-Api-Key, X-Amz-Security-Token',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Max-Age': '3600',
   };
 }
@@ -457,7 +461,8 @@ function getCorsHeaders(): Record<string, string> {
  */
 function createApiGatewayResponse(
   response: SuccessResponse | ErrorResponse | null,
-  statusCode: number
+  statusCode: number,
+  origin?: string
 ): APIGatewayProxyResult {
   const defaultResponse: SuccessResponse = {
     status: true,
@@ -471,7 +476,7 @@ function createApiGatewayResponse(
     statusCode: finalResponse.code || statusCode,
     headers: {
       'Content-Type': 'application/json',
-      ...getCorsHeaders(),
+      ...getCorsHeaders(origin),
     },
     body: JSON.stringify(finalResponse),
   };
@@ -515,11 +520,14 @@ export async function handler(
     // Remove query string if present in rawPath
     const path = rawPath.split('?')[0];
 
+    // Extract origin for CORS
+    const origin = event.headers?.['origin'] || event.headers?.['Origin'];
+
     // Handle OPTIONS requests (CORS preflight)
     if (method === 'OPTIONS') {
       return {
         statusCode: 200,
-        headers: getCorsHeaders(),
+        headers: getCorsHeaders(origin),
         body: '',
       };
     }
@@ -553,10 +561,11 @@ export async function handler(
         {
           status: false,
           code: 404,
-          error: 'Route not found',
+          error: 'Ruta no encontrada',
           data: null,
         },
-        404
+        404,
+        origin
       );
     }
 
@@ -602,7 +611,7 @@ export async function handler(
     }
 
     // Transform to API Gateway format
-    return createApiGatewayResponse(capturedData, capturedStatus);
+    return createApiGatewayResponse(capturedData, capturedStatus, origin);
   } catch (error) {
     // Global error handling
     let statusCode = 500;
@@ -640,6 +649,6 @@ export async function handler(
       }),
     };
 
-    return createApiGatewayResponse(errorResponse, statusCode);
+    return createApiGatewayResponse(errorResponse, statusCode, origin);
   }
 }
