@@ -51,6 +51,19 @@ export class AuthController {
    * @param {Response} res Express response used to return the logout confirmation.
    * @returns {Promise<void>} Resolves when the response is sent.
    */
+  /**
+   * Issues a new access token given a valid refresh token.
+   *
+   * @param {Request} req Express request containing the refresh token in the body.
+   * @param {Response} res Express response used to return the new access token.
+   * @returns {Promise<void>} Resolves when the response is sent.
+   */
+  public async refresh(req: Request, res: Response): Promise<void> {
+    const { refreshToken } = req.body;
+    const result = await this.authService.refresh(refreshToken);
+    sendSuccess(res, result);
+  }
+
   public async logout(req: Request, res: Response): Promise<void> {
     const authenticatedReq = req as AuthenticatedRequest;
     const userId = authenticatedReq.user?.id;
@@ -59,7 +72,7 @@ export class AuthController {
       throw new UnauthorizedError('User not authenticated');
     }
 
-    const result = await this.authService.logout(userId);
+    const result = await this.authService.logout(userId, req.body?.refreshToken);
     sendSuccess(res, result);
   }
 }

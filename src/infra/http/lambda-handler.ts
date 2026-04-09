@@ -1,6 +1,7 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { Request, Response } from 'express';
 import { ZodSchema, ZodError } from 'zod';
+import { env } from '../config/env';
 
 // Dependency Injection - Initialize outside handler for warm start
 import { HealthController } from './controllers/health.controller';
@@ -11,6 +12,7 @@ import { AuthService } from '../../application/services/auth.service';
 import { UserMongooseRepository } from '../repositories/user-mongoose.repository';
 import { JwtTokenService } from '../services/jwt-token.service';
 import { BcryptPasswordService } from '../services/bcrypt-password.service';
+import { RefreshTokenMongooseRepository } from '../repositories/refresh-token-mongoose.repository';
 
 import { UserController } from './controllers/user/user.controller';
 import { UserService } from '../../application/services/user.service';
@@ -33,10 +35,19 @@ import { PaymentMethodService } from '../../application/services/payment-method.
 
 import { DashboardController } from './controllers/dashboard/dashboard.controller';
 import { DashboardService } from '../../application/services/dashboard.service';
+import { CreditCardService } from '../../application/services/credit-card.service';
+import { CreditCardController } from './controllers/credit-card/credit-card.controller';
 
 import { NotificationController } from './controllers/notification/notification.controller';
 import { NotificationService } from '../../application/services/notification.service';
 import { NotificationMongooseRepository } from '../repositories/notification-mongoose.repository';
+
+import { BudgetController } from './controllers/budget/budget.controller';
+import { BudgetService } from '../../application/services/budget.service';
+import { BudgetMongooseRepository } from '../repositories/budget-mongoose.repository';
+
+import { GmfController } from './controllers/gmf/gmf.controller';
+import { GmfService } from '../../application/services/gmf.service';
 
 import { AppError, UnauthorizedError } from '../../domain/errors/app-error';
 import { AuthenticatedRequest } from './types/request.types';
@@ -54,6 +65,9 @@ import { createRecurringSchema } from '../../application/dto/finance/create-recu
 import { createPaymentMethodSchema } from '../../application/dto/payment-method/create-payment-method.dto';
 import { updatePaymentMethodSchema } from '../../application/dto/payment-method/update-payment-method.dto';
 import { registerPushTokenSchema } from '../../application/dto/notification/register-push-token.dto';
+import { createBudgetSchema } from '../../application/dto/budget/create-budget.dto';
+import { updateBudgetSchema } from '../../application/dto/budget/update-budget.dto';
+import { toggleGmfExemptSchema } from '../../application/dto/payment-method/toggle-gmf-exempt.dto';
 import { MongooseClientSingleton } from '../database/mongoose-client';
 
 // Initialize MongoDB connection outside handler (warm start optimization)
@@ -82,9 +96,10 @@ async function ensureMongoConnection(): Promise<void> {
 const userRepository = new UserMongooseRepository();
 const tokenService = new JwtTokenService();
 const passwordService = new BcryptPasswordService();
+const refreshTokenRepository = new RefreshTokenMongooseRepository();
 
 // Services
-const authService = new AuthService(userRepository, tokenService, passwordService);
+const authService = new AuthService(userRepository, tokenService, passwordService, refreshTokenRepository);
 const categoryRepository = new CategoryMongooseRepository();
 const userService = new UserService(userRepository, passwordService, categoryRepository);
 const categoryService = new CategoryService(categoryRepository, userRepository);
@@ -105,9 +120,13 @@ const recurringExpenseService = new RecurringExpenseService(
   userRepository,
   paymentMethodRepository
 );
-const dashboardService = new DashboardService(transactionRepository, recurringExpenseRepository);
+const creditCardService = new CreditCardService(paymentMethodRepository, transactionRepository);
+const dashboardService = new DashboardService(transactionRepository, recurringExpenseRepository, creditCardService, paymentMethodRepository);
 const notificationRepository = new NotificationMongooseRepository();
 const notificationService = new NotificationService(userRepository, notificationRepository);
+const budgetRepository = new BudgetMongooseRepository();
+const budgetService = new BudgetService(budgetRepository, transactionRepository, notificationRepository, userRepository);
+const gmfService = new GmfService(transactionRepository, paymentMethodRepository);
 const healthService = new HealthService();
 
 // Controllers
@@ -120,6 +139,9 @@ const recurringExpenseController = new RecurringExpenseController(recurringExpen
 const paymentMethodController = new PaymentMethodController(paymentMethodService);
 const dashboardController = new DashboardController(dashboardService);
 const notificationController = new NotificationController(notificationService);
+const creditCardController = new CreditCardController(creditCardService);
+const budgetController = new BudgetController(budgetService);
+const gmfController = new GmfController(gmfService);
 
 /**
  * Type for route handler function
@@ -156,7 +178,11 @@ function createRequest(event: APIGatewayProxyEvent): Request {
   const queryParams = event.queryStringParameters || {};
   const pathParams = event.pathParameters || {};
   const headers = event.headers || {};
-  const body = event.body ? JSON.parse(event.body) : {};
+  let rawBody = event.body || '';
+  if (rawBody && event.isBase64Encoded) {
+    rawBody = Buffer.from(rawBody, 'base64').toString('utf-8');
+  }
+  const body = rawBody ? JSON.parse(rawBody) : {};
 
   // Match path parameters (filter out undefined values)
   const params: Record<string, string> = {};
@@ -360,6 +386,7 @@ const routes: RouteConfig[] = [
   // Payment method routes (all require auth)
   { method: 'POST', path: '/payment-methods', handler: paymentMethodController.create.bind(paymentMethodController), authRequired: true, validateSchema: createPaymentMethodSchema },
   { method: 'GET', path: '/payment-methods', handler: paymentMethodController.getAll.bind(paymentMethodController), authRequired: true },
+  { method: 'PATCH', path: '/payment-methods/:id/gmf-exempt', handler: paymentMethodController.toggleGmfExempt.bind(paymentMethodController), authRequired: true, validateSchema: toggleGmfExemptSchema },
   { method: 'GET', path: '/payment-methods/:id/calculate-due-date', handler: paymentMethodController.calculatePaymentDueDate.bind(paymentMethodController), authRequired: true },
   { method: 'PUT', path: '/payment-methods/:id', handler: paymentMethodController.update.bind(paymentMethodController), authRequired: true, validateSchema: updatePaymentMethodSchema },
   { method: 'DELETE', path: '/payment-methods/:id', handler: paymentMethodController.delete.bind(paymentMethodController), authRequired: true },
@@ -372,6 +399,28 @@ const routes: RouteConfig[] = [
   { method: 'GET', path: '/notifications', handler: notificationController.getNotifications.bind(notificationController), authRequired: true },
   { method: 'PATCH', path: '/notifications/:id/read', handler: notificationController.markAsRead.bind(notificationController), authRequired: true },
   { method: 'GET', path: '/notifications/unread-count', handler: notificationController.getUnreadCount.bind(notificationController), authRequired: true },
+
+  // Credit card routes (all require auth)
+  { method: 'GET', path: '/credit-cards', handler: creditCardController.getAllCards.bind(creditCardController), authRequired: true },
+  { method: 'GET', path: '/credit-cards/:id', handler: creditCardController.getCardDetail.bind(creditCardController), authRequired: true },
+  { method: 'GET', path: '/credit-cards/:id/statements', handler: creditCardController.getStatements.bind(creditCardController), authRequired: true },
+  { method: 'GET', path: '/credit-cards/:id/statements/:periodStart', handler: creditCardController.getStatementDetail.bind(creditCardController), authRequired: true },
+  { method: 'POST', path: '/credit-cards/:id/pay', handler: creditCardController.payCard.bind(creditCardController), authRequired: true },
+  { method: 'GET', path: '/credit-cards/:id/payments', handler: creditCardController.getPaymentHistory.bind(creditCardController), authRequired: true },
+
+  // GMF routes (all require auth)
+  { method: 'GET', path: '/gmf/summary', handler: gmfController.getSummary.bind(gmfController), authRequired: true },
+
+  // Budget routes — /summary and /history BEFORE /:id to avoid conflicts
+  { method: 'POST', path: '/budgets', handler: budgetController.create.bind(budgetController), authRequired: true, validateSchema: createBudgetSchema },
+  { method: 'GET', path: '/budgets', handler: budgetController.getAll.bind(budgetController), authRequired: true },
+  { method: 'GET', path: '/budgets/summary', handler: budgetController.getSummary.bind(budgetController), authRequired: true },
+  { method: 'GET', path: '/budgets/history', handler: budgetController.getHistory.bind(budgetController), authRequired: true },
+  { method: 'GET', path: '/budgets/:id', handler: budgetController.getById.bind(budgetController), authRequired: true },
+  { method: 'PUT', path: '/budgets/:id', handler: budgetController.update.bind(budgetController), authRequired: true, validateSchema: updateBudgetSchema },
+  { method: 'PATCH', path: '/budgets/:id/recalculate', handler: budgetController.recalculate.bind(budgetController), authRequired: true },
+  { method: 'PATCH', path: '/budgets/:id/finalize', handler: budgetController.finalize.bind(budgetController), authRequired: true },
+  { method: 'DELETE', path: '/budgets/:id', handler: budgetController.permanentDelete.bind(budgetController), authRequired: true },
 ];
 
 /**
@@ -405,11 +454,14 @@ function findRoute(method: string, path: string): RouteConfig | null {
  *
  * @returns {Record<string, string>} CORS headers object
  */
-function getCorsHeaders(): Record<string, string> {
+function getCorsHeaders(origin?: string): Record<string, string> {
+  const allowedOrigins = env.CORS_ORIGIN.split(',').map(o => o.trim());
+  const resolvedOrigin = origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+
   return {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': resolvedOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Amz-Date, X-Api-Key, X-Amz-Security-Token',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Max-Age': '3600',
   };
 }
@@ -423,7 +475,8 @@ function getCorsHeaders(): Record<string, string> {
  */
 function createApiGatewayResponse(
   response: SuccessResponse | ErrorResponse | null,
-  statusCode: number
+  statusCode: number,
+  origin?: string
 ): APIGatewayProxyResult {
   const defaultResponse: SuccessResponse = {
     status: true,
@@ -437,7 +490,7 @@ function createApiGatewayResponse(
     statusCode: finalResponse.code || statusCode,
     headers: {
       'Content-Type': 'application/json',
-      ...getCorsHeaders(),
+      ...getCorsHeaders(origin),
     },
     body: JSON.stringify(finalResponse),
   };
@@ -481,11 +534,14 @@ export async function handler(
     // Remove query string if present in rawPath
     const path = rawPath.split('?')[0];
 
+    // Extract origin for CORS
+    const origin = event.headers?.['origin'] || event.headers?.['Origin'];
+
     // Handle OPTIONS requests (CORS preflight)
     if (method === 'OPTIONS') {
       return {
         statusCode: 200,
-        headers: getCorsHeaders(),
+        headers: getCorsHeaders(origin),
         body: '',
       };
     }
@@ -519,10 +575,11 @@ export async function handler(
         {
           status: false,
           code: 404,
-          error: 'Route not found',
+          error: 'Ruta no encontrada',
           data: null,
         },
-        404
+        404,
+        origin
       );
     }
 
@@ -568,9 +625,10 @@ export async function handler(
     }
 
     // Transform to API Gateway format
-    return createApiGatewayResponse(capturedData, capturedStatus);
-  } catch (error) {
+    return createApiGatewayResponse(capturedData, capturedStatus, origin);
+  } catch (error: unknown) {
     // Global error handling
+    console.error('Lambda global catch:', JSON.stringify(error, Object.getOwnPropertyNames(error as object)));
     let statusCode = 500;
     let message = 'Error interno del servidor';
 
@@ -582,8 +640,12 @@ export async function handler(
       message = `Error de validación: ${error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ')}`;
     } else if (error instanceof Error) {
       message = error.message;
+      // MongoDB duplicate key error (E11000)
+      if ('code' in error && (error as any).code === 11000) {
+        statusCode = 409;
+        message = 'El registro ya existe. El usuario o email ya está en uso.';
       // Fallback for common errors
-      if (error.message.includes('no encontrado') || error.message.includes('not found')) {
+      } else if (error.message.includes('no encontrado') || error.message.includes('not found')) {
         statusCode = 404;
       } else if (error.message.includes('duplicado') || error.message.includes('duplicate')) {
         statusCode = 409;
@@ -606,6 +668,6 @@ export async function handler(
       }),
     };
 
-    return createApiGatewayResponse(errorResponse, statusCode);
+    return createApiGatewayResponse(errorResponse, statusCode, origin);
   }
 }

@@ -151,7 +151,7 @@ During the guided deploy, you'll be prompted for:
 ```bash
 cd deploy
 
-export MONGO_URI="mongodb+srv://user:pass@cluster.mongodb.net/dbname"
+export MONGO_URI="mongodb+srv://amifapp_mongodb:TAPq0e4Jd3xn4ee3@ami-cluster.s5zlcze.mongodb.net/ami?appName=ami-cluster"
 npm run build --prefix ..
 node scripts/deploy-lambda-infra.js
 ```

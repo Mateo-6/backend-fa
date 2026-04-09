@@ -27,6 +27,7 @@ export class JwtTokenService implements ITokenService {
   generate(payload: object): string {
     return jwt.sign(payload, this.secret, {
       expiresIn: this.expiresIn,
+      algorithm: 'HS256',
     } as jwt.SignOptions);
   }
 
@@ -39,7 +40,7 @@ export class JwtTokenService implements ITokenService {
    */
   verify(token: string): object {
     try {
-      return jwt.verify(token, this.secret) as object;
+      return jwt.verify(token, this.secret, { algorithms: ['HS256'] }) as object;
     } catch (error) {
       throw new UnauthorizedError('Token inválido o expirado');
     }

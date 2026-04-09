@@ -18,6 +18,8 @@ async function deployLambdaInfra(options = {}) {
     region = process.env.AWS_REGION || 'us-east-1',
     stackName = process.env.AWS_STACK_NAME || 'ami-api-lambda',
     mongoUri = process.env.MONGO_URI || process.env.MONGO_URL,
+    jwtSecret = process.env.JWT_SECRET,
+    corsOrigin = process.env.CORS_ORIGIN || '*',
     profile = process.env.AWS_PROFILE,
     noConfirm = process.env.NO_CONFIRM === 'true',
     guided = process.env.GUIDED === 'true' || options.guided === true
@@ -36,6 +38,13 @@ async function deployLambdaInfra(options = {}) {
     console.error('   export MONGO_URI="mongodb+srv://user:pass@cluster.mongodb.net/dbname"');
     console.error('   Or pass it as an argument: node scripts/deploy-lambda-infra.js <stack-name> <mongo-uri>');
     console.error('   Or use --guided mode: node scripts/deploy-lambda-infra.js --guided');
+    process.exit(1);
+  }
+
+  if (!guided && !jwtSecret) {
+    console.error('❌ Error: JWT_SECRET is required for Lambda deployment');
+    console.error('   Please set JWT_SECRET environment variable:');
+    console.error('   export JWT_SECRET="your-secret-key"');
     process.exit(1);
   }
 
@@ -160,7 +169,7 @@ async function deployLambdaInfra(options = {}) {
         'deploy',
         '--config-file', configPath,
         '--stack-name', stackName,
-        '--parameter-overrides', `MongoUri=${mongoUri}`,
+        '--parameter-overrides', `MongoUri=${mongoUri}`, `JwtSecret=${jwtSecret}`, `CorsOrigin=${corsOrigin}`,
         '--region', region,
         '--no-confirm-changeset',
         '--no-fail-on-empty-changeset',
@@ -230,12 +239,14 @@ function checkPrerequisites() {
 // Main execution
 const stackName = process.argv[2] || process.env.AWS_STACK_NAME || 'ami-api-lambda';
 const mongoUri = process.argv[3] || process.env.MONGO_URI || process.env.MONGO_URL;
+const jwtSecret = process.env.JWT_SECRET;
+const corsOrigin = process.env.CORS_ORIGIN || '*';
 const region = process.env.AWS_REGION || 'us-east-1';
 const profile = process.env.AWS_PROFILE;
 const noConfirm = process.argv.includes('--no-confirm') || process.env.NO_CONFIRM === 'true';
 const guided = process.argv.includes('--guided') || process.env.GUIDED === 'true';
 
-deployLambdaInfra({ region, stackName, mongoUri, profile, noConfirm, guided }).catch((error) => {
+deployLambdaInfra({ region, stackName, mongoUri, jwtSecret, corsOrigin, profile, noConfirm, guided }).catch((error) => {
   console.error('❌ Deployment error:', error);
   process.exit(1);
 });

@@ -12,6 +12,25 @@ import { getMongooseInstance } from '../database/mongoose-client';
  */
 export class NotificationMongooseRepository implements NotificationRepository {
   /**
+   * Persists a new notification document.
+   *
+   * @param {Notification} notification Notification data to persist.
+   * @returns {Promise<Notification>} Created notification mapped to the domain type.
+   */
+  async create(notification: Notification): Promise<Notification> {
+    await getMongooseInstance();
+    const created = await NotificationModel.create({
+      userId: notification.userId,
+      title: notification.title,
+      body: notification.body,
+      priority: notification.priority,
+      isRead: notification.isRead ?? false,
+      metadata: notification.metadata ?? {},
+    });
+    return this.toDomain(created);
+  }
+
+  /**
    * Retrieves notifications for a user with pagination, ordered by createdAt descending.
    *
    * @param {string} userId Owner identifier.

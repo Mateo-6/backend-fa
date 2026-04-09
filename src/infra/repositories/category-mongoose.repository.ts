@@ -3,6 +3,7 @@ import { Category, CategoryType } from '../../domain/category/types/category.typ
 import { CategoryModel, ICategoryDocument } from '../database/models/category.model';
 import { getMongooseInstance } from '../database/mongoose-client';
 import { UserModel } from '../database/models/user.model';
+import { sanitizeStringValue } from '../utils/sanitize-query';
 
 export class CategoryMongooseRepository implements CategoryRepository {
   /**
@@ -48,7 +49,7 @@ export class CategoryMongooseRepository implements CategoryRepository {
     await getMongooseInstance();
     const query: Record<string, unknown> = { user: userId };
     if (type) {
-      query.type = type;
+      query.type = sanitizeStringValue(type);
     }
     const categories = await CategoryModel.find(query).sort({ createdAt: -1 }).exec();
     return categories.map((category) => this.toDomain(category));

@@ -11,7 +11,7 @@ export const createCategorySchema: z.ZodType<
     .max(255, 'La descripción debe tener menos de 255 caracteres')
     .optional(),
   type: z.nativeEnum(CategoryType, {
-    message: 'El tipo debe ser "income" o "expense"',
+    message: 'El tipo debe ser "income", "expense" o "transfer"',
   }),
 });
 

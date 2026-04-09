@@ -4,12 +4,14 @@ import { CategoryRepository } from '../../domain/category/repositories/category.
 import { UserRepository } from '../../domain/user/repositories/user.repository';
 import { PaymentMethodRepository } from '../../domain/payment-method/repositories/payment-method.repository';
 import { PaymentMethodService } from './payment-method.service';
+import { BudgetService } from './budget.service';
 import { CreateTransactionDto } from '../dto/finance/create-transaction.dto';
 import { UpdateTransactionDto } from '../dto/finance/update-transaction.dto';
 import { Transaction, TransactionType, CategorySnapshot } from '../../domain/finance/types/transaction.types';
 import { RecurringExpense, RecurringFrequency } from '../../domain/finance/types/recurring-expense.types';
 import { CategoryType } from '../../domain/category/types/category.types';
-import { NotFoundError, ForbiddenError } from '../../domain/errors/app-error';
+import { NotFoundError, ForbiddenError, ValidationError } from '../../domain/errors/app-error';
+import { TransactionSubtype, PaymentMethodType, BankAccountDetails } from 'fa-contracts';
 
 /**
  * Filter options for querying transactions.
@@ -19,6 +21,16 @@ export interface TransactionHistoryFilters {
   endDate?: Date;
   type?: TransactionType;
   categoryId?: string;
+  /** Filter by payment method identifier. */
+  paymentMethodId?: string;
+  /** Filter by transaction subtype. */
+  subtype?: string | null;
+  /** When true, excludes CARD_PAYMENT transactions. */
+  excludeCardPayments?: boolean;
+  /** Maximum number of results to return (default 50). */
+  limit?: number;
+  /** Number of results to skip (default 0). */
+  offset?: number;
 }
 
 /**
@@ -32,6 +44,7 @@ export class TransactionService {
    * @param {UserRepository} userRepository Repository used to validate the owner existence.
    * @param {PaymentMethodRepository} paymentMethodRepository Repository used to validate payment method existence.
    * @param {PaymentMethodService} paymentMethodService Service used to update credit card balance.
+   * @param {BudgetService} [budgetService] Optional service used to recalculate budget spent on EXPENSE changes.
    */
   constructor(
     private readonly transactionRepository: TransactionRepository,
@@ -39,7 +52,8 @@ export class TransactionService {
     private readonly categoryRepository: CategoryRepository,
     private readonly userRepository: UserRepository,
     private readonly paymentMethodRepository: PaymentMethodRepository,
-    private readonly paymentMethodService: PaymentMethodService
+    private readonly paymentMethodService: PaymentMethodService,
+    private readonly budgetService?: BudgetService
   ) {}
 
   /**
@@ -66,14 +80,55 @@ export class TransactionService {
     }
 
     // Validate that category type matches transaction type
-    const expectedCategoryType = data.type === TransactionType.INCOME ? CategoryType.INCOME : CategoryType.EXPENSE;
+    let expectedCategoryType: CategoryType;
+    if (data.type === TransactionType.INCOME) {
+      expectedCategoryType = CategoryType.INCOME;
+    } else if (data.type === TransactionType.EXPENSE) {
+      expectedCategoryType = CategoryType.EXPENSE;
+    } else {
+      expectedCategoryType = CategoryType.TRANSFER;
+    }
+
     if (category.type !== expectedCategoryType) {
       throw new ForbiddenError(`El tipo de categoría "${category.type}" no coincide con el tipo de transacción "${data.type}"`);
     }
 
-    // Payment method is required only for EXPENSE transactions
-    if (data.type === TransactionType.EXPENSE && data.paymentMethodId) {
+    // Validate payment method ownership when provided for INCOME/EXPENSE transactions
+    if (data.type !== TransactionType.TRANSFER && data.paymentMethodId) {
       await this.ensurePaymentMethodExists(data.paymentMethodId, userId);
+
+      // INCOME transactions can only be linked to BANK_ACCOUNT or CASH, not CREDIT_CARD
+      if (data.type === TransactionType.INCOME) {
+        const paymentMethod = await this.paymentMethodRepository.findById(data.paymentMethodId);
+        if (paymentMethod && paymentMethod.type === PaymentMethodType.CREDIT_CARD) {
+          throw new ForbiddenError('Los ingresos no pueden asociarse a una tarjeta de crédito');
+        }
+      }
+    }
+
+    // Validate TRANSFER-specific rules
+    if (data.type === TransactionType.TRANSFER) {
+      const sourceId = data.sourcePaymentMethodId!;
+      const destinationId = data.destinationPaymentMethodId!;
+
+      if (sourceId === destinationId) {
+        throw new ValidationError('El método de pago origen y destino deben ser diferentes');
+      }
+
+      await this.ensurePaymentMethodExists(sourceId, userId);
+      await this.ensurePaymentMethodExists(destinationId, userId);
+
+      const [source, destination] = await Promise.all([
+        this.paymentMethodRepository.findById(sourceId),
+        this.paymentMethodRepository.findById(destinationId),
+      ]);
+
+      if (source?.type === PaymentMethodType.CREDIT_CARD) {
+        throw new ValidationError('El método de pago origen no puede ser una tarjeta de crédito');
+      }
+      if (destination?.type === PaymentMethodType.CREDIT_CARD) {
+        throw new ValidationError('El método de pago destino no puede ser una tarjeta de crédito');
+      }
     }
 
     const categorySnapshot: CategorySnapshot = {
@@ -93,17 +148,24 @@ export class TransactionService {
       type: data.type,
       category: categorySnapshot,
       paymentMethodId: data.paymentMethodId,
+      sourcePaymentMethodId: data.sourcePaymentMethodId,
+      destinationPaymentMethodId: data.destinationPaymentMethodId,
       isRecurring: false,
     });
 
-    // Update credit card balance if payment method is provided
-    if (data.paymentMethodId) {
+    if (data.type === TransactionType.TRANSFER) {
+      // Decrease source balance, increase destination balance
+      await this.paymentMethodService.updatePaymentMethodBalance(data.sourcePaymentMethodId!, data.amount, true);
+      await this.paymentMethodService.updatePaymentMethodBalance(data.destinationPaymentMethodId!, data.amount, false);
+    } else if (data.paymentMethodId) {
+      // Update credit card balance if payment method is provided for INCOME/EXPENSE
       const isExpense = data.type === TransactionType.EXPENSE;
-      await this.paymentMethodService.updateCreditCardBalance(
-        data.paymentMethodId,
-        data.amount,
-        isExpense
-      );
+      await this.paymentMethodService.updatePaymentMethodBalance(data.paymentMethodId, data.amount, isExpense);
+    }
+
+    // Recalculate affected budgets when an EXPENSE is created (not for TRANSFER)
+    if (data.type === TransactionType.EXPENSE && this.budgetService) {
+      await this.budgetService.updateBudgetsForTransaction(userId, data.categoryId, transactionDate);
     }
 
     return transaction;
@@ -176,10 +238,19 @@ export class TransactionService {
 
     // Update credit card balance (recurring expenses are always EXPENSE transactions)
     if (recurringExpense.paymentMethodId) {
-      await this.paymentMethodService.updateCreditCardBalance(
+      await this.paymentMethodService.updatePaymentMethodBalance(
         recurringExpense.paymentMethodId,
         recurringExpense.amount,
         true // Recurring expenses are always expenses
+      );
+    }
+
+    // Recalculate affected budgets for the recurring EXPENSE
+    if (this.budgetService) {
+      await this.budgetService.updateBudgetsForTransaction(
+        recurringExpense.userId,
+        recurringExpense.categoryId,
+        new Date()
       );
     }
 
@@ -196,7 +267,7 @@ export class TransactionService {
    * @returns {Promise<Transaction[]>} Collection of transactions ordered by date (descending).
    * @throws {NotFoundError} If the user does not exist.
    */
-  async getHistory(userId: string, filters?: TransactionHistoryFilters): Promise<Transaction[]> {
+  async getHistory(userId: string, filters?: TransactionHistoryFilters): Promise<{ items: (Transaction & { gmfAmount: number })[]; total: number }> {
     await this.ensureUserExists(userId);
 
     const now = new Date();
@@ -208,9 +279,34 @@ export class TransactionService {
       endDate: filters?.endDate ?? defaultEndDate,
       type: filters?.type,
       categoryId: filters?.categoryId,
+      paymentMethodId: filters?.paymentMethodId,
+      subtype: filters?.subtype,
+      excludeCardPayments: filters?.excludeCardPayments,
+      limit: filters?.limit,
+      offset: filters?.offset,
     };
 
-    return this.transactionRepository.findAllByUser(userId, repositoryFilters);
+    const result = await this.transactionRepository.findAllByUser(userId, repositoryFilters);
+
+    // Enrich transactions with gmfAmount (4x1000 tax)
+    const paymentMethods = await this.paymentMethodRepository.findAllByUser(userId);
+    const pmMap = new Map(paymentMethods.map(pm => [pm.id, pm]));
+
+    const enrichedItems = result.items.map(t => {
+      let gmfAmount = 0;
+      if (t.type === TransactionType.EXPENSE && t.paymentMethodId) {
+        const pm = pmMap.get(t.paymentMethodId);
+        if (pm && pm.type === PaymentMethodType.BANK_ACCOUNT) {
+          const details = pm.details as BankAccountDetails;
+          if (!details.is_gmf_exempt) {
+            gmfAmount = Math.round(t.amount * 0.004);
+          }
+        }
+      }
+      return { ...t, gmfAmount };
+    });
+
+    return { items: enrichedItems, total: result.total };
   }
 
   /**
@@ -235,7 +331,87 @@ export class TransactionService {
       throw new ForbiddenError('No tienes permiso para actualizar esta transacción');
     }
 
-    const expectedCategoryType = transaction.type === TransactionType.INCOME ? CategoryType.INCOME : CategoryType.EXPENSE;
+    // TRANSFER transactions cannot change type, and non-TRANSFER transactions cannot become TRANSFER
+    if (
+      (transaction.type === TransactionType.TRANSFER && data.type !== undefined && data.type !== TransactionType.TRANSFER) ||
+      (transaction.type !== TransactionType.TRANSFER && data.type === TransactionType.TRANSFER)
+    ) {
+      throw new ValidationError('No se puede cambiar el tipo de una transferencia');
+    }
+
+    // The effective transaction type after the update (may change if data.type is provided)
+    const effectiveType = data.type ?? transaction.type;
+
+    // Block unsupported update paths for TRANSFER transactions
+    if (effectiveType === TransactionType.TRANSFER) {
+      // For transfers, only allow updating amount, description, and date
+      if (data.categoryId || data.paymentMethodId) {
+        throw new ValidationError('No se puede cambiar la categoría o método de pago de una transferencia');
+      }
+      // Handle sourcePaymentMethodId and destinationPaymentMethodId updates for TRANSFER
+      const updateData: Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>> = {};
+      if (typeof data.amount === 'number') updateData.amount = data.amount;
+      if (typeof data.description === 'string') updateData.description = data.description;
+      if (data.date instanceof Date) updateData.date = data.date;
+      if (data.sourcePaymentMethodId) {
+        await this.ensurePaymentMethodExists(data.sourcePaymentMethodId, userId);
+        const source = await this.paymentMethodRepository.findById(data.sourcePaymentMethodId);
+        if (source?.type === PaymentMethodType.CREDIT_CARD) {
+          throw new ValidationError('El método de pago origen no puede ser una tarjeta de crédito');
+        }
+        updateData.sourcePaymentMethodId = data.sourcePaymentMethodId;
+      }
+      if (data.destinationPaymentMethodId) {
+        await this.ensurePaymentMethodExists(data.destinationPaymentMethodId, userId);
+        const destination = await this.paymentMethodRepository.findById(data.destinationPaymentMethodId);
+        if (destination?.type === PaymentMethodType.CREDIT_CARD) {
+          throw new ValidationError('El método de pago destino no puede ser una tarjeta de crédito');
+        }
+        updateData.destinationPaymentMethodId = data.destinationPaymentMethodId;
+      }
+
+      const finalSourceId = updateData.sourcePaymentMethodId ?? transaction.sourcePaymentMethodId;
+      const finalDestinationId = updateData.destinationPaymentMethodId ?? transaction.destinationPaymentMethodId;
+      if (finalSourceId && finalDestinationId && finalSourceId === finalDestinationId) {
+        throw new ValidationError('El método de pago origen y destino deben ser diferentes');
+      }
+
+      const finalAmount = typeof data.amount === 'number' ? data.amount : transaction.amount;
+
+      // Reverse old transfer balance effects
+      if (transaction.sourcePaymentMethodId) {
+        await this.paymentMethodService.updatePaymentMethodBalance(transaction.sourcePaymentMethodId, transaction.amount, false);
+      }
+      if (transaction.destinationPaymentMethodId) {
+        await this.paymentMethodService.updatePaymentMethodBalance(transaction.destinationPaymentMethodId, transaction.amount, true);
+      }
+
+      const updatedTransaction = await this.transactionRepository.update(id, updateData);
+      if (!updatedTransaction) {
+        // Rollback: re-apply old effects
+        if (transaction.sourcePaymentMethodId) {
+          await this.paymentMethodService.updatePaymentMethodBalance(transaction.sourcePaymentMethodId, transaction.amount, true);
+        }
+        if (transaction.destinationPaymentMethodId) {
+          await this.paymentMethodService.updatePaymentMethodBalance(transaction.destinationPaymentMethodId, transaction.amount, false);
+        }
+        throw new NotFoundError('Transaction', id);
+      }
+
+      // Apply new transfer balance effects
+      const newSourceId = finalSourceId ?? transaction.sourcePaymentMethodId;
+      const newDestinationId = finalDestinationId ?? transaction.destinationPaymentMethodId;
+      if (newSourceId) {
+        await this.paymentMethodService.updatePaymentMethodBalance(newSourceId, finalAmount, true);
+      }
+      if (newDestinationId) {
+        await this.paymentMethodService.updatePaymentMethodBalance(newDestinationId, finalAmount, false);
+      }
+
+      return updatedTransaction;
+    }
+
+    const expectedCategoryType = effectiveType === TransactionType.INCOME ? CategoryType.INCOME : CategoryType.EXPENSE;
 
     // Prepare update data
     const updateData: Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>> = {};
@@ -249,24 +425,31 @@ export class TransactionService {
     if (data.date instanceof Date) {
       updateData.date = data.date;
     }
+    if (data.type !== undefined) {
+      updateData.type = data.type;
+    }
 
-    // Handle category update
-    if (data.categoryId) {
-      const category = await this.categoryRepository.findById(data.categoryId);
+    // Handle category update — also triggered when only the type changes, to re-validate the existing category
+    const categoryIdToValidate = data.categoryId ?? (data.type !== undefined ? transaction.category.id : undefined);
+    if (categoryIdToValidate) {
+      const category = await this.categoryRepository.findById(categoryIdToValidate);
       if (!category) {
-        throw new NotFoundError('Category', data.categoryId);
+        throw new NotFoundError('Category', categoryIdToValidate);
       }
       if (category.userId !== userId) {
         throw new ForbiddenError('No tienes permiso para usar esta categoría');
       }
       if (category.type !== expectedCategoryType) {
-        throw new ForbiddenError(`El tipo de categoría "${category.type}" no coincide con el tipo de transacción "${transaction.type}"`);
+        throw new ValidationError('La categoría no corresponde al tipo de transacción');
       }
-      updateData.category = {
-        id: category.id!,
-        name: category.name,
-        icon: undefined,
-      };
+      // Only write the snapshot when the caller explicitly changed the category
+      if (data.categoryId) {
+        updateData.category = {
+          id: category.id!,
+          name: category.name,
+          icon: undefined,
+        };
+      }
     }
 
     // Handle payment method update
@@ -282,35 +465,45 @@ export class TransactionService {
     const finalAmount = typeof data.amount === 'number' ? data.amount : transaction.amount;
     const finalPaymentMethodId = data.paymentMethodId !== undefined ? data.paymentMethodId : transaction.paymentMethodId;
 
-    // For EXPENSE transactions: reverse old credit card effect before update, then apply new effect after
-    if (transaction.type === TransactionType.EXPENSE && transaction.paymentMethodId) {
-      await this.paymentMethodService.updateCreditCardBalance(
+    // Reverse old balance effect before update (handles both EXPENSE and INCOME)
+    if (transaction.paymentMethodId) {
+      const isOriginalExpense = transaction.type === TransactionType.EXPENSE;
+      await this.paymentMethodService.updatePaymentMethodBalance(
         transaction.paymentMethodId,
         transaction.amount,
-        false // Reverse: subtract the original expense from the balance
+        !isOriginalExpense // flip to reverse: EXPENSE reversal = false, INCOME reversal = true
       );
     }
 
     const updatedTransaction = await this.transactionRepository.update(id, updateData);
     if (!updatedTransaction) {
-      // Rollback: re-apply the old credit card effect we reversed
-      if (transaction.type === TransactionType.EXPENSE && transaction.paymentMethodId) {
-        await this.paymentMethodService.updateCreditCardBalance(
+      // Rollback: re-apply the old effect we reversed
+      if (transaction.paymentMethodId) {
+        const isOriginalExpense = transaction.type === TransactionType.EXPENSE;
+        await this.paymentMethodService.updatePaymentMethodBalance(
           transaction.paymentMethodId,
           transaction.amount,
-          true
+          isOriginalExpense
         );
       }
       throw new NotFoundError('Transaction', id);
     }
 
-    // Apply new credit card effect for EXPENSE transactions
-    if (transaction.type === TransactionType.EXPENSE && finalPaymentMethodId) {
-      await this.paymentMethodService.updateCreditCardBalance(
+    // Apply new balance effect using the effective (possibly updated) type
+    if (finalPaymentMethodId) {
+      const isExpense = effectiveType === TransactionType.EXPENSE;
+      await this.paymentMethodService.updatePaymentMethodBalance(
         finalPaymentMethodId,
         finalAmount,
-        true // Apply: add the (possibly updated) expense to the balance
+        isExpense
       );
+    }
+
+    // Recalculate affected budgets when the result is (or was) an EXPENSE
+    if ((transaction.type === TransactionType.EXPENSE || effectiveType === TransactionType.EXPENSE) && this.budgetService) {
+      const updatedCategoryId = updateData.category?.id ?? transaction.category.id;
+      const updatedDate = updateData.date ?? transaction.date;
+      await this.budgetService.updateBudgetsForTransaction(userId, updatedCategoryId, updatedDate);
     }
 
     return updatedTransaction;
@@ -334,7 +527,37 @@ export class TransactionService {
     if (transaction.userId !== userId) {
       throw new ForbiddenError('No tienes permiso para eliminar esta transacción');
     }
+
+    // Reverse balance effect before deleting
+    if (transaction.type === TransactionType.TRANSFER) {
+      // Reverse: increase source balance back, decrease destination balance back
+      if (transaction.sourcePaymentMethodId) {
+        await this.paymentMethodService.updatePaymentMethodBalance(transaction.sourcePaymentMethodId, transaction.amount, false);
+      }
+      if (transaction.destinationPaymentMethodId) {
+        await this.paymentMethodService.updatePaymentMethodBalance(transaction.destinationPaymentMethodId, transaction.amount, true);
+      }
+    } else if (transaction.subtype === TransactionSubtype.CARD_PAYMENT && transaction.cardPaymentDetails) {
+      // CARD_PAYMENT reduces the card's balance. Reversing: increase the card balance back.
+      const cardId = transaction.cardPaymentDetails.creditCardId;
+      await this.paymentMethodService.updatePaymentMethodBalance(cardId, transaction.amount, true);
+    } else if (transaction.paymentMethodId) {
+      // For EXPENSE: reverse = pass false (undo the balance decrease / debt increase)
+      // For INCOME: reverse = pass true (undo the balance increase)
+      const isOriginalExpense = transaction.type === TransactionType.EXPENSE;
+      await this.paymentMethodService.updatePaymentMethodBalance(
+        transaction.paymentMethodId,
+        transaction.amount,
+        !isOriginalExpense
+      );
+    }
+
     await this.transactionRepository.delete(id);
+
+    // Recalculate affected budgets when an EXPENSE is deleted
+    if (transaction.type === TransactionType.EXPENSE && this.budgetService) {
+      await this.budgetService.updateBudgetsForTransaction(userId, transaction.category.id, transaction.date);
+    }
   }
 
   /**

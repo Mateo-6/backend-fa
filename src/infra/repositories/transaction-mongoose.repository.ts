@@ -2,6 +2,9 @@ import { TransactionRepository, TransactionFilters } from '../../domain/finance/
 import { Transaction } from '../../domain/finance/types/transaction.types';
 import { TransactionModel, ITransactionDocument } from '../database/models/transaction.model';
 import { getMongooseInstance } from '../database/mongoose-client';
+import { TransactionSubtype } from 'fa-contracts';
+import mongoose from 'mongoose';
+import { sanitizeStringValue } from '../utils/sanitize-query';
 
 /**
  * Mongoose implementation of TransactionRepository.
@@ -20,11 +23,13 @@ export class TransactionMongooseRepository implements TransactionRepository {
       description: transaction.description,
       date: transaction.date,
       type: transaction.type,
+      subtype: transaction.subtype ?? null,
       user: transaction.userId,
       category: transaction.category,
-      paymentMethod: transaction.paymentMethodId || null, // Mongoose will convert string to ObjectId, null for INCOME transactions
+      paymentMethod: transaction.paymentMethodId || null,
       isRecurring: transaction.isRecurring,
       recurringExpense: transaction.recurringExpenseId,
+      cardPaymentDetails: transaction.cardPaymentDetails ?? null,
     });
     return this.toDomain(created);
   }
@@ -36,25 +41,50 @@ export class TransactionMongooseRepository implements TransactionRepository {
    * @param {TransactionFilters} filters Optional filters for date range, type, category.
    * @returns {Promise<Transaction[]>} Transactions tied to the user, ordered by date descending.
    */
-  async findAllByUser(userId: string, filters?: TransactionFilters): Promise<Transaction[]> {
+  async findAllByUser(userId: string, filters?: TransactionFilters): Promise<{ items: Transaction[]; total: number }> {
     await getMongooseInstance();
     const query: Record<string, unknown> = { user: userId };
 
+    const dateFilter: Record<string, Date> = {};
     if (filters?.startDate) {
-      query.date = { ...(query.date as Record<string, unknown> || {}), $gte: filters.startDate };
+      dateFilter.$gte = filters.startDate;
     }
     if (filters?.endDate) {
-      query.date = { ...(query.date as Record<string, unknown> || {}), $lte: filters.endDate };
+      dateFilter.$lte = filters.endDate;
+    }
+    if (Object.keys(dateFilter).length > 0) {
+      query.date = mongoose.trusted(dateFilter);
     }
     if (filters?.type) {
       query.type = filters.type;
     }
     if (filters?.categoryId) {
-      query['category.id'] = filters.categoryId;
+      query['category.id'] = sanitizeStringValue(filters.categoryId);
+    }
+    if (filters?.paymentMethodId) {
+      query.paymentMethod = sanitizeStringValue(filters.paymentMethodId);
+    }
+    if (filters?.subtype !== undefined && filters.subtype !== null) {
+      query.subtype = sanitizeStringValue(filters.subtype);
+    } else if (filters?.subtype === null) {
+      query.subtype = null;
+    }
+    if (filters?.excludeCardPayments) {
+      query.subtype = mongoose.trusted({ $ne: TransactionSubtype.CARD_PAYMENT });
     }
 
-    const transactions = await TransactionModel.find(query).sort({ date: -1 }).exec();
-    return transactions.map((transaction) => this.toDomain(transaction));
+    const limit = filters?.limit ?? 50;
+    const offset = filters?.offset ?? 0;
+
+    const [transactions, total] = await Promise.all([
+      TransactionModel.find(query).sort({ date: -1, createdAt: -1 }).skip(offset).limit(limit).exec(),
+      TransactionModel.countDocuments(query).exec(),
+    ]);
+
+    return {
+      items: transactions.map((transaction) => this.toDomain(transaction)),
+      total,
+    };
   }
 
   /**
@@ -143,10 +173,19 @@ export class TransactionMongooseRepository implements TransactionRepository {
       description: doc.description,
       date: doc.date,
       type: doc.type,
+      subtype: doc.subtype ?? null,
       category: doc.category,
       paymentMethodId: doc.paymentMethod?.toString() || undefined,
       isRecurring: doc.isRecurring,
       recurringExpenseId: doc.recurringExpense?.toString(),
+      cardPaymentDetails: doc.cardPaymentDetails
+        ? {
+            creditCardId: doc.cardPaymentDetails.creditCardId,
+            isFullPayment: doc.cardPaymentDetails.isFullPayment,
+            billingPeriodStart: doc.cardPaymentDetails.billingPeriodStart,
+            billingPeriodEnd: doc.cardPaymentDetails.billingPeriodEnd,
+          }
+        : null,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
     };

@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "financial-app-api-collection",
 		"name": "Financial App API",
-		"description": "Complete API collection for Financial App - Health, Auth, Dashboard, Users, Categories, Transactions, Recurring Expenses, Payment Methods, and Notifications",
+		"description": "Complete API collection for Financial App - Health, Auth, Dashboard, Users, Categories, Transactions, Recurring Expenses, Payment Methods, Credit Cards, Notifications, and Budgets",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -1194,6 +1194,200 @@
 			]
 		},
 		{
+			"name": "Credit Cards",
+			"item": [
+				{
+					"name": "Get All Credit Cards",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/credit-cards",
+							"host": ["{{base_url}}"],
+							"path": ["credit-cards"]
+						},
+						"description": "Get all credit cards for the authenticated user with summary info (name, last 4 digits, credit limit, current balance, cut-off day, payment day)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Credit Card Detail",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/credit-cards/:id",
+							"host": ["{{base_url}}"],
+							"path": ["credit-cards", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{credit_card_id}}"
+								}
+							]
+						},
+						"description": "Get full detail for a single credit card, including all fields and current balance information."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Card Statements",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.length > 0) {",
+									"        pm.environment.set('period_start', response.data[0].periodStart);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/credit-cards/:id/statements",
+							"host": ["{{base_url}}"],
+							"path": ["credit-cards", ":id", "statements"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{credit_card_id}}"
+								}
+							]
+						},
+						"description": "Returns the last 12 billing period statements for a credit card. Each statement includes totals, dates, and a summary. The first statement's periodStart will be automatically saved to the 'period_start' environment variable."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Statement Detail",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/credit-cards/:id/statements/:periodStart",
+							"host": ["{{base_url}}"],
+							"path": ["credit-cards", ":id", "statements", ":periodStart"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{credit_card_id}}"
+								},
+								{
+									"key": "periodStart",
+									"value": "{{period_start}}",
+									"description": "ISO 8601 date string for the start of the billing period (e.g. 2024-01-15)"
+								}
+							]
+						},
+						"description": "Returns the detailed view for a single billing period, including individual transactions and a category breakdown. The periodStart must be a valid ISO 8601 date string."
+					},
+					"response": []
+				},
+				{
+					"name": "Pay Credit Card",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.id) {",
+									"        pm.environment.set('transaction_id', response.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"sourceAccountId\": \"{{payment_method_id}}\",\n    \"amount\": 500.00,\n    \"date\": \"2024-01-20T10:00:00Z\",\n    \"billingPeriodStart\": \"2023-12-16T00:00:00Z\",\n    \"billingPeriodEnd\": \"2024-01-15T23:59:59Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/credit-cards/:id/pay",
+							"host": ["{{base_url}}"],
+							"path": ["credit-cards", ":id", "pay"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{credit_card_id}}"
+								}
+							]
+						},
+						"description": "Registers a credit card payment from a bank account. Atomically creates an EXPENSE transaction and reduces the card's current balance. Fields: sourceAccountId (bank account payment method ID), amount (positive number), date (ISO 8601), billingPeriodStart (ISO 8601), billingPeriodEnd (ISO 8601, must be after billingPeriodStart). Returns the created transaction."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Card Payment History",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/credit-cards/:id/payments",
+							"host": ["{{base_url}}"],
+							"path": ["credit-cards", ":id", "payments"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{credit_card_id}}"
+								}
+							]
+						},
+						"description": "Returns the full payment history for a specific credit card, listing all payments made against this card."
+					},
+					"response": []
+				}
+			]
+		},
+		{
 			"name": "Notifications",
 			"item": [
 				{
@@ -1334,6 +1528,289 @@
 					"response": []
 				}
 			]
+		},
+		{
+			"name": "Budgets",
+			"item": [
+				{
+					"name": "Create Budget",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.id) {",
+									"        pm.environment.set('budget_id', response.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Monthly Food Budget\",\n    \"amount\": 500.00,\n    \"currency\": \"USD\",\n    \"period\": \"MONTHLY\",\n    \"categoryId\": \"{{category_id}}\",\n    \"startDate\": \"2024-01-01\",\n    \"rollover\": false,\n    \"alertThresholds\": [80, 100]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/budgets",
+							"host": ["{{base_url}}"],
+							"path": ["budgets"]
+						},
+						"description": "Create a new budget for the authenticated user. Fields: name (required, max 100 chars), amount (required, positive number), currency (required, 3 chars e.g. USD), period (required: WEEKLY, MONTHLY, or YEARLY), categoryId (optional, null for general budgets), startDate (optional, ISO date), rollover (optional, default false), alertThresholds (optional, array of numbers 1-100, default [80, 100]). The budget ID will be automatically saved to the 'budget_id' environment variable."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Budget (General - No Category)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.id) {",
+									"        pm.environment.set('budget_id', response.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Weekly General Budget\",\n    \"amount\": 200.00,\n    \"currency\": \"USD\",\n    \"period\": \"WEEKLY\",\n    \"rollover\": true,\n    \"alertThresholds\": [50, 80, 100]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/budgets",
+							"host": ["{{base_url}}"],
+							"path": ["budgets"]
+						},
+						"description": "Create a general budget without a category. When categoryId is omitted or null, the budget tracks all expenses regardless of category. This example uses rollover=true and custom alert thresholds at 50%, 80%, and 100%."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Budgets",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/budgets",
+							"host": ["{{base_url}}"],
+							"path": ["budgets"]
+						},
+						"description": "Get all budgets for the authenticated user. Supports optional query parameters: isActive (boolean, filter by active status) and includeExpired (boolean, include expired budgets)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Budgets (Active Only)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/budgets?isActive=true",
+							"host": ["{{base_url}}"],
+							"path": ["budgets"],
+							"query": [
+								{
+									"key": "isActive",
+									"value": "true",
+									"description": "Filter by active status (true or false)"
+								}
+							]
+						},
+						"description": "Get only active budgets for the authenticated user. Use isActive=true to filter active budgets, isActive=false to filter deactivated budgets."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Budgets (Include Expired)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/budgets?includeExpired=true",
+							"host": ["{{base_url}}"],
+							"path": ["budgets"],
+							"query": [
+								{
+									"key": "includeExpired",
+									"value": "true",
+									"description": "Include budgets that have passed their end date (true or false)"
+								}
+							]
+						},
+						"description": "Get all budgets including expired ones. By default expired budgets are excluded; use includeExpired=true to include them."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Budget Summary",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/budgets/summary",
+							"host": ["{{base_url}}"],
+							"path": ["budgets", "summary"]
+						},
+						"description": "Get active budgets sorted by consumption percentage descending. Used for the dashboard widget to show budgets that are closest to their limit first."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Budget History",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/budgets/history",
+							"host": ["{{base_url}}"],
+							"path": ["budgets", "history"]
+						},
+						"description": "Get expired or inactive budgets for the authenticated user. Useful for reviewing past budget performance."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Budget by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/budgets/:id",
+							"host": ["{{base_url}}"],
+							"path": ["budgets", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{budget_id}}"
+								}
+							]
+						},
+						"description": "Get a specific budget by ID for the authenticated user."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Budget",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Food Budget\",\n    \"amount\": 600.00,\n    \"alertThresholds\": [50, 80, 100],\n    \"rollover\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/budgets/:id",
+							"host": ["{{base_url}}"],
+							"path": ["budgets", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{budget_id}}"
+								}
+							]
+						},
+						"description": "Update mutable fields of an existing budget. Only name, amount, alertThresholds, and rollover can be updated — period and categoryId are immutable after creation. At least one field must be provided."
+					},
+					"response": []
+				},
+				{
+					"name": "Deactivate Budget",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/budgets/:id",
+							"host": ["{{base_url}}"],
+							"path": ["budgets", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "{{budget_id}}"
+								}
+							]
+						},
+						"description": "Soft-delete (deactivate) a budget by setting isActive to false. The budget is not permanently removed and can still be viewed in the history endpoint."
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"variable": [
@@ -1374,6 +1851,21 @@
 		},
 		{
 			"key": "notification_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "credit_card_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "period_start",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "budget_id",
 			"value": "",
 			"type": "string"
 		}

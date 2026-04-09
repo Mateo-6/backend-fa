@@ -8,6 +8,8 @@ import { UserMongooseRepository } from '../../repositories/user-mongoose.reposit
 import { CategoryMongooseRepository } from '../../repositories/category-mongoose.repository';
 import { asyncHandler } from '../middleware/async-handler.middleware';
 import { BcryptPasswordService } from '../../services/bcrypt-password.service';
+import { authMiddleware } from '../middleware/auth.middleware';
+import { JwtTokenService } from '../../services/jwt-token.service';
 
 const router = Router();
 
@@ -15,12 +17,13 @@ const router = Router();
 const userRepository = new UserMongooseRepository();
 const categoryRepository = new CategoryMongooseRepository();
 const passwordService = new BcryptPasswordService();
+const tokenService = new JwtTokenService();
 const userService = new UserService(userRepository, passwordService, categoryRepository);
 const userController = new UserController(userService);
 
 router.post('/', validate(createUserSchema), asyncHandler(userController.create.bind(userController)));
-router.get('/', asyncHandler(userController.getAll.bind(userController)));
-router.get('/:id', asyncHandler(userController.getById.bind(userController)));
+router.get('/', authMiddleware(tokenService), asyncHandler(userController.getAll.bind(userController)));
+router.get('/:id', authMiddleware(tokenService), asyncHandler(userController.getById.bind(userController)));
 router.put('/:id', validate(updateUserSchema), asyncHandler(userController.update.bind(userController)));
 router.delete('/:id', asyncHandler(userController.delete.bind(userController)));
 

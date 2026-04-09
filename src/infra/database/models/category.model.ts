@@ -19,7 +19,7 @@ const CategorySchema = new Schema<ICategoryDocument>(
     },
     type: {
       type: String,
-      enum: ['income', 'expense'],
+      enum: ['income', 'expense', 'transfer'],
       required: true,
       index: true,
     },
