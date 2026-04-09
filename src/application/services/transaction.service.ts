@@ -11,7 +11,7 @@ import { Transaction, TransactionType, CategorySnapshot } from '../../domain/fin
 import { RecurringExpense, RecurringFrequency } from '../../domain/finance/types/recurring-expense.types';
 import { CategoryType } from '../../domain/category/types/category.types';
 import { NotFoundError, ForbiddenError, ValidationError } from '../../domain/errors/app-error';
-import { TransactionSubtype, PaymentMethodType } from 'fa-contracts';
+import { TransactionSubtype, PaymentMethodType, BankAccountDetails } from 'fa-contracts';
 
 /**
  * Filter options for querying transactions.
@@ -267,7 +267,7 @@ export class TransactionService {
    * @returns {Promise<Transaction[]>} Collection of transactions ordered by date (descending).
    * @throws {NotFoundError} If the user does not exist.
    */
-  async getHistory(userId: string, filters?: TransactionHistoryFilters): Promise<{ items: Transaction[]; total: number }> {
+  async getHistory(userId: string, filters?: TransactionHistoryFilters): Promise<{ items: (Transaction & { gmfAmount: number })[]; total: number }> {
     await this.ensureUserExists(userId);
 
     const now = new Date();
@@ -286,7 +286,27 @@ export class TransactionService {
       offset: filters?.offset,
     };
 
-    return this.transactionRepository.findAllByUser(userId, repositoryFilters);
+    const result = await this.transactionRepository.findAllByUser(userId, repositoryFilters);
+
+    // Enrich transactions with gmfAmount (4x1000 tax)
+    const paymentMethods = await this.paymentMethodRepository.findAllByUser(userId);
+    const pmMap = new Map(paymentMethods.map(pm => [pm.id, pm]));
+
+    const enrichedItems = result.items.map(t => {
+      let gmfAmount = 0;
+      if (t.type === TransactionType.EXPENSE && t.paymentMethodId) {
+        const pm = pmMap.get(t.paymentMethodId);
+        if (pm && pm.type === PaymentMethodType.BANK_ACCOUNT) {
+          const details = pm.details as BankAccountDetails;
+          if (!details.is_gmf_exempt) {
+            gmfAmount = Math.round(t.amount * 0.004);
+          }
+        }
+      }
+      return { ...t, gmfAmount };
+    });
+
+    return { items: enrichedItems, total: result.total };
   }
 
   /**

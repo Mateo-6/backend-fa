@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { PaymentMethodService } from '../../../../application/services/payment-method.service';
 import { CreatePaymentMethodDto } from '../../../../application/dto/payment-method/create-payment-method.dto';
 import { UpdatePaymentMethodDto } from '../../../../application/dto/payment-method/update-payment-method.dto';
+import { ToggleGmfExemptDto } from '../../../../application/dto/payment-method/toggle-gmf-exempt.dto';
 import { AuthenticatedRequest } from '../../types/request.types';
 import { UnauthorizedError, NotFoundError } from '../../../../domain/errors/app-error';
 import { sendSuccess } from '../../utils/response.util';
@@ -76,6 +77,17 @@ export class PaymentMethodController {
 
     const dueDate = await this.paymentMethodService.calculatePaymentDueDate(id, date);
     sendSuccess(res, { dueDate });
+  }
+
+  public async toggleGmfExempt(req: AuthenticatedRequest, res: Response): Promise<void> {
+    if (!req.user?.id) {
+      throw new UnauthorizedError('Usuario no autenticado');
+    }
+
+    const { id } = req.params;
+    const { is_exempt }: ToggleGmfExemptDto = req.body;
+    const paymentMethod = await this.paymentMethodService.toggleGmfExempt(req.user.id, id, is_exempt);
+    sendSuccess(res, paymentMethod);
   }
 
   /**

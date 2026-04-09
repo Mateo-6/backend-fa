@@ -2,8 +2,8 @@ import { PaymentMethodRepository } from '../../domain/payment-method/repositorie
 import { UserRepository } from '../../domain/user/repositories/user.repository';
 import { CreatePaymentMethodDto } from '../dto/payment-method/create-payment-method.dto';
 import { UpdatePaymentMethodDto } from '../dto/payment-method/update-payment-method.dto';
-import { PaymentMethod, PaymentMethodType, CreditCardDetails, BankAccountDetails, CashDetails } from '../../domain/payment-method/types/payment-method.types';
-import { NotFoundError, ForbiddenError } from '../../domain/errors/app-error';
+import { PaymentMethod, PaymentMethodType, CreditCardDetails, BankAccountDetails, CashDetails, BankAccountType } from '../../domain/payment-method/types/payment-method.types';
+import { NotFoundError, ForbiddenError, ValidationError } from '../../domain/errors/app-error';
 
 /**
  * Service for managing payment methods.
@@ -140,6 +140,37 @@ export class PaymentMethodService {
     const finalPaymentDay = Math.min(paymentDay, daysInMonth);
 
     return new Date(paymentYear, paymentMonth, finalPaymentDay);
+  }
+
+  async toggleGmfExempt(userId: string, paymentMethodId: string, isExempt: boolean): Promise<PaymentMethod> {
+    const paymentMethod = await this.ensurePaymentMethodOwnership(paymentMethodId, userId);
+
+    if (paymentMethod.type !== PaymentMethodType.BANK_ACCOUNT) {
+      throw new ValidationError('Solo las cuentas bancarias pueden ser exentas del 4x1000');
+    }
+
+    const details = paymentMethod.details as BankAccountDetails;
+    if (details.account_type !== BankAccountType.SAVINGS) {
+      throw new ValidationError('Solo las cuentas de ahorros pueden ser exentas del 4x1000');
+    }
+
+    if (isExempt) {
+      const allPaymentMethods = await this.paymentMethodRepository.findAllByUser(userId);
+      for (const pm of allPaymentMethods) {
+        if (pm.id !== paymentMethodId && pm.type === PaymentMethodType.BANK_ACCOUNT) {
+          const pmDetails = pm.details as BankAccountDetails;
+          if (pmDetails.is_gmf_exempt) {
+            await this.paymentMethodRepository.update(pm.id!, {
+              details: { ...pmDetails, is_gmf_exempt: false },
+            });
+          }
+        }
+      }
+    }
+
+    return this.paymentMethodRepository.update(paymentMethodId, {
+      details: { ...details, is_gmf_exempt: isExempt },
+    });
   }
 
   /**

@@ -6,6 +6,7 @@ import { UserMongooseRepository } from '../../repositories/user-mongoose.reposit
 import { validate } from '../middleware/validation.middleware';
 import { createPaymentMethodSchema } from '../../../application/dto/payment-method/create-payment-method.dto';
 import { updatePaymentMethodSchema } from '../../../application/dto/payment-method/update-payment-method.dto';
+import { toggleGmfExemptSchema } from '../../../application/dto/payment-method/toggle-gmf-exempt.dto';
 import { asyncHandler } from '../middleware/async-handler.middleware';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { JwtTokenService } from '../../services/jwt-token.service';
@@ -30,6 +31,12 @@ router.get(
   '/',
   authMiddleware(tokenService),
   asyncHandler(paymentMethodController.getAll.bind(paymentMethodController))
+);
+router.patch(
+  '/:id/gmf-exempt',
+  authMiddleware(tokenService),
+  validate(toggleGmfExemptSchema),
+  asyncHandler(paymentMethodController.toggleGmfExempt.bind(paymentMethodController))
 );
 router.get(
   '/:id/calculate-due-date',

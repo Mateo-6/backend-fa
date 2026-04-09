@@ -46,6 +46,9 @@ import { BudgetController } from './controllers/budget/budget.controller';
 import { BudgetService } from '../../application/services/budget.service';
 import { BudgetMongooseRepository } from '../repositories/budget-mongoose.repository';
 
+import { GmfController } from './controllers/gmf/gmf.controller';
+import { GmfService } from '../../application/services/gmf.service';
+
 import { AppError, UnauthorizedError } from '../../domain/errors/app-error';
 import { AuthenticatedRequest } from './types/request.types';
 import { SuccessResponse, ErrorResponse } from './types/response.types';
@@ -64,6 +67,7 @@ import { updatePaymentMethodSchema } from '../../application/dto/payment-method/
 import { registerPushTokenSchema } from '../../application/dto/notification/register-push-token.dto';
 import { createBudgetSchema } from '../../application/dto/budget/create-budget.dto';
 import { updateBudgetSchema } from '../../application/dto/budget/update-budget.dto';
+import { toggleGmfExemptSchema } from '../../application/dto/payment-method/toggle-gmf-exempt.dto';
 import { MongooseClientSingleton } from '../database/mongoose-client';
 
 // Initialize MongoDB connection outside handler (warm start optimization)
@@ -122,6 +126,7 @@ const notificationRepository = new NotificationMongooseRepository();
 const notificationService = new NotificationService(userRepository, notificationRepository);
 const budgetRepository = new BudgetMongooseRepository();
 const budgetService = new BudgetService(budgetRepository, transactionRepository, notificationRepository, userRepository);
+const gmfService = new GmfService(transactionRepository, paymentMethodRepository);
 const healthService = new HealthService();
 
 // Controllers
@@ -136,6 +141,7 @@ const dashboardController = new DashboardController(dashboardService);
 const notificationController = new NotificationController(notificationService);
 const creditCardController = new CreditCardController(creditCardService);
 const budgetController = new BudgetController(budgetService);
+const gmfController = new GmfController(gmfService);
 
 /**
  * Type for route handler function
@@ -172,7 +178,11 @@ function createRequest(event: APIGatewayProxyEvent): Request {
   const queryParams = event.queryStringParameters || {};
   const pathParams = event.pathParameters || {};
   const headers = event.headers || {};
-  const body = event.body ? JSON.parse(event.body) : {};
+  let rawBody = event.body || '';
+  if (rawBody && event.isBase64Encoded) {
+    rawBody = Buffer.from(rawBody, 'base64').toString('utf-8');
+  }
+  const body = rawBody ? JSON.parse(rawBody) : {};
 
   // Match path parameters (filter out undefined values)
   const params: Record<string, string> = {};
@@ -376,6 +386,7 @@ const routes: RouteConfig[] = [
   // Payment method routes (all require auth)
   { method: 'POST', path: '/payment-methods', handler: paymentMethodController.create.bind(paymentMethodController), authRequired: true, validateSchema: createPaymentMethodSchema },
   { method: 'GET', path: '/payment-methods', handler: paymentMethodController.getAll.bind(paymentMethodController), authRequired: true },
+  { method: 'PATCH', path: '/payment-methods/:id/gmf-exempt', handler: paymentMethodController.toggleGmfExempt.bind(paymentMethodController), authRequired: true, validateSchema: toggleGmfExemptSchema },
   { method: 'GET', path: '/payment-methods/:id/calculate-due-date', handler: paymentMethodController.calculatePaymentDueDate.bind(paymentMethodController), authRequired: true },
   { method: 'PUT', path: '/payment-methods/:id', handler: paymentMethodController.update.bind(paymentMethodController), authRequired: true, validateSchema: updatePaymentMethodSchema },
   { method: 'DELETE', path: '/payment-methods/:id', handler: paymentMethodController.delete.bind(paymentMethodController), authRequired: true },
@@ -396,6 +407,9 @@ const routes: RouteConfig[] = [
   { method: 'GET', path: '/credit-cards/:id/statements/:periodStart', handler: creditCardController.getStatementDetail.bind(creditCardController), authRequired: true },
   { method: 'POST', path: '/credit-cards/:id/pay', handler: creditCardController.payCard.bind(creditCardController), authRequired: true },
   { method: 'GET', path: '/credit-cards/:id/payments', handler: creditCardController.getPaymentHistory.bind(creditCardController), authRequired: true },
+
+  // GMF routes (all require auth)
+  { method: 'GET', path: '/gmf/summary', handler: gmfController.getSummary.bind(gmfController), authRequired: true },
 
   // Budget routes — /summary and /history BEFORE /:id to avoid conflicts
   { method: 'POST', path: '/budgets', handler: budgetController.create.bind(budgetController), authRequired: true, validateSchema: createBudgetSchema },
@@ -612,8 +626,9 @@ export async function handler(
 
     // Transform to API Gateway format
     return createApiGatewayResponse(capturedData, capturedStatus, origin);
-  } catch (error) {
+  } catch (error: unknown) {
     // Global error handling
+    console.error('Lambda global catch:', JSON.stringify(error, Object.getOwnPropertyNames(error as object)));
     let statusCode = 500;
     let message = 'Error interno del servidor';
 
@@ -625,8 +640,12 @@ export async function handler(
       message = `Error de validación: ${error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ')}`;
     } else if (error instanceof Error) {
       message = error.message;
+      // MongoDB duplicate key error (E11000)
+      if ('code' in error && (error as any).code === 11000) {
+        statusCode = 409;
+        message = 'El registro ya existe. El usuario o email ya está en uso.';
       // Fallback for common errors
-      if (error.message.includes('no encontrado') || error.message.includes('not found')) {
+      } else if (error.message.includes('no encontrado') || error.message.includes('not found')) {
         statusCode = 404;
       } else if (error.message.includes('duplicado') || error.message.includes('duplicate')) {
         statusCode = 409;
