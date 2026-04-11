@@ -33,7 +33,7 @@ export class PaymentMethodMongooseRepository implements PaymentMethodRepository 
    */
   async findAllByUser(userId: string): Promise<PaymentMethod[]> {
     await getMongooseInstance();
-    const paymentMethods = await PaymentMethodModel.find({ user: userId })
+    const paymentMethods = await PaymentMethodModel.find({ user: userId, deletedAt: null })
       .sort({ createdAt: -1 })
       .exec();
     return paymentMethods.map((paymentMethod) => this.toDomain(paymentMethod));
@@ -47,7 +47,7 @@ export class PaymentMethodMongooseRepository implements PaymentMethodRepository 
    */
   async findById(id: string): Promise<PaymentMethod | null> {
     await getMongooseInstance();
-    const paymentMethod = await PaymentMethodModel.findById(id).exec();
+    const paymentMethod = await PaymentMethodModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!paymentMethod) {
       return null;
     }
@@ -84,7 +84,7 @@ export class PaymentMethodMongooseRepository implements PaymentMethodRepository 
    */
   async delete(id: string): Promise<void> {
     await getMongooseInstance();
-    await PaymentMethodModel.deleteOne({ _id: id }).exec();
+    await PaymentMethodModel.updateOne({ _id: id }, { $set: { deletedAt: new Date() } }).exec();
   }
 
   /**
@@ -103,6 +103,7 @@ export class PaymentMethodMongooseRepository implements PaymentMethodRepository 
       userId: doc.user.toString(),
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
+      deletedAt: doc.deletedAt ?? null,
     };
   }
 }

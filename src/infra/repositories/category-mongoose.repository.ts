@@ -33,7 +33,7 @@ export class CategoryMongooseRepository implements CategoryRepository {
    */
   async findAll(): Promise<Category[]> {
     await getMongooseInstance();
-    const categories = await CategoryModel.find().sort({ createdAt: -1 }).exec();
+    const categories = await CategoryModel.find({ deletedAt: null }).sort({ createdAt: -1 }).exec();
     return categories.map((category) => this.toDomain(category));
   }
 
@@ -47,7 +47,7 @@ export class CategoryMongooseRepository implements CategoryRepository {
    */
   async findAllByUser(userId: string, type?: CategoryType): Promise<Category[]> {
     await getMongooseInstance();
-    const query: Record<string, unknown> = { user: userId };
+    const query: Record<string, unknown> = { user: userId, deletedAt: null };
     if (type) {
       query.type = sanitizeStringValue(type);
     }
@@ -63,7 +63,7 @@ export class CategoryMongooseRepository implements CategoryRepository {
    */
   async findById(id: string): Promise<Category | null> {
     await getMongooseInstance();
-    const category = await CategoryModel.findById(id).exec();
+    const category = await CategoryModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!category) {
       return null;
     }
@@ -108,11 +108,11 @@ export class CategoryMongooseRepository implements CategoryRepository {
    */
   async delete(id: string): Promise<void> {
     await getMongooseInstance();
-    const category = await CategoryModel.findById(id).exec();
+    const category = await CategoryModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!category) {
       return;
     }
-    await CategoryModel.deleteOne({ _id: id }).exec();
+    await CategoryModel.updateOne({ _id: id }, { $set: { deletedAt: new Date() } }).exec();
     await UserModel.findByIdAndUpdate(category.user, {
       $pull: { categories: category._id },
     }).exec();
@@ -133,6 +133,7 @@ export class CategoryMongooseRepository implements CategoryRepository {
       userId: doc.user.toString(),
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
+      deletedAt: doc.deletedAt ?? null,
     };
   }
 }

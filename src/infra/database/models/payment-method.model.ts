@@ -43,6 +43,11 @@ const PaymentMethodSchema = new Schema<IPaymentMethodDocument>(
       type: Schema.Types.Mixed,
       required: true,
     },
+    deletedAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
   },
   {
     timestamps: true,

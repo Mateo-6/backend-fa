@@ -28,6 +28,11 @@ const CategorySchema = new Schema<ICategoryDocument>(
       ref: 'User',
       required: true,
     },
+    deletedAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
   },
   {
     timestamps: true,

@@ -9,7 +9,7 @@ export const createUserSchema: z.ZodType<User> = z.object({
     .min(8, 'La contraseña debe tener al menos 8 caracteres')
     .regex(/[A-Z]/, 'La contraseña debe contener al menos una mayúscula')
     .regex(/[0-9]/, 'La contraseña debe contener al menos un número')
-    .regex(/[!@#$%^&*(),.?":{}|<>]/, 'La contraseña debe contener al menos un carácter especial'),
+    .regex(/[!@#$%^&*(),.?":{}|<>=+\-_~`[\]\\;'/]/, 'La contraseña debe contener al menos un carácter especial'),
   phone: z.string().min(1, 'El teléfono es requerido').max(100, 'El teléfono debe tener menos de 100 caracteres'),
   email: z.string().email('Formato de email inválido'),
 });

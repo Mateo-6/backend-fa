@@ -11,7 +11,7 @@ import { Transaction, TransactionType, CategorySnapshot } from '../../domain/fin
 import { RecurringExpense, RecurringFrequency } from '../../domain/finance/types/recurring-expense.types';
 import { CategoryType } from '../../domain/category/types/category.types';
 import { NotFoundError, ForbiddenError, ValidationError } from '../../domain/errors/app-error';
-import { TransactionSubtype, PaymentMethodType, BankAccountDetails } from 'fa-contracts';
+import { TransactionSubtype, PaymentMethodType, BankAccountDetails, CreditCardDetails } from 'fa-contracts';
 
 /**
  * Filter options for querying transactions.
@@ -97,11 +97,23 @@ export class TransactionService {
     if (data.type !== TransactionType.TRANSFER && data.paymentMethodId) {
       await this.ensurePaymentMethodExists(data.paymentMethodId, userId);
 
+      const paymentMethod = await this.paymentMethodRepository.findById(data.paymentMethodId);
+
       // INCOME transactions can only be linked to BANK_ACCOUNT or CASH, not CREDIT_CARD
       if (data.type === TransactionType.INCOME) {
-        const paymentMethod = await this.paymentMethodRepository.findById(data.paymentMethodId);
         if (paymentMethod && paymentMethod.type === PaymentMethodType.CREDIT_CARD) {
           throw new ForbiddenError('Los ingresos no pueden asociarse a una tarjeta de crédito');
+        }
+      }
+
+      // EXPENSE on credit card: validate that amount does not exceed available credit
+      if (data.type === TransactionType.EXPENSE && paymentMethod?.type === PaymentMethodType.CREDIT_CARD) {
+        const details = paymentMethod.details as CreditCardDetails;
+        const availableCredit = details.credit_limit - details.current_balance;
+        if (data.amount > availableCredit) {
+          throw new ValidationError(
+            `El gasto de $${data.amount.toLocaleString('es-CO')} excede el cupo disponible de $${availableCredit.toLocaleString('es-CO')} en la tarjeta "${paymentMethod.name}"`
+          );
         }
       }
     }
@@ -214,6 +226,18 @@ export class TransactionService {
 
     // Validate payment method
     await this.ensurePaymentMethodExists(recurringExpense.paymentMethodId, recurringExpense.userId);
+
+    // Validate credit limit if payment method is a credit card
+    const paymentMethod = await this.paymentMethodRepository.findById(recurringExpense.paymentMethodId);
+    if (paymentMethod?.type === PaymentMethodType.CREDIT_CARD) {
+      const details = paymentMethod.details as CreditCardDetails;
+      const availableCredit = details.credit_limit - details.current_balance;
+      if (recurringExpense.amount > availableCredit) {
+        throw new ValidationError(
+          `El gasto recurrente de $${recurringExpense.amount.toLocaleString('es-CO')} excede el cupo disponible de $${availableCredit.toLocaleString('es-CO')} en la tarjeta "${paymentMethod.name}"`
+        );
+      }
+    }
 
     // Create transaction
     const transaction = await this.transactionRepository.create({

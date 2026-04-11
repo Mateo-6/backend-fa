@@ -43,7 +43,7 @@ export class TransactionMongooseRepository implements TransactionRepository {
    */
   async findAllByUser(userId: string, filters?: TransactionFilters): Promise<{ items: Transaction[]; total: number }> {
     await getMongooseInstance();
-    const query: Record<string, unknown> = { user: userId };
+    const query: Record<string, unknown> = { user: userId, deletedAt: null };
 
     const dateFilter: Record<string, Date> = {};
     if (filters?.startDate) {
@@ -95,7 +95,7 @@ export class TransactionMongooseRepository implements TransactionRepository {
    */
   async findById(id: string): Promise<Transaction | null> {
     await getMongooseInstance();
-    const transaction = await TransactionModel.findById(id).exec();
+    const transaction = await TransactionModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!transaction) {
       return null;
     }
@@ -156,7 +156,7 @@ export class TransactionMongooseRepository implements TransactionRepository {
    */
   async delete(id: string): Promise<void> {
     await getMongooseInstance();
-    await TransactionModel.deleteOne({ _id: id }).exec();
+    await TransactionModel.updateOne({ _id: id }, { $set: { deletedAt: new Date() } }).exec();
   }
 
   /**
@@ -188,6 +188,7 @@ export class TransactionMongooseRepository implements TransactionRepository {
         : null,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
+      deletedAt: doc.deletedAt ?? null,
     };
   }
 }

@@ -135,6 +135,11 @@ const TransactionSchema = new Schema<ITransactionDocument>(
       type: CardPaymentDetailsSchema,
       default: null,
     },
+    deletedAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
   },
   {
     timestamps: true,
