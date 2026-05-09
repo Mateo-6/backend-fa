@@ -135,6 +135,11 @@ const TransactionSchema = new Schema<ITransactionDocument>(
       type: CardPaymentDetailsSchema,
       default: null,
     },
+    budgetAmount: {
+      type: Number,
+      required: false,
+      default: null,
+    },
     deletedAt: {
       type: Date,
       default: null,

@@ -163,6 +163,7 @@ export class TransactionService {
       sourcePaymentMethodId: data.sourcePaymentMethodId,
       destinationPaymentMethodId: data.destinationPaymentMethodId,
       isRecurring: false,
+      budgetAmount: data.budgetAmount ?? null,
     });
 
     if (data.type === TransactionType.TRANSFER) {
@@ -484,6 +485,10 @@ export class TransactionService {
       } else {
         updateData.paymentMethodId = undefined;
       }
+    }
+
+    if (data.budgetAmount !== undefined) {
+      updateData.budgetAmount = data.budgetAmount;
     }
 
     const finalAmount = typeof data.amount === 'number' ? data.amount : transaction.amount;

@@ -241,7 +241,7 @@ export class BudgetService {
 
     const { items: transactions } = await this.transactionRepository.findAllByUser(budget.userId, filters as any);
 
-    const newSpent = transactions.reduce((sum, t) => sum + t.amount, 0);
+    const newSpent = transactions.reduce((sum, t) => sum + (t.budgetAmount ?? t.amount), 0);
 
     await this.budgetRepository.update(budgetId, { spent: newSpent });
 
