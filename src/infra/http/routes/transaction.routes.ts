@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { TransactionController } from '../controllers/finance/transaction.controller';
 import { TransactionService } from '../../../application/services/transaction.service';
 import { PaymentMethodService } from '../../../application/services/payment-method.service';
+import { CategoryService } from '../../../application/services/category.service';
+import { AmiService } from '../../../application/services/ami.service';
 import { BudgetService } from '../../../application/services/budget.service';
 import { TransactionMongooseRepository } from '../../repositories/transaction-mongoose.repository';
 import { RecurringExpenseMongooseRepository } from '../../repositories/recurring-expense-mongoose.repository';
@@ -10,12 +12,15 @@ import { UserMongooseRepository } from '../../repositories/user-mongoose.reposit
 import { PaymentMethodMongooseRepository } from '../../repositories/payment-method-mongoose.repository';
 import { BudgetMongooseRepository } from '../../repositories/budget-mongoose.repository';
 import { NotificationMongooseRepository } from '../../repositories/notification-mongoose.repository';
+import { redisCacheService } from '../../services/redis-cache.service';
 import { validate } from '../middleware/validation.middleware';
 import { createTransactionSchema } from '../../../application/dto/finance/create-transaction.dto';
 import { updateTransactionSchema } from '../../../application/dto/finance/update-transaction.dto';
 import { transactionHistoryQuerySchema } from '../../../application/dto/finance/transaction-history-query.dto';
+import { ParseIntentRequestSchema } from '../../../application/dto/finance/parse-intent.dto';
 import { asyncHandler } from '../middleware/async-handler.middleware';
 import { authMiddleware } from '../middleware/auth.middleware';
+import { amiRateLimit } from '../middleware/ami-rate-limit.middleware';
 import { JwtTokenService } from '../../services/jwt-token.service';
 
 const router = Router();
@@ -29,6 +34,7 @@ const paymentMethodRepository = new PaymentMethodMongooseRepository();
 const budgetRepository = new BudgetMongooseRepository();
 const notificationRepository = new NotificationMongooseRepository();
 const paymentMethodService = new PaymentMethodService(paymentMethodRepository, userRepository);
+const categoryService = new CategoryService(categoryRepository, userRepository);
 const budgetService = new BudgetService(
   budgetRepository,
   transactionRepository,
@@ -44,10 +50,19 @@ const transactionService = new TransactionService(
   paymentMethodService,
   budgetService
 );
-const transactionController = new TransactionController(transactionService);
+const amiService = new AmiService(categoryService, paymentMethodService, redisCacheService);
+const transactionController = new TransactionController(transactionService, amiService);
 const tokenService = new JwtTokenService();
 
 // All transaction routes are protected with authentication middleware
+// parse-intent MUST be registered before /:id to avoid parameter capture
+router.post(
+  '/parse-intent',
+  authMiddleware(tokenService),
+  amiRateLimit,
+  validate(ParseIntentRequestSchema),
+  asyncHandler(transactionController.parseIntent.bind(transactionController))
+);
 router.post(
   '/manual',
   authMiddleware(tokenService),

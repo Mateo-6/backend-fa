@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { TransactionService } from '../../../../application/services/transaction.service';
+import { AmiService } from '../../../../application/services/ami.service';
 import { CreateTransactionDto } from '../../../../application/dto/finance/create-transaction.dto';
 import { UpdateTransactionDto } from '../../../../application/dto/finance/update-transaction.dto';
 import { AuthenticatedRequest } from '../../types/request.types';
@@ -13,8 +14,12 @@ import { TransactionType } from '../../../../domain/finance/types/transaction.ty
 export class TransactionController {
   /**
    * @param {TransactionService} transactionService Service encapsulating transaction business logic.
+   * @param {AmiService} amiService Service for AI-powered transaction intent parsing.
    */
-  constructor(private readonly transactionService: TransactionService) {}
+  constructor(
+    private readonly transactionService: TransactionService,
+    private readonly amiService: AmiService
+  ) {}
 
   /**
    * Creates a new manual transaction using the provided payload.
@@ -148,6 +153,23 @@ export class TransactionController {
     const { id } = req.params;
     await this.transactionService.delete(id, req.user.id);
     sendSuccess(res, { message: 'Transacción eliminada exitosamente' }, 200);
+  }
+
+  /**
+   * Parses natural language text and returns structured transaction field hints.
+   * Uses OpenAI with fuzzy entity matching against the user's categories and payment methods.
+   *
+   * @param {AuthenticatedRequest} req Express request whose body contains { text: string }.
+   * @param {Response} res Express response used to send the parse result.
+   * @returns {Promise<void>} Resolves when the response is dispatched.
+   */
+  public async parseIntent(req: AuthenticatedRequest, res: Response): Promise<void> {
+    if (!req.user?.id) {
+      throw new UnauthorizedError('Usuario no autenticado');
+    }
+
+    const result = await this.amiService.parseIntent(req.user.id, req.body.text);
+    sendSuccess(res, result, 200);
   }
 }
 
