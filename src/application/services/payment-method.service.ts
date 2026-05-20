@@ -4,6 +4,7 @@ import { CreatePaymentMethodDto } from '../dto/payment-method/create-payment-met
 import { UpdatePaymentMethodDto } from '../dto/payment-method/update-payment-method.dto';
 import { PaymentMethod, PaymentMethodType, CreditCardDetails, BankAccountDetails, CashDetails, BankAccountType } from '../../domain/payment-method/types/payment-method.types';
 import { NotFoundError, ForbiddenError, ValidationError } from '../../domain/errors/app-error';
+import { redisCacheService, RedisCacheService } from '../../infra/services/redis-cache.service';
 
 /**
  * Service for managing payment methods.
@@ -28,7 +29,9 @@ export class PaymentMethodService {
    */
   async create(data: CreatePaymentMethodDto, userId: string): Promise<PaymentMethod> {
     await this.ensureUserExists(userId);
-    return this.paymentMethodRepository.create({ ...data, userId, details: data.details || {} });
+    const paymentMethod = await this.paymentMethodRepository.create({ ...data, userId, details: data.details || {} });
+    redisCacheService.del(RedisCacheService.paymentMethodsKey(userId)).catch(() => {});
+    return paymentMethod;
   }
 
   /**
@@ -66,7 +69,9 @@ export class PaymentMethodService {
       };
     }
     
-    return this.paymentMethodRepository.update(id, finalUpdateData);
+    const updatedPaymentMethod = await this.paymentMethodRepository.update(id, finalUpdateData);
+    redisCacheService.del(RedisCacheService.paymentMethodsKey(userId)).catch(() => {});
+    return updatedPaymentMethod;
   }
 
   /**
@@ -82,6 +87,7 @@ export class PaymentMethodService {
   async delete(id: string, userId: string): Promise<void> {
     await this.ensurePaymentMethodOwnership(id, userId);
     await this.paymentMethodRepository.delete(id);
+    redisCacheService.del(RedisCacheService.paymentMethodsKey(userId)).catch(() => {});
   }
 
   /**

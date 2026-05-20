@@ -4,6 +4,7 @@ import { CreateCategoryDto } from '../dto/category/create-category.dto';
 import { UpdateCategoryDto } from '../dto/category/update-category.dto';
 import { Category, CategoryType } from '../../domain/category/types/category.types';
 import { NotFoundError, ForbiddenError } from '../../domain/errors/app-error';
+import { redisCacheService, RedisCacheService } from '../../infra/services/redis-cache.service';
 
 /**
  * Service for managing categories.
@@ -28,7 +29,9 @@ export class CategoryService {
    */
   async create(data: CreateCategoryDto, userId: string): Promise<Category> {
     await this.ensureUserExists(userId);
-    return this.categoryRepository.create({ ...data, userId });
+    const category = await this.categoryRepository.create({ ...data, userId });
+    redisCacheService.del(RedisCacheService.categoriesKey(userId)).catch(() => {});
+    return category;
   }
 
   /**
@@ -90,6 +93,7 @@ export class CategoryService {
     if (!updatedCategory) {
       throw new NotFoundError('Category', id);
     }
+    redisCacheService.del(RedisCacheService.categoriesKey(userId)).catch(() => {});
     return updatedCategory;
   }
 
@@ -106,6 +110,7 @@ export class CategoryService {
   async delete(id: string, userId: string): Promise<void> {
     await this.ensureCategoryOwnership(id, userId);
     await this.categoryRepository.delete(id);
+    redisCacheService.del(RedisCacheService.categoriesKey(userId)).catch(() => {});
   }
 
   /**
