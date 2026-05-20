@@ -146,7 +146,7 @@ export class TransactionService {
     const categorySnapshot: CategorySnapshot = {
       id: category.id!,
       name: category.name,
-      icon: undefined, // Add icon field to Category type if needed
+      icon: category.icon ?? undefined,
     };
 
     // Ensure date is a Date object (Zod transforms string to Date)
@@ -222,7 +222,7 @@ export class TransactionService {
     const categorySnapshot: CategorySnapshot = {
       id: category.id!,
       name: category.name,
-      icon: undefined, // Add icon field to Category type if needed
+      icon: category.icon ?? undefined,
     };
 
     // Validate payment method
@@ -472,7 +472,7 @@ export class TransactionService {
         updateData.category = {
           id: category.id!,
           name: category.name,
-          icon: undefined,
+          icon: category.icon ?? undefined,
         };
       }
     }

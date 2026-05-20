@@ -18,6 +18,8 @@ export class CategoryMongooseRepository implements CategoryRepository {
       name: category.name,
       description: category.description,
       type: category.type,
+      color: category.color,
+      icon: category.icon,
       user: category.userId,
     });
     await UserModel.findByIdAndUpdate(createdCategory.user, {
@@ -89,6 +91,12 @@ export class CategoryMongooseRepository implements CategoryRepository {
     if (typeof data.type === 'string') {
       mappedData.type = data.type;
     }
+    if (data.color !== undefined) {
+      mappedData.color = data.color;
+    }
+    if (data.icon !== undefined) {
+      mappedData.icon = data.icon;
+    }
     const category = await CategoryModel.findByIdAndUpdate(
       id,
       { $set: mappedData },
@@ -130,6 +138,8 @@ export class CategoryMongooseRepository implements CategoryRepository {
       name: doc.name,
       description: doc.description ?? undefined,
       type: doc.type,
+      color: doc.color ?? null,
+      icon: doc.icon ?? null,
       userId: doc.user.toString(),
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
