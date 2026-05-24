@@ -15,6 +15,7 @@ import budgetRoutes from './routes/budget.routes';
 import gmfRoutes from './routes/gmf.routes';
 import { env } from '../config/env';
 import { errorHandler } from './middleware/error-handler.middleware';
+import { apiRateLimit } from './middleware/rate-limit.middleware';
 
 export class Server {
   private readonly app: Application;
@@ -44,6 +45,7 @@ export class Server {
       allowedHeaders: ['Content-Type', 'Authorization'],
     }));
     this.app.use(express.json({ limit: '100kb' }));
+    this.app.use(apiRateLimit);
   }
 
   /**

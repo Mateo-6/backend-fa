@@ -7,7 +7,7 @@ import { transactionHistoryQuerySchema } from '../../../application/dto/finance/
 import { ParseIntentRequestSchema } from '../../../application/dto/finance/parse-intent.dto';
 import { asyncHandler } from '../middleware/async-handler.middleware';
 import { authMiddleware } from '../middleware/auth.middleware';
-import { amiRateLimit } from '../middleware/ami-rate-limit.middleware';
+import { amiRateLimit } from '../middleware/rate-limit.middleware';
 import { container } from '../../factories/service.factory';
 
 const router = Router();
