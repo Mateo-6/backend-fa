@@ -52,6 +52,7 @@ import { GmfService } from '../../application/services/gmf.service';
 import { AmiService } from '../../application/services/ami.service';
 import { OpenAiParserService } from '../services/openai-parser.service';
 import { redisCacheService } from '../services/redis-cache.service';
+import { MongooseTransactionRunner } from '../database/mongoose-transaction-runner';
 
 import { AppError, UnauthorizedError } from '../../domain/errors/app-error';
 import { AuthenticatedRequest } from './types/request.types';
@@ -118,7 +119,8 @@ const transactionService = new TransactionService(
   categoryRepository,
   userRepository,
   paymentMethodRepository,
-  paymentMethodService
+  paymentMethodService,
+  new MongooseTransactionRunner(),
 );
 const recurringExpenseService = new RecurringExpenseService(
   recurringExpenseRepository,

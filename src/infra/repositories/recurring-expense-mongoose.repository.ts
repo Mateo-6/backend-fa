@@ -2,6 +2,7 @@ import { RecurringExpenseRepository } from '../../domain/finance/repositories/re
 import { RecurringExpense } from '../../domain/finance/types/recurring-expense.types';
 import { RecurringExpenseModel, IRecurringExpenseDocument } from '../database/models/recurring-expense.model';
 import { getMongooseInstance } from '../database/mongoose-client';
+import { sessionContext } from '../database/session-context';
 
 /**
  * Mongoose implementation of RecurringExpenseRepository.
@@ -129,10 +130,11 @@ export class RecurringExpenseMongooseRepository implements RecurringExpenseRepos
    */
   async updateNextPaymentDate(id: string, nextPaymentDate: Date): Promise<RecurringExpense | null> {
     await getMongooseInstance();
+    const session = sessionContext.getStore();
     const recurringExpense = await RecurringExpenseModel.findByIdAndUpdate(
       id,
       { $set: { nextPaymentDate } },
-      { new: true }
+      { new: true, ...(session ? { session } : {}) },
     ).exec();
     if (!recurringExpense) {
       return null;

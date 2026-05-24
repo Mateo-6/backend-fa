@@ -2,6 +2,7 @@ import { PaymentMethodRepository } from '../../domain/payment-method/repositorie
 import { PaymentMethod } from '../../domain/payment-method/types/payment-method.types';
 import { PaymentMethodModel, IPaymentMethodDocument } from '../database/models/payment-method.model';
 import { getMongooseInstance } from '../database/mongoose-client';
+import { sessionContext } from '../database/session-context';
 
 /**
  * Mongoose implementation of the PaymentMethodRepository interface.
@@ -63,10 +64,11 @@ export class PaymentMethodMongooseRepository implements PaymentMethodRepository 
    */
   async update(id: string, updateData: Partial<Omit<PaymentMethod, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>): Promise<PaymentMethod> {
     await getMongooseInstance();
+    const session = sessionContext.getStore();
     const updatedPaymentMethod = await PaymentMethodModel.findByIdAndUpdate(
       id,
       { $set: updateData },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true, ...(session ? { session } : {}) },
     ).exec();
 
     if (!updatedPaymentMethod) {

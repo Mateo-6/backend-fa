@@ -24,6 +24,7 @@ import { CreditCardService } from '../../application/services/credit-card.servic
 import { GmfService } from '../../application/services/gmf.service';
 import { NotificationService } from '../../application/services/notification.service';
 import { AmiService } from '../../application/services/ami.service';
+import { MongooseTransactionRunner } from '../database/mongoose-transaction-runner';
 
 // Repositories — one instance each, shared across all services
 const userRepository = new UserMongooseRepository();
@@ -39,6 +40,7 @@ const refreshTokenRepository = new RefreshTokenMongooseRepository();
 const tokenService = new JwtTokenService();
 const passwordService = new BcryptPasswordService();
 const openAiParser = new OpenAiParserService();
+const transactionRunner = new MongooseTransactionRunner();
 
 // Application services — built in dependency order
 const categoryService = new CategoryService(categoryRepository, userRepository, redisCacheService);
@@ -55,6 +57,7 @@ const transactionService = new TransactionService(
   userRepository,
   paymentMethodRepository,
   paymentMethodService,
+  transactionRunner,
   budgetService,
 );
 const recurringExpenseService = new RecurringExpenseService(recurringExpenseRepository, userRepository, paymentMethodRepository);
