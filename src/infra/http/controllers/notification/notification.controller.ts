@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { NotificationService } from '../../../../application/services/notification.service';
 import { RegisterPushTokenDto } from '../../../../application/dto/notification/register-push-token.dto';
+import { GetNotificationsQueryDto } from '../../../../application/dto/notification/get-notifications-query.dto';
 import { AuthenticatedRequest } from '../../types/request.types';
 import { sendSuccess } from '../../utils/response.util';
 import { UnauthorizedError } from '../../../../domain/errors/app-error';
@@ -53,8 +54,7 @@ export class NotificationController {
       throw new UnauthorizedError('Usuario no autenticado');
     }
 
-    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
-    const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
+    const { limit, offset } = req.query as unknown as GetNotificationsQueryDto;
 
     const paginatedNotifications = await this.notificationService.getNotifications(req.user.id, {
       limit,
