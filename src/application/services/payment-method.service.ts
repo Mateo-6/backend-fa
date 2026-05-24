@@ -4,7 +4,8 @@ import { CreatePaymentMethodDto } from '../dto/payment-method/create-payment-met
 import { UpdatePaymentMethodDto } from '../dto/payment-method/update-payment-method.dto';
 import { PaymentMethod, PaymentMethodType, CreditCardDetails, BankAccountDetails, CashDetails, BankAccountType } from '../../domain/payment-method/types/payment-method.types';
 import { NotFoundError, ForbiddenError, ValidationError } from '../../domain/errors/app-error';
-import { redisCacheService, RedisCacheService } from '../../infra/services/redis-cache.service';
+import { ICache } from '../../domain/cache/cache.interface';
+import { cacheKeys } from '../constants/cache-keys';
 
 /**
  * Service for managing payment methods.
@@ -17,7 +18,8 @@ export class PaymentMethodService {
    */
   constructor(
     private readonly paymentMethodRepository: PaymentMethodRepository,
-    private readonly userRepository: UserRepository
+    private readonly userRepository: UserRepository,
+    private readonly cache: ICache,
   ) {}
 
   /**
@@ -30,7 +32,7 @@ export class PaymentMethodService {
   async create(data: CreatePaymentMethodDto, userId: string): Promise<PaymentMethod> {
     await this.ensureUserExists(userId);
     const paymentMethod = await this.paymentMethodRepository.create({ ...data, userId, details: data.details || {} });
-    redisCacheService.del(RedisCacheService.paymentMethodsKey(userId)).catch(() => {});
+    this.cache.del(cacheKeys.paymentMethods(userId)).catch(() => {});
     return paymentMethod;
   }
 
@@ -70,7 +72,7 @@ export class PaymentMethodService {
     }
     
     const updatedPaymentMethod = await this.paymentMethodRepository.update(id, finalUpdateData);
-    redisCacheService.del(RedisCacheService.paymentMethodsKey(userId)).catch(() => {});
+    this.cache.del(cacheKeys.paymentMethods(userId)).catch(() => {});
     return updatedPaymentMethod;
   }
 
@@ -87,7 +89,7 @@ export class PaymentMethodService {
   async delete(id: string, userId: string): Promise<void> {
     await this.ensurePaymentMethodOwnership(id, userId);
     await this.paymentMethodRepository.delete(id);
-    redisCacheService.del(RedisCacheService.paymentMethodsKey(userId)).catch(() => {});
+    this.cache.del(cacheKeys.paymentMethods(userId)).catch(() => {});
   }
 
   /**

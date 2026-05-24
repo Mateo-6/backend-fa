@@ -9,12 +9,13 @@ import { updateCategorySchema } from '../../../application/dto/category/update-c
 import { asyncHandler } from '../middleware/async-handler.middleware';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { JwtTokenService } from '../../services/jwt-token.service';
+import { redisCacheService } from '../../services/redis-cache.service';
 
 const router = Router();
 
 const categoryRepository = new CategoryMongooseRepository();
 const userRepository = new UserMongooseRepository();
-const categoryService = new CategoryService(categoryRepository, userRepository);
+const categoryService = new CategoryService(categoryRepository, userRepository, redisCacheService);
 const categoryController = new CategoryController(categoryService);
 const tokenService = new JwtTokenService();
 

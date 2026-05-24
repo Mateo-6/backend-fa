@@ -4,6 +4,7 @@ import { TransactionService } from '../../../application/services/transaction.se
 import { PaymentMethodService } from '../../../application/services/payment-method.service';
 import { CategoryService } from '../../../application/services/category.service';
 import { AmiService } from '../../../application/services/ami.service';
+import { OpenAiParserService } from '../../services/openai-parser.service';
 import { BudgetService } from '../../../application/services/budget.service';
 import { TransactionMongooseRepository } from '../../repositories/transaction-mongoose.repository';
 import { RecurringExpenseMongooseRepository } from '../../repositories/recurring-expense-mongoose.repository';
@@ -33,8 +34,8 @@ const userRepository = new UserMongooseRepository();
 const paymentMethodRepository = new PaymentMethodMongooseRepository();
 const budgetRepository = new BudgetMongooseRepository();
 const notificationRepository = new NotificationMongooseRepository();
-const paymentMethodService = new PaymentMethodService(paymentMethodRepository, userRepository);
-const categoryService = new CategoryService(categoryRepository, userRepository);
+const paymentMethodService = new PaymentMethodService(paymentMethodRepository, userRepository, redisCacheService);
+const categoryService = new CategoryService(categoryRepository, userRepository, redisCacheService);
 const budgetService = new BudgetService(
   budgetRepository,
   transactionRepository,
@@ -50,7 +51,8 @@ const transactionService = new TransactionService(
   paymentMethodService,
   budgetService
 );
-const amiService = new AmiService(categoryService, paymentMethodService, redisCacheService);
+const openAiParser = new OpenAiParserService();
+const amiService = new AmiService(openAiParser, categoryService, paymentMethodService, redisCacheService);
 const transactionController = new TransactionController(transactionService, amiService);
 const tokenService = new JwtTokenService();
 

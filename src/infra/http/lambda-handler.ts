@@ -50,6 +50,7 @@ import { GmfController } from './controllers/gmf/gmf.controller';
 import { GmfService } from '../../application/services/gmf.service';
 
 import { AmiService } from '../../application/services/ami.service';
+import { OpenAiParserService } from '../services/openai-parser.service';
 import { redisCacheService } from '../services/redis-cache.service';
 
 import { AppError, UnauthorizedError } from '../../domain/errors/app-error';
@@ -106,11 +107,11 @@ const refreshTokenRepository = new RefreshTokenMongooseRepository();
 const authService = new AuthService(userRepository, tokenService, passwordService, refreshTokenRepository);
 const categoryRepository = new CategoryMongooseRepository();
 const userService = new UserService(userRepository, passwordService, categoryRepository);
-const categoryService = new CategoryService(categoryRepository, userRepository);
+const categoryService = new CategoryService(categoryRepository, userRepository, redisCacheService);
 const transactionRepository = new TransactionMongooseRepository();
 const recurringExpenseRepository = new RecurringExpenseMongooseRepository();
 const paymentMethodRepository = new PaymentMethodMongooseRepository();
-const paymentMethodService = new PaymentMethodService(paymentMethodRepository, userRepository);
+const paymentMethodService = new PaymentMethodService(paymentMethodRepository, userRepository, redisCacheService);
 const transactionService = new TransactionService(
   transactionRepository,
   recurringExpenseRepository,
@@ -131,7 +132,8 @@ const notificationService = new NotificationService(userRepository, notification
 const budgetRepository = new BudgetMongooseRepository();
 const budgetService = new BudgetService(budgetRepository, transactionRepository, notificationRepository, userRepository);
 const gmfService = new GmfService(transactionRepository, paymentMethodRepository);
-const amiService = new AmiService(categoryService, paymentMethodService, redisCacheService);
+const openAiParser = new OpenAiParserService();
+const amiService = new AmiService(openAiParser, categoryService, paymentMethodService, redisCacheService);
 const healthService = new HealthService();
 
 // Controllers

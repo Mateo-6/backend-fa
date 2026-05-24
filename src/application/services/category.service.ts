@@ -4,7 +4,8 @@ import { CreateCategoryDto } from '../dto/category/create-category.dto';
 import { UpdateCategoryDto } from '../dto/category/update-category.dto';
 import { Category, CategoryType } from '../../domain/category/types/category.types';
 import { NotFoundError, ForbiddenError } from '../../domain/errors/app-error';
-import { redisCacheService, RedisCacheService } from '../../infra/services/redis-cache.service';
+import { ICache } from '../../domain/cache/cache.interface';
+import { cacheKeys } from '../constants/cache-keys';
 
 /**
  * Service for managing categories.
@@ -17,7 +18,8 @@ export class CategoryService {
    */
   constructor(
     private readonly categoryRepository: CategoryRepository,
-    private readonly userRepository: UserRepository
+    private readonly userRepository: UserRepository,
+    private readonly cache: ICache,
   ) {}
 
   /**
@@ -30,7 +32,7 @@ export class CategoryService {
   async create(data: CreateCategoryDto, userId: string): Promise<Category> {
     await this.ensureUserExists(userId);
     const category = await this.categoryRepository.create({ ...data, userId });
-    redisCacheService.del(RedisCacheService.categoriesKey(userId)).catch(() => {});
+    this.cache.del(cacheKeys.categories(userId)).catch(() => {});
     return category;
   }
 
@@ -93,7 +95,7 @@ export class CategoryService {
     if (!updatedCategory) {
       throw new NotFoundError('Category', id);
     }
-    redisCacheService.del(RedisCacheService.categoriesKey(userId)).catch(() => {});
+    this.cache.del(cacheKeys.categories(userId)).catch(() => {});
     return updatedCategory;
   }
 
@@ -110,7 +112,7 @@ export class CategoryService {
   async delete(id: string, userId: string): Promise<void> {
     await this.ensureCategoryOwnership(id, userId);
     await this.categoryRepository.delete(id);
-    redisCacheService.del(RedisCacheService.categoriesKey(userId)).catch(() => {});
+    this.cache.del(cacheKeys.categories(userId)).catch(() => {});
   }
 
   /**

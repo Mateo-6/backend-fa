@@ -1,11 +1,12 @@
 import Redis from 'ioredis';
+import { ICache } from '../../domain/cache/cache.interface';
 
 /**
  * Singleton Redis cache service with silent failure semantics.
  * All methods catch errors and return null/void — Redis being unavailable
  * must never crash the application.
  */
-export class RedisCacheService {
+export class RedisCacheService implements ICache {
   private readonly client: Redis;
 
   constructor() {
@@ -18,26 +19,6 @@ export class RedisCacheService {
 
     // Suppress unhandled error events — errors are caught per-call
     this.client.on('error', () => {});
-  }
-
-  /**
-   * Redis key for a user's categories list.
-   *
-   * @param {string} userId Owner identifier.
-   * @returns {string} Redis key string.
-   */
-  static categoriesKey(userId: string): string {
-    return `ami:cats:${userId}`;
-  }
-
-  /**
-   * Redis key for a user's payment methods list.
-   *
-   * @param {string} userId Owner identifier.
-   * @returns {string} Redis key string.
-   */
-  static paymentMethodsKey(userId: string): string {
-    return `ami:pms:${userId}`;
   }
 
   /**

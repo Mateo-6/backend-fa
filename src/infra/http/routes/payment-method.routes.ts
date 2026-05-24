@@ -10,13 +10,14 @@ import { toggleGmfExemptSchema } from '../../../application/dto/payment-method/t
 import { asyncHandler } from '../middleware/async-handler.middleware';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { JwtTokenService } from '../../services/jwt-token.service';
+import { redisCacheService } from '../../services/redis-cache.service';
 
 const router = Router();
 
 // Dependency injection setup
 const paymentMethodRepository = new PaymentMethodMongooseRepository();
 const userRepository = new UserMongooseRepository();
-const paymentMethodService = new PaymentMethodService(paymentMethodRepository, userRepository);
+const paymentMethodService = new PaymentMethodService(paymentMethodRepository, userRepository, redisCacheService);
 const paymentMethodController = new PaymentMethodController(paymentMethodService);
 const tokenService = new JwtTokenService();
 
