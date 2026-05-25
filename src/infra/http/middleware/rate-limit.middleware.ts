@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { AuthenticatedRequest } from '../types/request.types';
 
 const rateLimitResponse = (message: string) => (_req: any, res: any) => {
@@ -38,7 +38,7 @@ export const amiRateLimit = rateLimit({
   max: 60,
   keyGenerator: (req) => {
     const authenticatedReq = req as AuthenticatedRequest;
-    return authenticatedReq.user?.id ?? req.ip ?? 'unknown';
+    return authenticatedReq.user?.id ?? ipKeyGenerator(req);
   },
   standardHeaders: true,
   legacyHeaders: false,
