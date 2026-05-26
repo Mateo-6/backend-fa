@@ -5,6 +5,7 @@ import { AuthenticatedRequest } from '../../types/request.types';
 import { UnauthorizedError } from '../../../../domain/errors/app-error';
 import { sendSuccess } from '../../utils/response.util';
 import { RecurringExpense } from '../../../../domain/finance/types/recurring-expense.types';
+import { logger } from '../../../utils/logger';
 
 /**
  * Controller for handling recurring expense-related HTTP requests.
@@ -24,12 +25,14 @@ export class RecurringExpenseController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async create(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
+    const { requestId, user } = req;
     const createRecurringDto: CreateRecurringDto = req.body;
-    const recurringExpense = await this.recurringExpenseService.create(createRecurringDto, req.user.id);
+
+    logger.info('Creating recurring expense', { requestId, userId: user.id, name: createRecurringDto.name });
+    const recurringExpense = await this.recurringExpenseService.create(createRecurringDto, user.id);
+    logger.info('Recurring expense created', { requestId, userId: user.id, recurringId: recurringExpense.id });
     sendSuccess(res, recurringExpense, 201);
   }
 
@@ -42,11 +45,11 @@ export class RecurringExpenseController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async getAll(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
-    const recurringExpenses = await this.recurringExpenseService.findAllByUser(req.user.id);
+    const { requestId, user } = req;
+    logger.info('Fetching recurring expenses', { requestId, userId: user.id });
+    const recurringExpenses = await this.recurringExpenseService.findAllByUser(user.id);
     sendSuccess(res, recurringExpenses);
   }
 
@@ -59,13 +62,14 @@ export class RecurringExpenseController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async update(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
+    const { requestId, user } = req;
     const { id } = req.params;
     const updateData: Partial<Omit<RecurringExpense, 'id'>> = req.body;
-    const recurringExpense = await this.recurringExpenseService.update(id, updateData, req.user.id);
+
+    logger.info('Updating recurring expense', { requestId, userId: user.id, recurringId: id });
+    const recurringExpense = await this.recurringExpenseService.update(id, updateData, user.id);
     sendSuccess(res, recurringExpense);
   }
 
@@ -78,13 +82,13 @@ export class RecurringExpenseController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async delete(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
+    const { requestId, user } = req;
     const { id } = req.params;
-    await this.recurringExpenseService.delete(id, req.user.id);
+
+    logger.info('Deleting recurring expense', { requestId, userId: user.id, recurringId: id });
+    await this.recurringExpenseService.delete(id, user.id);
     sendSuccess(res, { message: 'Gasto recurrente eliminado exitosamente' }, 200);
   }
 }
-

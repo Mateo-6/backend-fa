@@ -7,6 +7,7 @@ import { AuthenticatedRequest } from '../../types/request.types';
 import { UnauthorizedError } from '../../../../domain/errors/app-error';
 import { sendSuccess } from '../../utils/response.util';
 import { TransactionType } from '../../../../domain/finance/types/transaction.types';
+import { logger } from '../../../utils/logger';
 
 /**
  * Controller for handling transaction-related HTTP requests.
@@ -18,7 +19,7 @@ export class TransactionController {
    */
   constructor(
     private readonly transactionService: TransactionService,
-    private readonly amiService: AmiService
+    private readonly amiService: AmiService,
   ) {}
 
   /**
@@ -30,12 +31,19 @@ export class TransactionController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async createManual(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
+    const { requestId, user } = req;
     const createTransactionDto: CreateTransactionDto = req.body;
-    const transaction = await this.transactionService.createManual(createTransactionDto, req.user.id);
+
+    logger.info('Creating manual transaction', {
+      requestId,
+      userId: user.id,
+      type: createTransactionDto.type,
+      amount: createTransactionDto.amount,
+    });
+    const transaction = await this.transactionService.createManual(createTransactionDto, user.id);
+    logger.info('Manual transaction created', { requestId, userId: user.id, transactionId: transaction.id });
     sendSuccess(res, transaction, 201);
   }
 
@@ -48,12 +56,14 @@ export class TransactionController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async processRecurringPayment(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
+    const { requestId, user } = req;
     const { recurringExpenseId } = req.params;
-    const transaction = await this.transactionService.processRecurringPayment(req.user.id, recurringExpenseId);
+
+    logger.info('Processing recurring payment', { requestId, userId: user.id, recurringExpenseId });
+    const transaction = await this.transactionService.processRecurringPayment(user.id, recurringExpenseId);
+    logger.info('Recurring payment processed', { requestId, userId: user.id, transactionId: transaction.id });
     sendSuccess(res, transaction, 201);
   }
 
@@ -66,9 +76,9 @@ export class TransactionController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async getHistory(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
+
+    const { requestId, user } = req;
 
     const filters: {
       startDate?: Date;
@@ -83,37 +93,18 @@ export class TransactionController {
     } = {};
 
     // Query params are pre-validated by transactionHistoryQuerySchema via validate() middleware
-    if (req.query.startDate) {
-      const s = req.query.startDate as string;
-      filters.startDate = new Date(`${s}T00:00:00.000Z`);
-    }
-    if (req.query.endDate) {
-      const e = req.query.endDate as string;
-      filters.endDate = new Date(`${e}T23:59:59.999Z`);
-    }
-    if (req.query.type) {
-      filters.type = req.query.type as TransactionType;
-    }
-    if (req.query.categoryId) {
-      filters.categoryId = req.query.categoryId as string;
-    }
-    if (req.query.paymentMethodId) {
-      filters.paymentMethodId = req.query.paymentMethodId as string;
-    }
-    if (req.query.subtype) {
-      filters.subtype = (req.query.subtype as string).toUpperCase();
-    }
-    if (req.query.excludeCardPayments === 'true') {
-      filters.excludeCardPayments = true;
-    }
-    if (req.query.limit !== undefined) {
-      filters.limit = Number(req.query.limit);
-    }
-    if (req.query.offset !== undefined) {
-      filters.offset = Number(req.query.offset);
-    }
+    if (req.query.startDate) filters.startDate = new Date(`${req.query.startDate as string}T00:00:00.000Z`);
+    if (req.query.endDate)   filters.endDate   = new Date(`${req.query.endDate as string}T23:59:59.999Z`);
+    if (req.query.type)             filters.type             = req.query.type as TransactionType;
+    if (req.query.categoryId)       filters.categoryId       = req.query.categoryId as string;
+    if (req.query.paymentMethodId)  filters.paymentMethodId  = req.query.paymentMethodId as string;
+    if (req.query.subtype)          filters.subtype          = (req.query.subtype as string).toUpperCase();
+    if (req.query.excludeCardPayments === 'true') filters.excludeCardPayments = true;
+    if (req.query.limit  !== undefined) filters.limit  = Number(req.query.limit);
+    if (req.query.offset !== undefined) filters.offset = Number(req.query.offset);
 
-    const result = await this.transactionService.getHistory(req.user.id, filters);
+    logger.info('Fetching transaction history', { requestId, userId: user.id, filters });
+    const result = await this.transactionService.getHistory(user.id, filters);
     sendSuccess(res, result);
   }
 
@@ -127,13 +118,14 @@ export class TransactionController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async update(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
+    const { requestId, user } = req;
     const { id } = req.params;
     const updateTransactionDto: UpdateTransactionDto = req.body;
-    const transaction = await this.transactionService.update(id, updateTransactionDto, req.user.id);
+
+    logger.info('Updating transaction', { requestId, userId: user.id, transactionId: id });
+    const transaction = await this.transactionService.update(id, updateTransactionDto, user.id);
     sendSuccess(res, transaction);
   }
 
@@ -146,12 +138,13 @@ export class TransactionController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async delete(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
+    const { requestId, user } = req;
     const { id } = req.params;
-    await this.transactionService.delete(id, req.user.id);
+
+    logger.info('Deleting transaction', { requestId, userId: user.id, transactionId: id });
+    await this.transactionService.delete(id, user.id);
     sendSuccess(res, { message: 'Transacción eliminada exitosamente' }, 200);
   }
 
@@ -164,12 +157,13 @@ export class TransactionController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async parseIntent(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
-    const result = await this.amiService.parseIntent(req.user.id, req.body.text);
+    const { requestId, user } = req;
+
+    logger.info('Processing transaction intent with AI', { requestId, userId: user.id });
+    const result = await this.amiService.parseIntent(user.id, req.body.text);
+    logger.info('Intent processed', { requestId, userId: user.id });
     sendSuccess(res, result, 200);
   }
 }
-

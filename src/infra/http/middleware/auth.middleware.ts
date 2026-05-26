@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { ITokenService } from '../../../domain/auth/services/token-service.interface';
 import { AuthenticatedRequest } from '../types/request.types';
 import { UnauthorizedError } from '../../../domain/errors/app-error';
+import { getRequestContext } from './request-context';
 
 /**
  * Middleware to authenticate requests using JWT tokens.
@@ -37,9 +38,12 @@ export const authMiddleware = (tokenService: ITokenService) => {
       }
 
       // Attach user info to request
-      req.user = {
-        id: decoded.id,
-      };
+      req.user = { id: decoded.id };
+
+      // Propagate userId into the AsyncLocalStorage context so services and
+      // repositories can include it in their logs without receiving it as a param
+      const ctx = getRequestContext();
+      if (ctx) ctx.userId = decoded.id;
 
       next();
     } catch (error) {

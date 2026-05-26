@@ -3,6 +3,7 @@ import { DashboardService } from '../../../../application/services/dashboard.ser
 import { AuthenticatedRequest } from '../../types/request.types';
 import { UnauthorizedError } from '../../../../domain/errors/app-error';
 import { sendSuccess } from '../../utils/response.util';
+import { logger } from '../../../utils/logger';
 
 /**
  * Controller for handling dashboard-related HTTP requests.
@@ -26,12 +27,11 @@ export class DashboardController {
    * @returns {Promise<void>} Resolves when the response is sent.
    */
   public async getDashboard(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
-    const dashboardData = await this.dashboardService.getDashboardData(req.user.id);
+    const { requestId, user } = req;
+    logger.info('Fetching dashboard', { requestId, userId: user.id });
+    const dashboardData = await this.dashboardService.getDashboardData(user.id);
     sendSuccess(res, dashboardData);
   }
 }
-

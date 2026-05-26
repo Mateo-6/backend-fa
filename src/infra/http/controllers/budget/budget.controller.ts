@@ -5,6 +5,7 @@ import { UpdateBudgetDto } from '../../../../application/dto/budget/update-budge
 import { AuthenticatedRequest } from '../../types/request.types';
 import { sendSuccess } from '../../utils/response.util';
 import { UnauthorizedError } from '../../../../domain/errors/app-error';
+import { logger } from '../../../utils/logger';
 
 /**
  * Controller for handling budget-related HTTP requests.
@@ -24,8 +25,13 @@ export class BudgetController {
    */
   public async create(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
+
+    const { requestId, user } = req;
     const dto: CreateBudgetDto = req.body;
-    const budget = await this.budgetService.create(dto, req.user.id);
+
+    logger.info('Creating budget', { requestId, userId: user.id, name: dto.name });
+    const budget = await this.budgetService.create(dto, user.id);
+    logger.info('Budget created', { requestId, userId: user.id, budgetId: budget.id });
     sendSuccess(res, budget, 201);
   }
 
@@ -39,9 +45,13 @@ export class BudgetController {
    */
   public async getAll(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
+
+    const { requestId, user } = req;
     const includeExpired = req.query.includeExpired === 'true';
     const isActive = req.query.isActive !== undefined ? req.query.isActive === 'true' : undefined;
-    const budgets = await this.budgetService.getAll(req.user.id, { isActive, includeExpired });
+
+    logger.info('Fetching budgets', { requestId, userId: user.id, isActive, includeExpired });
+    const budgets = await this.budgetService.getAll(user.id, { isActive, includeExpired });
     sendSuccess(res, budgets);
   }
 
@@ -55,7 +65,10 @@ export class BudgetController {
    */
   public async getSummary(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
-    const budgets = await this.budgetService.getSummary(req.user.id);
+
+    const { requestId, user } = req;
+    logger.info('Fetching budget summary', { requestId, userId: user.id });
+    const budgets = await this.budgetService.getSummary(user.id);
     sendSuccess(res, budgets);
   }
 
@@ -68,7 +81,10 @@ export class BudgetController {
    */
   public async getHistory(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
-    const budgets = await this.budgetService.getHistory(req.user.id);
+
+    const { requestId, user } = req;
+    logger.info('Fetching budget history', { requestId, userId: user.id });
+    const budgets = await this.budgetService.getHistory(user.id);
     sendSuccess(res, budgets);
   }
 
@@ -81,7 +97,12 @@ export class BudgetController {
    */
   public async getById(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
-    const budget = await this.budgetService.getById(req.params.id, req.user.id);
+
+    const { requestId, user } = req;
+    const { id } = req.params;
+
+    logger.info('Fetching budget by ID', { requestId, userId: user.id, budgetId: id });
+    const budget = await this.budgetService.getById(id, user.id);
     sendSuccess(res, budget);
   }
 
@@ -94,8 +115,13 @@ export class BudgetController {
    */
   public async update(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
+
+    const { requestId, user } = req;
+    const { id } = req.params;
     const dto: UpdateBudgetDto = req.body;
-    const budget = await this.budgetService.update(req.params.id, dto, req.user.id);
+
+    logger.info('Updating budget', { requestId, userId: user.id, budgetId: id });
+    const budget = await this.budgetService.update(id, dto, user.id);
     sendSuccess(res, budget);
   }
 
@@ -108,7 +134,12 @@ export class BudgetController {
    */
   public async recalculate(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
-    const budget = await this.budgetService.recalculate(req.params.id, req.user.id);
+
+    const { requestId, user } = req;
+    const { id } = req.params;
+
+    logger.info('Recalculating budget', { requestId, userId: user.id, budgetId: id });
+    const budget = await this.budgetService.recalculate(id, user.id);
     sendSuccess(res, budget);
   }
 
@@ -121,7 +152,12 @@ export class BudgetController {
    */
   public async finalize(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
-    await this.budgetService.finalize(req.params.id, req.user.id);
+
+    const { requestId, user } = req;
+    const { id } = req.params;
+
+    logger.info('Finalizing budget', { requestId, userId: user.id, budgetId: id });
+    await this.budgetService.finalize(id, user.id);
     sendSuccess(res, null, 200);
   }
 
@@ -134,7 +170,12 @@ export class BudgetController {
    */
   public async permanentDelete(req: AuthenticatedRequest, res: Response): Promise<void> {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
-    await this.budgetService.permanentDelete(req.params.id, req.user.id);
+
+    const { requestId, user } = req;
+    const { id } = req.params;
+
+    logger.info('Permanently deleting budget', { requestId, userId: user.id, budgetId: id });
+    await this.budgetService.permanentDelete(id, user.id);
     sendSuccess(res, null, 200);
   }
 }

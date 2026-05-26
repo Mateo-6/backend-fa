@@ -3,6 +3,8 @@ import { PaymentMethod } from '../../domain/payment-method/types/payment-method.
 import { PaymentMethodModel, IPaymentMethodDocument } from '../database/models/payment-method.model';
 import { getMongooseInstance } from '../database/mongoose-client';
 import { sessionContext } from '../database/session-context';
+import { logger } from '../utils/logger';
+import { getRequestContext } from '../http/middleware/request-context';
 
 /**
  * Mongoose implementation of the PaymentMethodRepository interface.
@@ -15,6 +17,8 @@ export class PaymentMethodMongooseRepository implements PaymentMethodRepository 
    * @returns {Promise<PaymentMethod>} Created payment method mapped to the domain type.
    */
   async create(paymentMethod: PaymentMethod): Promise<PaymentMethod> {
+    const ctx = getRequestContext();
+    logger.debug('DB insert: PaymentMethod', { ...ctx, name: paymentMethod.name, type: paymentMethod.type });
     await getMongooseInstance();
     const createdPaymentMethod = await PaymentMethodModel.create({
       name: paymentMethod.name,

@@ -4,6 +4,8 @@ import { CategoryModel, ICategoryDocument } from '../database/models/category.mo
 import { getMongooseInstance } from '../database/mongoose-client';
 import { UserModel } from '../database/models/user.model';
 import { sanitizeStringValue } from '../utils/sanitize-query';
+import { logger } from '../utils/logger';
+import { getRequestContext } from '../http/middleware/request-context';
 
 export class CategoryMongooseRepository implements CategoryRepository {
   /**
@@ -13,6 +15,8 @@ export class CategoryMongooseRepository implements CategoryRepository {
    * @returns {Promise<Category>} Created category mapped to the domain type.
    */
   async create(category: Category): Promise<Category> {
+    const ctx = getRequestContext();
+    logger.debug('DB insert: Category', { ...ctx, name: category.name, type: category.type });
     await getMongooseInstance();
     const createdCategory = await CategoryModel.create({
       name: category.name,
@@ -48,6 +52,8 @@ export class CategoryMongooseRepository implements CategoryRepository {
    * @returns {Promise<Category[]>} Categories tied to the user.
    */
   async findAllByUser(userId: string, type?: CategoryType): Promise<Category[]> {
+    const ctx = getRequestContext();
+    logger.debug('DB query: Categories.findAllByUser', { ...ctx, userId, type });
     await getMongooseInstance();
     const query: Record<string, unknown> = { user: userId, deletedAt: null };
     if (type) {

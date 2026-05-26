@@ -13,6 +13,8 @@ import { CategoryType } from '../../domain/category/types/category.types';
 import { NotFoundError, ForbiddenError, ValidationError } from '../../domain/errors/app-error';
 import { ITransactionRunner } from '../../domain/shared/transaction-runner.interface';
 import { TransactionSubtype, PaymentMethodType, BankAccountDetails, CreditCardDetails } from 'fa-contracts';
+import { logger } from '../../infra/utils/logger';
+import { getRequestContext } from '../../infra/http/middleware/request-context';
 
 /**
  * Filter options for querying transactions.
@@ -70,6 +72,9 @@ export class TransactionService {
    * @throws {ForbiddenError} If the category does not belong to the user.
    */
   async createManual(data: CreateTransactionDto, userId: string): Promise<Transaction> {
+    const ctx = getRequestContext();
+    logger.debug('Validating manual transaction', { ...ctx, type: data.type, amount: data.amount, categoryId: data.categoryId });
+
     await this.ensureUserExists(userId);
 
     const category = await this.categoryRepository.findById(data.categoryId);
@@ -78,6 +83,7 @@ export class TransactionService {
     }
 
     if (category.userId !== userId) {
+      logger.warn('Category does not belong to user', { ...ctx, categoryId: data.categoryId });
       throw new ForbiddenError('No tienes permiso para usar esta categoría');
     }
 
@@ -180,8 +186,11 @@ export class TransactionService {
       return created;
     });
 
+    logger.info('Transaction persisted to DB', { ...ctx, transactionId: transaction.id, type: data.type, amount: data.amount });
+
     // Budget recalculation is non-critical — runs outside the atomic block
     if (data.type === TransactionType.EXPENSE && this.budgetService) {
+      logger.debug('Recalculating affected budgets', { ...ctx, categoryId: data.categoryId });
       await this.budgetService.updateBudgetsForTransaction(userId, data.categoryId, transactionDate);
     }
 
@@ -533,11 +542,13 @@ export class TransactionService {
    * @throws {ForbiddenError} If the transaction does not belong to the user.
    */
   async delete(id: string, userId: string): Promise<void> {
+    const ctx = getRequestContext();
     const transaction = await this.transactionRepository.findById(id);
     if (!transaction) {
       throw new NotFoundError('Transaction', id);
     }
     if (transaction.userId !== userId) {
+      logger.warn('Attempted to delete transaction owned by another user', { ...ctx, transactionId: id });
       throw new ForbiddenError('No tienes permiso para eliminar esta transacción');
     }
 
@@ -563,6 +574,8 @@ export class TransactionService {
 
       await this.transactionRepository.delete(id);
     });
+
+    logger.info('Transaction deleted from DB', { ...ctx, transactionId: id });
 
     // Budget recalculation is non-critical — runs outside the atomic block
     if (transaction.type === TransactionType.EXPENSE && this.budgetService) {

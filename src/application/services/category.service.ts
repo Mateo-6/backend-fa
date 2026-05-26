@@ -6,6 +6,8 @@ import { Category, CategoryType } from '../../domain/category/types/category.typ
 import { NotFoundError, ForbiddenError } from '../../domain/errors/app-error';
 import { ICache } from '../../domain/cache/cache.interface';
 import { cacheKeys } from '../constants/cache-keys';
+import { logger } from '../../infra/utils/logger';
+import { getRequestContext } from '../../infra/http/middleware/request-context';
 
 /**
  * Service for managing categories.
@@ -30,9 +32,11 @@ export class CategoryService {
    * @returns {Promise<Category>} Newly created category.
    */
   async create(data: CreateCategoryDto, userId: string): Promise<Category> {
+    const ctx = getRequestContext();
     await this.ensureUserExists(userId);
     const category = await this.categoryRepository.create({ ...data, userId });
     this.cache.del(cacheKeys.categories(userId)).catch(() => {});
+    logger.info('Category persisted to DB', { ...ctx, categoryId: category.id, name: category.name });
     return category;
   }
 
@@ -90,12 +94,14 @@ export class CategoryService {
    * @throws {ForbiddenError} If the category does not belong to the user.
    */
   async update(id: string, data: UpdateCategoryDto, userId: string): Promise<Category> {
+    const ctx = getRequestContext();
     await this.ensureCategoryOwnership(id, userId);
     const updatedCategory = await this.categoryRepository.update(id, data);
     if (!updatedCategory) {
       throw new NotFoundError('Category', id);
     }
     this.cache.del(cacheKeys.categories(userId)).catch(() => {});
+    logger.info('Category updated in DB', { ...ctx, categoryId: id });
     return updatedCategory;
   }
 
@@ -110,9 +116,11 @@ export class CategoryService {
    * @throws {ForbiddenError} If the category does not belong to the user.
    */
   async delete(id: string, userId: string): Promise<void> {
+    const ctx = getRequestContext();
     await this.ensureCategoryOwnership(id, userId);
     await this.categoryRepository.delete(id);
     this.cache.del(cacheKeys.categories(userId)).catch(() => {});
+    logger.info('Category deleted from DB', { ...ctx, categoryId: id });
   }
 
   /**

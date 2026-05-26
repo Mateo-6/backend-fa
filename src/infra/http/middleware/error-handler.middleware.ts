@@ -1,28 +1,23 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../../../domain/errors/app-error';
 import { sendError } from '../utils/response.util';
+import { logger } from '../../utils/logger';
+import { AuthenticatedRequest } from '../types/request.types';
 
-/**
- * Centralized Express error-handling middleware that formats error responses.
- *
- * @param {AppError | Error} err The error thrown within the request pipeline.
- * @param {Request} req Express request object where the error originated.
- * @param {Response} res Express response used to send the error payload.
- * @param {NextFunction} next Callback to pass control to the default handler when needed.
- * @returns {void} Sends an HTTP error response.
- */
 export const errorHandler = (
   err: AppError | Error,
   req: Request,
   res: Response,
   next: NextFunction
 ): void => {
-  // If the response was already sent, delegate to Express' default handler
   if (res.headersSent) {
     return next(err);
   }
 
-  // Determine the status code
+  const authReq = req as AuthenticatedRequest;
+  const requestId = authReq.requestId;
+  const userId    = authReq.user?.id;
+
   let statusCode = 500;
   let message = 'Error interno del servidor';
 
@@ -31,7 +26,6 @@ export const errorHandler = (
     message = err.message;
   } else if (err.message) {
     message = err.message;
-    // Fallback for common database errors (should be replaced with proper error classes)
     if (err.message.includes('no encontrado') || err.message.includes('not found')) {
       statusCode = 404;
     } else if (err.message.includes('duplicado') || err.message.includes('duplicate')) {
@@ -41,6 +35,19 @@ export const errorHandler = (
     }
   }
 
+  const logLevel = statusCode >= 500 ? 'error' : 'warn';
+
+  logger[logLevel]('Request error', {
+    requestId,
+    userId,
+    method: req.method,
+    path: req.path,
+    statusCode,
+    error: err.message,
+    stack: err.stack,
+    errorType: err.constructor.name,
+  });
+
   const details = process.env.NODE_ENV === 'development' ? {
     stack: err.stack,
     path: req.path,
@@ -49,4 +56,3 @@ export const errorHandler = (
 
   sendError(res, statusCode, message, details);
 };
-

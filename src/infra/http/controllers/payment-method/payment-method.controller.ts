@@ -6,6 +6,7 @@ import { ToggleGmfExemptDto } from '../../../../application/dto/payment-method/t
 import { AuthenticatedRequest } from '../../types/request.types';
 import { UnauthorizedError, NotFoundError } from '../../../../domain/errors/app-error';
 import { sendSuccess } from '../../utils/response.util';
+import { logger } from '../../../utils/logger';
 
 /**
  * Controller for handling payment method-related HTTP requests.
@@ -25,12 +26,14 @@ export class PaymentMethodController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async create(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
+    const { requestId, user } = req;
     const createPaymentMethodDto: CreatePaymentMethodDto = req.body;
-    const paymentMethod = await this.paymentMethodService.create(createPaymentMethodDto, req.user.id);
+
+    logger.info('Creating payment method', { requestId, userId: user.id, name: createPaymentMethodDto.name });
+    const paymentMethod = await this.paymentMethodService.create(createPaymentMethodDto, user.id);
+    logger.info('Payment method created', { requestId, userId: user.id, paymentMethodId: paymentMethod.id });
     sendSuccess(res, paymentMethod, 201);
   }
 
@@ -43,11 +46,11 @@ export class PaymentMethodController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async getAll(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
-    const paymentMethods = await this.paymentMethodService.findAllByUser(req.user.id);
+    const { requestId, user } = req;
+    logger.info('Fetching payment methods', { requestId, userId: user.id });
+    const paymentMethods = await this.paymentMethodService.findAllByUser(user.id);
     sendSuccess(res, paymentMethods);
   }
 
@@ -59,10 +62,9 @@ export class PaymentMethodController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async calculatePaymentDueDate(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
+    const { requestId, user } = req;
     const { id } = req.params;
     const { transactionDate } = req.query;
 
@@ -75,18 +77,20 @@ export class PaymentMethodController {
       throw new NotFoundError('TransactionDate', 'Formato de fecha de transacción inválido. Usa el formato ISO 8601');
     }
 
+    logger.info('Calculating payment due date', { requestId, userId: user.id, paymentMethodId: id, transactionDate });
     const dueDate = await this.paymentMethodService.calculatePaymentDueDate(id, date);
     sendSuccess(res, { dueDate });
   }
 
   public async toggleGmfExempt(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
+    const { requestId, user } = req;
     const { id } = req.params;
     const { is_exempt }: ToggleGmfExemptDto = req.body;
-    const paymentMethod = await this.paymentMethodService.toggleGmfExempt(req.user.id, id, is_exempt);
+
+    logger.info('Updating GMF exemption', { requestId, userId: user.id, paymentMethodId: id, is_exempt });
+    const paymentMethod = await this.paymentMethodService.toggleGmfExempt(user.id, id, is_exempt);
     sendSuccess(res, paymentMethod);
   }
 
@@ -99,13 +103,14 @@ export class PaymentMethodController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async update(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
+    const { requestId, user } = req;
     const { id } = req.params;
     const updatePaymentMethodDto: UpdatePaymentMethodDto = req.body;
-    const paymentMethod = await this.paymentMethodService.update(id, updatePaymentMethodDto, req.user.id);
+
+    logger.info('Updating payment method', { requestId, userId: user.id, paymentMethodId: id });
+    const paymentMethod = await this.paymentMethodService.update(id, updatePaymentMethodDto, user.id);
     sendSuccess(res, paymentMethod);
   }
 
@@ -118,13 +123,13 @@ export class PaymentMethodController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async delete(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
+    const { requestId, user } = req;
     const { id } = req.params;
-    await this.paymentMethodService.delete(id, req.user.id);
+
+    logger.info('Deleting payment method', { requestId, userId: user.id, paymentMethodId: id });
+    await this.paymentMethodService.delete(id, user.id);
     sendSuccess(res, null, 204);
   }
 }
-

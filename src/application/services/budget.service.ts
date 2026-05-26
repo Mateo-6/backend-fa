@@ -8,6 +8,8 @@ import { CreateBudgetDto } from '../dto/budget/create-budget.dto';
 import { UpdateBudgetDto } from '../dto/budget/update-budget.dto';
 import { NotFoundError, ForbiddenError, ConflictError } from '../../domain/errors/app-error';
 import { TransactionType } from '../../domain/finance/types/transaction.types';
+import { logger } from '../../infra/utils/logger';
+import { getRequestContext } from '../../infra/http/middleware/request-context';
 
 /**
  * Budget with computed progress fields appended.
@@ -57,6 +59,8 @@ export class BudgetService {
       return sameCat && overlaps;
     });
     if (conflict) {
+      const ctx = getRequestContext();
+      logger.warn('Budget conflict: active budget already exists for this period', { ...ctx, conflictingBudgetId: conflict.id, name: conflict.name });
       throw new ConflictError(
         `Ya existe un presupuesto activo para esta categoría en el período indicado: "${conflict.name}"`
       );
@@ -77,6 +81,9 @@ export class BudgetService {
       alertThresholds: data.alertThresholds ?? [80, 100],
       alertsSent: [],
     });
+
+    const ctx = getRequestContext();
+    logger.info('Budget persisted to DB', { ...ctx, budgetId: created.id, name: created.name, period: created.period });
 
     // Backfill spent from transactions that already exist in this period
     await this.recalculateSpent(created.id!);
@@ -314,6 +321,13 @@ export class BudgetService {
       }
 
       // Persist notification to DB
+      logger.warn('Budget threshold reached', {
+        userId: budget.userId,
+        budgetId: budget.id,
+        threshold,
+        percentage: Math.round(percentage),
+      });
+
       try {
         await this.notificationRepository.create({
           userId: budget.userId,
@@ -329,12 +343,20 @@ export class BudgetService {
           },
         });
       } catch (error) {
-        console.error(`[BudgetService] Error persisting alert for budget ${budget.id}:`, error);
+        logger.error('Failed to persist budget alert', {
+          userId: budget.userId,
+          budgetId: budget.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
 
       // Send Expo push notification
       this.sendExpoPush(budget.userId, title, body, budget.id!).catch((err) =>
-        console.error(`[BudgetService] Error sending push for budget ${budget.id}:`, err)
+        logger.error('Failed to send budget push notification', {
+          userId: budget.userId,
+          budgetId: budget.id,
+          error: err instanceof Error ? err.message : String(err),
+        })
       );
     }
 

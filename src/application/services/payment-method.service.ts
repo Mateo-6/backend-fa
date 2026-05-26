@@ -6,6 +6,8 @@ import { PaymentMethod, PaymentMethodType, CreditCardDetails, BankAccountDetails
 import { NotFoundError, ForbiddenError, ValidationError } from '../../domain/errors/app-error';
 import { ICache } from '../../domain/cache/cache.interface';
 import { cacheKeys } from '../constants/cache-keys';
+import { logger } from '../../infra/utils/logger';
+import { getRequestContext } from '../../infra/http/middleware/request-context';
 
 /**
  * Service for managing payment methods.
@@ -30,9 +32,11 @@ export class PaymentMethodService {
    * @returns {Promise<PaymentMethod>} Newly created payment method.
    */
   async create(data: CreatePaymentMethodDto, userId: string): Promise<PaymentMethod> {
+    const ctx = getRequestContext();
     await this.ensureUserExists(userId);
     const paymentMethod = await this.paymentMethodRepository.create({ ...data, userId, details: data.details || {} });
     this.cache.del(cacheKeys.paymentMethods(userId)).catch(() => {});
+    logger.info('Payment method persisted to DB', { ...ctx, paymentMethodId: paymentMethod.id, type: paymentMethod.type });
     return paymentMethod;
   }
 
@@ -203,10 +207,19 @@ export class PaymentMethodService {
    * @throws {NotFoundError} If the payment method does not exist.
    */
   async updatePaymentMethodBalance(paymentMethodId: string, transactionAmount: number, isExpense: boolean): Promise<void> {
+    const ctx = getRequestContext();
     const paymentMethod = await this.paymentMethodRepository.findById(paymentMethodId);
     if (!paymentMethod) {
       throw new NotFoundError('PaymentMethod', paymentMethodId);
     }
+
+    logger.debug('Updating payment method balance', {
+      ...ctx,
+      paymentMethodId,
+      type: paymentMethod.type,
+      amount: transactionAmount,
+      isExpense,
+    });
 
     if (paymentMethod.type === PaymentMethodType.CREDIT_CARD) {
       const details = paymentMethod.details as CreditCardDetails;

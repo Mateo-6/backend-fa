@@ -6,6 +6,8 @@ import { TransactionSubtype } from 'fa-contracts';
 import mongoose from 'mongoose';
 import { sanitizeStringValue } from '../utils/sanitize-query';
 import { sessionContext } from '../database/session-context';
+import { logger } from '../utils/logger';
+import { getRequestContext } from '../http/middleware/request-context';
 
 /**
  * Mongoose implementation of TransactionRepository.
@@ -18,8 +20,10 @@ export class TransactionMongooseRepository implements TransactionRepository {
    * @returns {Promise<Transaction>} Created transaction mapped to the domain type.
    */
   async create(transaction: Transaction): Promise<Transaction> {
+    const ctx = getRequestContext();
     await getMongooseInstance();
     const session = sessionContext.getStore();
+    logger.debug('DB insert: Transaction', { ...ctx, type: transaction.type, amount: transaction.amount });
     const [created] = await TransactionModel.create(
       [{
         amount: transaction.amount,
@@ -47,6 +51,8 @@ export class TransactionMongooseRepository implements TransactionRepository {
    * @returns {Promise<Transaction[]>} Transactions tied to the user, ordered by date descending.
    */
   async findAllByUser(userId: string, filters?: TransactionFilters): Promise<{ items: Transaction[]; total: number }> {
+    const ctx = getRequestContext();
+    logger.debug('DB query: Transactions.findAllByUser', { ...ctx, userId, filters });
     await getMongooseInstance();
     const query: Record<string, unknown> = { user: userId, deletedAt: null };
 
@@ -86,6 +92,7 @@ export class TransactionMongooseRepository implements TransactionRepository {
       TransactionModel.countDocuments(query).exec(),
     ]);
 
+    logger.debug('DB result: Transactions.findAllByUser', { ...getRequestContext(), count: transactions.length, total });
     return {
       items: transactions.map((transaction) => this.toDomain(transaction)),
       total,
@@ -165,6 +172,8 @@ export class TransactionMongooseRepository implements TransactionRepository {
    * @returns {Promise<void>} Resolves when the document is deleted.
    */
   async delete(id: string): Promise<void> {
+    const ctx = getRequestContext();
+    logger.debug('DB soft-delete: Transaction', { ...ctx, transactionId: id });
     await getMongooseInstance();
     const session = sessionContext.getStore();
     await TransactionModel.updateOne(
