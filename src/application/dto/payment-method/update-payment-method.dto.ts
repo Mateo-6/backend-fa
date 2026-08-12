@@ -181,10 +181,22 @@ export const updatePaymentMethodSchema: z.ZodType<{
         // The existing details will remain
       }
     } else if (data.type === undefined && data.details !== undefined) {
-      // If details are provided without type, validate with the flexible schema
-      // This handles partial updates where we don't know the current type
-      // We'll validate based on what's provided, but account_number won't be required
-      // unless we're updating an existing BANK_ACCOUNT (handled in service layer)
+      // Type not provided — validate any known numeric fields to prevent negative balances
+      const details = data.details as Record<string, unknown>;
+      if (typeof details.current_balance === 'number' && details.current_balance < 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'El saldo actual debe ser un número positivo',
+          path: ['details', 'current_balance'],
+        });
+      }
+      if (typeof details.amount === 'number' && details.amount < 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'El monto debe ser un número positivo',
+          path: ['details', 'amount'],
+        });
+      }
     }
   })
   .refine(

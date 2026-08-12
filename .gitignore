@@ -20,3 +20,6 @@ deploy/.lambda-update-*.zip
 
 # OS
 .DS_Store
+
+./deploy
+./mockups
