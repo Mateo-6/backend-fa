@@ -22,6 +22,7 @@ export const createTransactionSchema = z
     paymentMethodId: z.string().min(1, 'El ID del método de pago es requerido').optional(),
     sourcePaymentMethodId: z.string().min(1, 'El ID del método de pago origen es requerido').optional(),
     destinationPaymentMethodId: z.string().min(1, 'El ID del método de pago destino es requerido').optional(),
+    budgetAmount: z.number().min(0, 'El monto al presupuesto no puede ser negativo').nullable().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.type === TransactionType.TRANSFER) {

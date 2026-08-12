@@ -1,23 +1,21 @@
 import 'dotenv/config';
 import { Server } from './infra/http/server';
 import { MongooseClientSingleton } from './infra/database/mongoose-client';
+import { logger } from './infra/utils/logger';
 
-/**
- * Bootstraps the application by connecting to MongoDB and starting the HTTP server.
- * Terminates the process if initialization fails.
- *
- * @returns {Promise<void>} Resolves when the bootstrap sequence completes.
- */
 async function bootstrap(): Promise<void> {
   try {
-    // Initialize MongoDB connection
+    logger.info('Starting application...');
     await MongooseClientSingleton.connect();
-    
-    // Initialize server
+    logger.info('MongoDB connection established');
+
     const server = new Server();
     server.start();
   } catch (error) {
-    console.error('Failed to start application:', error);
+    logger.error('Failed to start application', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     process.exit(1);
   }
 }

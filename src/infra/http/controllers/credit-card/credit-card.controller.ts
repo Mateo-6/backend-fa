@@ -4,6 +4,7 @@ import { PayCardDto } from '../../../../application/dto/credit-card/pay-card.dto
 import { AuthenticatedRequest } from '../../types/request.types';
 import { UnauthorizedError, ValidationError } from '../../../../domain/errors/app-error';
 import { sendSuccess } from '../../utils/response.util';
+import { logger } from '../../../utils/logger';
 
 /**
  * Controller for credit card-specific HTTP requests.
@@ -22,10 +23,11 @@ export class CreditCardController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async getAllCards(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
-    const cards = await this.creditCardService.getAllCards(req.user.id);
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
+
+    const { requestId, user } = req;
+    logger.info('Fetching credit cards', { requestId, userId: user.id });
+    const cards = await this.creditCardService.getAllCards(user.id);
     sendSuccess(res, cards);
   }
 
@@ -37,11 +39,13 @@ export class CreditCardController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async getCardDetail(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
+
+    const { requestId, user } = req;
     const { id } = req.params;
-    const detail = await this.creditCardService.getCardDetail(req.user.id, id);
+
+    logger.info('Fetching card detail', { requestId, userId: user.id, cardId: id });
+    const detail = await this.creditCardService.getCardDetail(user.id, id);
     sendSuccess(res, detail);
   }
 
@@ -53,11 +57,13 @@ export class CreditCardController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async getStatements(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
+
+    const { requestId, user } = req;
     const { id } = req.params;
-    const statements = await this.creditCardService.getStatements(req.user.id, id);
+
+    logger.info('Fetching card statements', { requestId, userId: user.id, cardId: id });
+    const statements = await this.creditCardService.getStatements(user.id, id);
     sendSuccess(res, statements);
   }
 
@@ -70,15 +76,18 @@ export class CreditCardController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async getStatementDetail(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
+
+    const { requestId, user } = req;
     const { id, periodStart } = req.params;
     const periodStartDate = new Date(periodStart);
+
     if (isNaN(periodStartDate.getTime())) {
       throw new ValidationError('Formato de fecha inválido para periodStart. Usa formato ISO 8601');
     }
-    const detail = await this.creditCardService.getStatementDetail(req.user.id, id, periodStartDate);
+
+    logger.info('Fetching statement detail', { requestId, userId: user.id, cardId: id, periodStart });
+    const detail = await this.creditCardService.getStatementDetail(user.id, id, periodStartDate);
     sendSuccess(res, detail);
   }
 
@@ -91,12 +100,15 @@ export class CreditCardController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async payCard(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
+
+    const { requestId, user } = req;
     const { id } = req.params;
     const payCardDto: PayCardDto = req.body;
-    const transaction = await this.creditCardService.payCard(req.user.id, id, payCardDto);
+
+    logger.info('Processing card payment', { requestId, userId: user.id, cardId: id, amount: payCardDto.amount });
+    const transaction = await this.creditCardService.payCard(user.id, id, payCardDto);
+    logger.info('Card payment processed', { requestId, userId: user.id, transactionId: transaction.id });
     sendSuccess(res, transaction, 201);
   }
 
@@ -108,11 +120,13 @@ export class CreditCardController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async getPaymentHistory(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
+
+    const { requestId, user } = req;
     const { id } = req.params;
-    const payments = await this.creditCardService.getPaymentHistory(req.user.id, id);
+
+    logger.info('Fetching card payment history', { requestId, userId: user.id, cardId: id });
+    const payments = await this.creditCardService.getPaymentHistory(user.id, id);
     sendSuccess(res, payments);
   }
 }

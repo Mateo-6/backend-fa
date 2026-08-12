@@ -20,6 +20,16 @@ Parameters:
     Type: String
     Description: Comma-separated allowed CORS origins
     Default: '*'
+  OpenAiApiKey:
+    Type: String
+    Description: OpenAI API key for AMI intent parsing
+    NoEcho: true
+    MinLength: 1
+  RedisUrl:
+    Type: String
+    Description: Redis connection URL for caching
+    NoEcho: true
+    MinLength: 1
 
 Globals:
   Function:
@@ -41,6 +51,8 @@ Resources:
           JWT_SECRET: !Ref JwtSecret
           CORS_ORIGIN: !Ref CorsOrigin
           NODE_ENV: production
+          OPENAI_API_KEY: !Ref OpenAiApiKey
+          REDIS_URL: !Ref RedisUrl
       Events:
         ApiEvent:
           Type: HttpApi

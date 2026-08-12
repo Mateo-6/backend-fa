@@ -17,6 +17,16 @@ const CategorySchema = new Schema<ICategoryDocument>(
       default: null,
       trim: true,
     },
+    color: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    icon: {
+      type: String,
+      default: null,
+      trim: true,
+    },
     type: {
       type: String,
       enum: ['income', 'expense', 'transfer'],
@@ -27,6 +37,11 @@ const CategorySchema = new Schema<ICategoryDocument>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+      index: true,
     },
   },
   {

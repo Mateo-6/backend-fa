@@ -3,6 +3,8 @@ import { Budget } from '../../domain/budget/types/budget.types';
 import { BudgetModel, IBudgetDocument } from '../database/models/budget.model';
 import { getMongooseInstance } from '../database/mongoose-client';
 import mongoose from 'mongoose';
+import { logger } from '../utils/logger';
+import { getRequestContext } from '../http/middleware/request-context';
 
 /**
  * Mongoose implementation of BudgetRepository.
@@ -15,6 +17,8 @@ export class BudgetMongooseRepository implements BudgetRepository {
    * @returns {Promise<Budget>} Created budget mapped to the domain type.
    */
   async create(budget: Budget): Promise<Budget> {
+    const ctx = getRequestContext();
+    logger.debug('DB insert: Budget', { ...ctx, name: budget.name, period: budget.period, amount: budget.amount });
     await getMongooseInstance();
     const created = await BudgetModel.create({
       user: budget.userId,

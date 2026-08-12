@@ -4,6 +4,8 @@ import { CategoryModel, ICategoryDocument } from '../database/models/category.mo
 import { getMongooseInstance } from '../database/mongoose-client';
 import { UserModel } from '../database/models/user.model';
 import { sanitizeStringValue } from '../utils/sanitize-query';
+import { logger } from '../utils/logger';
+import { getRequestContext } from '../http/middleware/request-context';
 
 export class CategoryMongooseRepository implements CategoryRepository {
   /**
@@ -13,11 +15,15 @@ export class CategoryMongooseRepository implements CategoryRepository {
    * @returns {Promise<Category>} Created category mapped to the domain type.
    */
   async create(category: Category): Promise<Category> {
+    const ctx = getRequestContext();
+    logger.debug('DB insert: Category', { ...ctx, name: category.name, type: category.type });
     await getMongooseInstance();
     const createdCategory = await CategoryModel.create({
       name: category.name,
       description: category.description,
       type: category.type,
+      color: category.color,
+      icon: category.icon,
       user: category.userId,
     });
     await UserModel.findByIdAndUpdate(createdCategory.user, {
@@ -33,7 +39,7 @@ export class CategoryMongooseRepository implements CategoryRepository {
    */
   async findAll(): Promise<Category[]> {
     await getMongooseInstance();
-    const categories = await CategoryModel.find().sort({ createdAt: -1 }).exec();
+    const categories = await CategoryModel.find({ deletedAt: null }).sort({ createdAt: -1 }).exec();
     return categories.map((category) => this.toDomain(category));
   }
 
@@ -46,8 +52,10 @@ export class CategoryMongooseRepository implements CategoryRepository {
    * @returns {Promise<Category[]>} Categories tied to the user.
    */
   async findAllByUser(userId: string, type?: CategoryType): Promise<Category[]> {
+    const ctx = getRequestContext();
+    logger.debug('DB query: Categories.findAllByUser', { ...ctx, userId, type });
     await getMongooseInstance();
-    const query: Record<string, unknown> = { user: userId };
+    const query: Record<string, unknown> = { user: userId, deletedAt: null };
     if (type) {
       query.type = sanitizeStringValue(type);
     }
@@ -63,7 +71,7 @@ export class CategoryMongooseRepository implements CategoryRepository {
    */
   async findById(id: string): Promise<Category | null> {
     await getMongooseInstance();
-    const category = await CategoryModel.findById(id).exec();
+    const category = await CategoryModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!category) {
       return null;
     }
@@ -89,6 +97,12 @@ export class CategoryMongooseRepository implements CategoryRepository {
     if (typeof data.type === 'string') {
       mappedData.type = data.type;
     }
+    if (data.color !== undefined) {
+      mappedData.color = data.color;
+    }
+    if (data.icon !== undefined) {
+      mappedData.icon = data.icon;
+    }
     const category = await CategoryModel.findByIdAndUpdate(
       id,
       { $set: mappedData },
@@ -108,11 +122,11 @@ export class CategoryMongooseRepository implements CategoryRepository {
    */
   async delete(id: string): Promise<void> {
     await getMongooseInstance();
-    const category = await CategoryModel.findById(id).exec();
+    const category = await CategoryModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!category) {
       return;
     }
-    await CategoryModel.deleteOne({ _id: id }).exec();
+    await CategoryModel.updateOne({ _id: id }, { $set: { deletedAt: new Date() } }).exec();
     await UserModel.findByIdAndUpdate(category.user, {
       $pull: { categories: category._id },
     }).exec();
@@ -130,9 +144,12 @@ export class CategoryMongooseRepository implements CategoryRepository {
       name: doc.name,
       description: doc.description ?? undefined,
       type: doc.type,
+      color: doc.color ?? null,
+      icon: doc.icon ?? null,
       userId: doc.user.toString(),
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
+      deletedAt: doc.deletedAt ?? null,
     };
   }
 }

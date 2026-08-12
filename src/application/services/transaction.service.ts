@@ -11,7 +11,10 @@ import { Transaction, TransactionType, CategorySnapshot } from '../../domain/fin
 import { RecurringExpense, RecurringFrequency } from '../../domain/finance/types/recurring-expense.types';
 import { CategoryType } from '../../domain/category/types/category.types';
 import { NotFoundError, ForbiddenError, ValidationError } from '../../domain/errors/app-error';
-import { TransactionSubtype, PaymentMethodType, BankAccountDetails } from 'fa-contracts';
+import { ITransactionRunner } from '../../domain/shared/transaction-runner.interface';
+import { TransactionSubtype, PaymentMethodType, BankAccountDetails, CreditCardDetails } from 'fa-contracts';
+import { logger } from '../../infra/utils/logger';
+import { getRequestContext } from '../../infra/http/middleware/request-context';
 
 /**
  * Filter options for querying transactions.
@@ -53,6 +56,7 @@ export class TransactionService {
     private readonly userRepository: UserRepository,
     private readonly paymentMethodRepository: PaymentMethodRepository,
     private readonly paymentMethodService: PaymentMethodService,
+    private readonly transactionRunner: ITransactionRunner,
     private readonly budgetService?: BudgetService
   ) {}
 
@@ -68,6 +72,9 @@ export class TransactionService {
    * @throws {ForbiddenError} If the category does not belong to the user.
    */
   async createManual(data: CreateTransactionDto, userId: string): Promise<Transaction> {
+    const ctx = getRequestContext();
+    logger.debug('Validating manual transaction', { ...ctx, type: data.type, amount: data.amount, categoryId: data.categoryId });
+
     await this.ensureUserExists(userId);
 
     const category = await this.categoryRepository.findById(data.categoryId);
@@ -76,6 +83,7 @@ export class TransactionService {
     }
 
     if (category.userId !== userId) {
+      logger.warn('Category does not belong to user', { ...ctx, categoryId: data.categoryId });
       throw new ForbiddenError('No tienes permiso para usar esta categoría');
     }
 
@@ -97,11 +105,23 @@ export class TransactionService {
     if (data.type !== TransactionType.TRANSFER && data.paymentMethodId) {
       await this.ensurePaymentMethodExists(data.paymentMethodId, userId);
 
+      const paymentMethod = await this.paymentMethodRepository.findById(data.paymentMethodId);
+
       // INCOME transactions can only be linked to BANK_ACCOUNT or CASH, not CREDIT_CARD
       if (data.type === TransactionType.INCOME) {
-        const paymentMethod = await this.paymentMethodRepository.findById(data.paymentMethodId);
         if (paymentMethod && paymentMethod.type === PaymentMethodType.CREDIT_CARD) {
           throw new ForbiddenError('Los ingresos no pueden asociarse a una tarjeta de crédito');
+        }
+      }
+
+      // EXPENSE on credit card: validate that amount does not exceed available credit
+      if (data.type === TransactionType.EXPENSE && paymentMethod?.type === PaymentMethodType.CREDIT_CARD) {
+        const details = paymentMethod.details as CreditCardDetails;
+        const availableCredit = details.credit_limit - details.current_balance;
+        if (data.amount > availableCredit) {
+          throw new ValidationError(
+            `El gasto de $${data.amount.toLocaleString('es-CO')} excede el cupo disponible de $${availableCredit.toLocaleString('es-CO')} en la tarjeta "${paymentMethod.name}"`
+          );
         }
       }
     }
@@ -134,37 +154,43 @@ export class TransactionService {
     const categorySnapshot: CategorySnapshot = {
       id: category.id!,
       name: category.name,
-      icon: undefined, // Add icon field to Category type if needed
+      icon: category.icon ?? undefined,
     };
 
     // Ensure date is a Date object (Zod transforms string to Date)
     const transactionDate = data.date instanceof Date ? data.date : new Date(data.date);
 
-    const transaction = await this.transactionRepository.create({
-      userId,
-      amount: data.amount,
-      description: data.description,
-      date: transactionDate,
-      type: data.type,
-      category: categorySnapshot,
-      paymentMethodId: data.paymentMethodId,
-      sourcePaymentMethodId: data.sourcePaymentMethodId,
-      destinationPaymentMethodId: data.destinationPaymentMethodId,
-      isRecurring: false,
+    const transaction = await this.transactionRunner.run(async () => {
+      const created = await this.transactionRepository.create({
+        userId,
+        amount: data.amount,
+        description: data.description,
+        date: transactionDate,
+        type: data.type,
+        category: categorySnapshot,
+        paymentMethodId: data.paymentMethodId,
+        sourcePaymentMethodId: data.sourcePaymentMethodId,
+        destinationPaymentMethodId: data.destinationPaymentMethodId,
+        isRecurring: false,
+        budgetAmount: data.budgetAmount ?? null,
+      });
+
+      if (data.type === TransactionType.TRANSFER) {
+        await this.paymentMethodService.updatePaymentMethodBalance(data.sourcePaymentMethodId!, data.amount, true);
+        await this.paymentMethodService.updatePaymentMethodBalance(data.destinationPaymentMethodId!, data.amount, false);
+      } else if (data.paymentMethodId) {
+        const isExpense = data.type === TransactionType.EXPENSE;
+        await this.paymentMethodService.updatePaymentMethodBalance(data.paymentMethodId, data.amount, isExpense);
+      }
+
+      return created;
     });
 
-    if (data.type === TransactionType.TRANSFER) {
-      // Decrease source balance, increase destination balance
-      await this.paymentMethodService.updatePaymentMethodBalance(data.sourcePaymentMethodId!, data.amount, true);
-      await this.paymentMethodService.updatePaymentMethodBalance(data.destinationPaymentMethodId!, data.amount, false);
-    } else if (data.paymentMethodId) {
-      // Update credit card balance if payment method is provided for INCOME/EXPENSE
-      const isExpense = data.type === TransactionType.EXPENSE;
-      await this.paymentMethodService.updatePaymentMethodBalance(data.paymentMethodId, data.amount, isExpense);
-    }
+    logger.info('Transaction persisted to DB', { ...ctx, transactionId: transaction.id, type: data.type, amount: data.amount });
 
-    // Recalculate affected budgets when an EXPENSE is created (not for TRANSFER)
+    // Budget recalculation is non-critical — runs outside the atomic block
     if (data.type === TransactionType.EXPENSE && this.budgetService) {
+      logger.debug('Recalculating affected budgets', { ...ctx, categoryId: data.categoryId });
       await this.budgetService.updateBudgetsForTransaction(userId, data.categoryId, transactionDate);
     }
 
@@ -209,43 +235,57 @@ export class TransactionService {
     const categorySnapshot: CategorySnapshot = {
       id: category.id!,
       name: category.name,
-      icon: undefined, // Add icon field to Category type if needed
+      icon: category.icon ?? undefined,
     };
 
     // Validate payment method
     await this.ensurePaymentMethodExists(recurringExpense.paymentMethodId, recurringExpense.userId);
 
-    // Create transaction
-    const transaction = await this.transactionRepository.create({
-      userId: recurringExpense.userId,
-      amount: recurringExpense.amount,
-      description: recurringExpense.name,
-      date: new Date(),
-      type: TransactionType.EXPENSE,
-      category: categorySnapshot,
-      paymentMethodId: recurringExpense.paymentMethodId,
-      isRecurring: true,
-      recurringExpenseId: recurringExpense.id,
-    });
+    // Validate credit limit if payment method is a credit card
+    const paymentMethod = await this.paymentMethodRepository.findById(recurringExpense.paymentMethodId);
+    if (paymentMethod?.type === PaymentMethodType.CREDIT_CARD) {
+      const details = paymentMethod.details as CreditCardDetails;
+      const availableCredit = details.credit_limit - details.current_balance;
+      if (recurringExpense.amount > availableCredit) {
+        throw new ValidationError(
+          `El gasto recurrente de $${recurringExpense.amount.toLocaleString('es-CO')} excede el cupo disponible de $${availableCredit.toLocaleString('es-CO')} en la tarjeta "${paymentMethod.name}"`
+        );
+      }
+    }
 
-    // Calculate and update next payment date
     const nextPaymentDate = this.calculateNextPaymentDate(
       new Date(),
       recurringExpense.payDay,
       recurringExpense.frequency
     );
-    await this.recurringExpenseRepository.updateNextPaymentDate(recurringExpenseId, nextPaymentDate);
 
-    // Update credit card balance (recurring expenses are always EXPENSE transactions)
-    if (recurringExpense.paymentMethodId) {
-      await this.paymentMethodService.updatePaymentMethodBalance(
-        recurringExpense.paymentMethodId,
-        recurringExpense.amount,
-        true // Recurring expenses are always expenses
-      );
-    }
+    const transaction = await this.transactionRunner.run(async () => {
+      const created = await this.transactionRepository.create({
+        userId: recurringExpense.userId,
+        amount: recurringExpense.amount,
+        description: recurringExpense.name,
+        date: new Date(),
+        type: TransactionType.EXPENSE,
+        category: categorySnapshot,
+        paymentMethodId: recurringExpense.paymentMethodId,
+        isRecurring: true,
+        recurringExpenseId: recurringExpense.id,
+      });
 
-    // Recalculate affected budgets for the recurring EXPENSE
+      await this.recurringExpenseRepository.updateNextPaymentDate(recurringExpenseId, nextPaymentDate);
+
+      if (recurringExpense.paymentMethodId) {
+        await this.paymentMethodService.updatePaymentMethodBalance(
+          recurringExpense.paymentMethodId,
+          recurringExpense.amount,
+          true,
+        );
+      }
+
+      return created;
+    });
+
+    // Budget recalculation is non-critical — runs outside the atomic block
     if (this.budgetService) {
       await this.budgetService.updateBudgetsForTransaction(
         recurringExpense.userId,
@@ -378,37 +418,28 @@ export class TransactionService {
 
       const finalAmount = typeof data.amount === 'number' ? data.amount : transaction.amount;
 
-      // Reverse old transfer balance effects
-      if (transaction.sourcePaymentMethodId) {
-        await this.paymentMethodService.updatePaymentMethodBalance(transaction.sourcePaymentMethodId, transaction.amount, false);
-      }
-      if (transaction.destinationPaymentMethodId) {
-        await this.paymentMethodService.updatePaymentMethodBalance(transaction.destinationPaymentMethodId, transaction.amount, true);
-      }
-
-      const updatedTransaction = await this.transactionRepository.update(id, updateData);
-      if (!updatedTransaction) {
-        // Rollback: re-apply old effects
+      return this.transactionRunner.run(async () => {
         if (transaction.sourcePaymentMethodId) {
-          await this.paymentMethodService.updatePaymentMethodBalance(transaction.sourcePaymentMethodId, transaction.amount, true);
+          await this.paymentMethodService.updatePaymentMethodBalance(transaction.sourcePaymentMethodId, transaction.amount, false);
         }
         if (transaction.destinationPaymentMethodId) {
-          await this.paymentMethodService.updatePaymentMethodBalance(transaction.destinationPaymentMethodId, transaction.amount, false);
+          await this.paymentMethodService.updatePaymentMethodBalance(transaction.destinationPaymentMethodId, transaction.amount, true);
         }
-        throw new NotFoundError('Transaction', id);
-      }
 
-      // Apply new transfer balance effects
-      const newSourceId = finalSourceId ?? transaction.sourcePaymentMethodId;
-      const newDestinationId = finalDestinationId ?? transaction.destinationPaymentMethodId;
-      if (newSourceId) {
-        await this.paymentMethodService.updatePaymentMethodBalance(newSourceId, finalAmount, true);
-      }
-      if (newDestinationId) {
-        await this.paymentMethodService.updatePaymentMethodBalance(newDestinationId, finalAmount, false);
-      }
+        const updatedTransaction = await this.transactionRepository.update(id, updateData);
+        if (!updatedTransaction) throw new NotFoundError('Transaction', id);
 
-      return updatedTransaction;
+        const newSourceId = finalSourceId ?? transaction.sourcePaymentMethodId;
+        const newDestinationId = finalDestinationId ?? transaction.destinationPaymentMethodId;
+        if (newSourceId) {
+          await this.paymentMethodService.updatePaymentMethodBalance(newSourceId, finalAmount, true);
+        }
+        if (newDestinationId) {
+          await this.paymentMethodService.updatePaymentMethodBalance(newDestinationId, finalAmount, false);
+        }
+
+        return updatedTransaction;
+      });
     }
 
     const expectedCategoryType = effectiveType === TransactionType.INCOME ? CategoryType.INCOME : CategoryType.EXPENSE;
@@ -447,7 +478,7 @@ export class TransactionService {
         updateData.category = {
           id: category.id!,
           name: category.name,
-          icon: undefined,
+          icon: category.icon ?? undefined,
         };
       }
     }
@@ -462,44 +493,35 @@ export class TransactionService {
       }
     }
 
+    if (data.budgetAmount !== undefined) {
+      updateData.budgetAmount = data.budgetAmount;
+    }
+
     const finalAmount = typeof data.amount === 'number' ? data.amount : transaction.amount;
     const finalPaymentMethodId = data.paymentMethodId !== undefined ? data.paymentMethodId : transaction.paymentMethodId;
 
-    // Reverse old balance effect before update (handles both EXPENSE and INCOME)
-    if (transaction.paymentMethodId) {
-      const isOriginalExpense = transaction.type === TransactionType.EXPENSE;
-      await this.paymentMethodService.updatePaymentMethodBalance(
-        transaction.paymentMethodId,
-        transaction.amount,
-        !isOriginalExpense // flip to reverse: EXPENSE reversal = false, INCOME reversal = true
-      );
-    }
-
-    const updatedTransaction = await this.transactionRepository.update(id, updateData);
-    if (!updatedTransaction) {
-      // Rollback: re-apply the old effect we reversed
+    const updatedTransaction = await this.transactionRunner.run(async () => {
       if (transaction.paymentMethodId) {
         const isOriginalExpense = transaction.type === TransactionType.EXPENSE;
         await this.paymentMethodService.updatePaymentMethodBalance(
           transaction.paymentMethodId,
           transaction.amount,
-          isOriginalExpense
+          !isOriginalExpense,
         );
       }
-      throw new NotFoundError('Transaction', id);
-    }
 
-    // Apply new balance effect using the effective (possibly updated) type
-    if (finalPaymentMethodId) {
-      const isExpense = effectiveType === TransactionType.EXPENSE;
-      await this.paymentMethodService.updatePaymentMethodBalance(
-        finalPaymentMethodId,
-        finalAmount,
-        isExpense
-      );
-    }
+      const updated = await this.transactionRepository.update(id, updateData);
+      if (!updated) throw new NotFoundError('Transaction', id);
 
-    // Recalculate affected budgets when the result is (or was) an EXPENSE
+      if (finalPaymentMethodId) {
+        const isExpense = effectiveType === TransactionType.EXPENSE;
+        await this.paymentMethodService.updatePaymentMethodBalance(finalPaymentMethodId, finalAmount, isExpense);
+      }
+
+      return updated;
+    });
+
+    // Budget recalculation is non-critical — runs outside the atomic block
     if ((transaction.type === TransactionType.EXPENSE || effectiveType === TransactionType.EXPENSE) && this.budgetService) {
       const updatedCategoryId = updateData.category?.id ?? transaction.category.id;
       const updatedDate = updateData.date ?? transaction.date;
@@ -520,41 +542,42 @@ export class TransactionService {
    * @throws {ForbiddenError} If the transaction does not belong to the user.
    */
   async delete(id: string, userId: string): Promise<void> {
+    const ctx = getRequestContext();
     const transaction = await this.transactionRepository.findById(id);
     if (!transaction) {
       throw new NotFoundError('Transaction', id);
     }
     if (transaction.userId !== userId) {
+      logger.warn('Attempted to delete transaction owned by another user', { ...ctx, transactionId: id });
       throw new ForbiddenError('No tienes permiso para eliminar esta transacción');
     }
 
-    // Reverse balance effect before deleting
-    if (transaction.type === TransactionType.TRANSFER) {
-      // Reverse: increase source balance back, decrease destination balance back
-      if (transaction.sourcePaymentMethodId) {
-        await this.paymentMethodService.updatePaymentMethodBalance(transaction.sourcePaymentMethodId, transaction.amount, false);
+    await this.transactionRunner.run(async () => {
+      if (transaction.type === TransactionType.TRANSFER) {
+        if (transaction.sourcePaymentMethodId) {
+          await this.paymentMethodService.updatePaymentMethodBalance(transaction.sourcePaymentMethodId, transaction.amount, false);
+        }
+        if (transaction.destinationPaymentMethodId) {
+          await this.paymentMethodService.updatePaymentMethodBalance(transaction.destinationPaymentMethodId, transaction.amount, true);
+        }
+      } else if (transaction.subtype === TransactionSubtype.CARD_PAYMENT && transaction.cardPaymentDetails) {
+        const cardId = transaction.cardPaymentDetails.creditCardId;
+        await this.paymentMethodService.updatePaymentMethodBalance(cardId, transaction.amount, true);
+      } else if (transaction.paymentMethodId) {
+        const isOriginalExpense = transaction.type === TransactionType.EXPENSE;
+        await this.paymentMethodService.updatePaymentMethodBalance(
+          transaction.paymentMethodId,
+          transaction.amount,
+          !isOriginalExpense,
+        );
       }
-      if (transaction.destinationPaymentMethodId) {
-        await this.paymentMethodService.updatePaymentMethodBalance(transaction.destinationPaymentMethodId, transaction.amount, true);
-      }
-    } else if (transaction.subtype === TransactionSubtype.CARD_PAYMENT && transaction.cardPaymentDetails) {
-      // CARD_PAYMENT reduces the card's balance. Reversing: increase the card balance back.
-      const cardId = transaction.cardPaymentDetails.creditCardId;
-      await this.paymentMethodService.updatePaymentMethodBalance(cardId, transaction.amount, true);
-    } else if (transaction.paymentMethodId) {
-      // For EXPENSE: reverse = pass false (undo the balance decrease / debt increase)
-      // For INCOME: reverse = pass true (undo the balance increase)
-      const isOriginalExpense = transaction.type === TransactionType.EXPENSE;
-      await this.paymentMethodService.updatePaymentMethodBalance(
-        transaction.paymentMethodId,
-        transaction.amount,
-        !isOriginalExpense
-      );
-    }
 
-    await this.transactionRepository.delete(id);
+      await this.transactionRepository.delete(id);
+    });
 
-    // Recalculate affected budgets when an EXPENSE is deleted
+    logger.info('Transaction deleted from DB', { ...ctx, transactionId: id });
+
+    // Budget recalculation is non-critical — runs outside the atomic block
     if (transaction.type === TransactionType.EXPENSE && this.budgetService) {
       await this.budgetService.updateBudgetsForTransaction(userId, transaction.category.id, transaction.date);
     }

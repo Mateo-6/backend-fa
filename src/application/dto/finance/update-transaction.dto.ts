@@ -15,6 +15,7 @@ export const updateTransactionSchema: z.ZodType<{
   paymentMethodId?: string;
   sourcePaymentMethodId?: string;
   destinationPaymentMethodId?: string;
+  budgetAmount?: number | null;
 }> = z
   .object({
     amount: z.number().positive('El monto debe ser positivo').optional(),
@@ -33,6 +34,7 @@ export const updateTransactionSchema: z.ZodType<{
     paymentMethodId: z.string().min(1, 'El ID del método de pago es requerido').optional(),
     sourcePaymentMethodId: z.string().min(1, 'El ID del método de pago origen es requerido').optional(),
     destinationPaymentMethodId: z.string().min(1, 'El ID del método de pago destino es requerido').optional(),
+    budgetAmount: z.number().min(0, 'El monto al presupuesto no puede ser negativo').nullable().optional(),
   })
   .refine(
     (data) =>
@@ -43,7 +45,8 @@ export const updateTransactionSchema: z.ZodType<{
       typeof data.categoryId === 'string' ||
       typeof data.paymentMethodId === 'string' ||
       typeof data.sourcePaymentMethodId === 'string' ||
-      typeof data.destinationPaymentMethodId === 'string',
+      typeof data.destinationPaymentMethodId === 'string' ||
+      data.budgetAmount !== undefined,
     'Proporciona al menos un campo para actualizar'
   );
 

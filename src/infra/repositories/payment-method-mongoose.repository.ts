@@ -2,6 +2,9 @@ import { PaymentMethodRepository } from '../../domain/payment-method/repositorie
 import { PaymentMethod } from '../../domain/payment-method/types/payment-method.types';
 import { PaymentMethodModel, IPaymentMethodDocument } from '../database/models/payment-method.model';
 import { getMongooseInstance } from '../database/mongoose-client';
+import { sessionContext } from '../database/session-context';
+import { logger } from '../utils/logger';
+import { getRequestContext } from '../http/middleware/request-context';
 
 /**
  * Mongoose implementation of the PaymentMethodRepository interface.
@@ -14,6 +17,8 @@ export class PaymentMethodMongooseRepository implements PaymentMethodRepository 
    * @returns {Promise<PaymentMethod>} Created payment method mapped to the domain type.
    */
   async create(paymentMethod: PaymentMethod): Promise<PaymentMethod> {
+    const ctx = getRequestContext();
+    logger.debug('DB insert: PaymentMethod', { ...ctx, name: paymentMethod.name, type: paymentMethod.type });
     await getMongooseInstance();
     const createdPaymentMethod = await PaymentMethodModel.create({
       name: paymentMethod.name,
@@ -33,7 +38,7 @@ export class PaymentMethodMongooseRepository implements PaymentMethodRepository 
    */
   async findAllByUser(userId: string): Promise<PaymentMethod[]> {
     await getMongooseInstance();
-    const paymentMethods = await PaymentMethodModel.find({ user: userId })
+    const paymentMethods = await PaymentMethodModel.find({ user: userId, deletedAt: null })
       .sort({ createdAt: -1 })
       .exec();
     return paymentMethods.map((paymentMethod) => this.toDomain(paymentMethod));
@@ -47,7 +52,7 @@ export class PaymentMethodMongooseRepository implements PaymentMethodRepository 
    */
   async findById(id: string): Promise<PaymentMethod | null> {
     await getMongooseInstance();
-    const paymentMethod = await PaymentMethodModel.findById(id).exec();
+    const paymentMethod = await PaymentMethodModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!paymentMethod) {
       return null;
     }
@@ -63,10 +68,11 @@ export class PaymentMethodMongooseRepository implements PaymentMethodRepository 
    */
   async update(id: string, updateData: Partial<Omit<PaymentMethod, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>): Promise<PaymentMethod> {
     await getMongooseInstance();
+    const session = sessionContext.getStore();
     const updatedPaymentMethod = await PaymentMethodModel.findByIdAndUpdate(
       id,
       { $set: updateData },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true, ...(session ? { session } : {}) },
     ).exec();
 
     if (!updatedPaymentMethod) {
@@ -84,7 +90,7 @@ export class PaymentMethodMongooseRepository implements PaymentMethodRepository 
    */
   async delete(id: string): Promise<void> {
     await getMongooseInstance();
-    await PaymentMethodModel.deleteOne({ _id: id }).exec();
+    await PaymentMethodModel.updateOne({ _id: id }, { $set: { deletedAt: new Date() } }).exec();
   }
 
   /**
@@ -103,6 +109,7 @@ export class PaymentMethodMongooseRepository implements PaymentMethodRepository 
       userId: doc.user.toString(),
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
+      deletedAt: doc.deletedAt ?? null,
     };
   }
 }

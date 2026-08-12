@@ -49,6 +49,11 @@ import { BudgetMongooseRepository } from '../repositories/budget-mongoose.reposi
 import { GmfController } from './controllers/gmf/gmf.controller';
 import { GmfService } from '../../application/services/gmf.service';
 
+import { AmiService } from '../../application/services/ami.service';
+import { OpenAiParserService } from '../services/openai-parser.service';
+import { redisCacheService } from '../services/redis-cache.service';
+import { MongooseTransactionRunner } from '../database/mongoose-transaction-runner';
+
 import { AppError, UnauthorizedError } from '../../domain/errors/app-error';
 import { AuthenticatedRequest } from './types/request.types';
 import { SuccessResponse, ErrorResponse } from './types/response.types';
@@ -68,6 +73,7 @@ import { registerPushTokenSchema } from '../../application/dto/notification/regi
 import { createBudgetSchema } from '../../application/dto/budget/create-budget.dto';
 import { updateBudgetSchema } from '../../application/dto/budget/update-budget.dto';
 import { toggleGmfExemptSchema } from '../../application/dto/payment-method/toggle-gmf-exempt.dto';
+import { ParseIntentRequestSchema } from '../../application/dto/finance/parse-intent.dto';
 import { MongooseClientSingleton } from '../database/mongoose-client';
 
 // Initialize MongoDB connection outside handler (warm start optimization)
@@ -102,18 +108,19 @@ const refreshTokenRepository = new RefreshTokenMongooseRepository();
 const authService = new AuthService(userRepository, tokenService, passwordService, refreshTokenRepository);
 const categoryRepository = new CategoryMongooseRepository();
 const userService = new UserService(userRepository, passwordService, categoryRepository);
-const categoryService = new CategoryService(categoryRepository, userRepository);
+const categoryService = new CategoryService(categoryRepository, userRepository, redisCacheService);
 const transactionRepository = new TransactionMongooseRepository();
 const recurringExpenseRepository = new RecurringExpenseMongooseRepository();
 const paymentMethodRepository = new PaymentMethodMongooseRepository();
-const paymentMethodService = new PaymentMethodService(paymentMethodRepository, userRepository);
+const paymentMethodService = new PaymentMethodService(paymentMethodRepository, userRepository, redisCacheService);
 const transactionService = new TransactionService(
   transactionRepository,
   recurringExpenseRepository,
   categoryRepository,
   userRepository,
   paymentMethodRepository,
-  paymentMethodService
+  paymentMethodService,
+  new MongooseTransactionRunner(),
 );
 const recurringExpenseService = new RecurringExpenseService(
   recurringExpenseRepository,
@@ -127,6 +134,8 @@ const notificationService = new NotificationService(userRepository, notification
 const budgetRepository = new BudgetMongooseRepository();
 const budgetService = new BudgetService(budgetRepository, transactionRepository, notificationRepository, userRepository);
 const gmfService = new GmfService(transactionRepository, paymentMethodRepository);
+const openAiParser = new OpenAiParserService();
+const amiService = new AmiService(openAiParser, categoryService, paymentMethodService, redisCacheService);
 const healthService = new HealthService();
 
 // Controllers
@@ -134,7 +143,7 @@ const healthController = new HealthController(healthService);
 const authController = new AuthController(authService);
 const userController = new UserController(userService);
 const categoryController = new CategoryController(categoryService);
-const transactionController = new TransactionController(transactionService);
+const transactionController = new TransactionController(transactionService, amiService);
 const recurringExpenseController = new RecurringExpenseController(recurringExpenseService);
 const paymentMethodController = new PaymentMethodController(paymentMethodService);
 const dashboardController = new DashboardController(dashboardService);
@@ -371,6 +380,8 @@ const routes: RouteConfig[] = [
   { method: 'DELETE', path: '/categories/:id', handler: categoryController.delete.bind(categoryController), authRequired: true },
 
   // Transaction routes (all require auth)
+  // parse-intent MUST be listed before /:id to avoid parameter capture
+  { method: 'POST', path: '/transactions/parse-intent', handler: transactionController.parseIntent.bind(transactionController), authRequired: true, validateSchema: ParseIntentRequestSchema },
   { method: 'POST', path: '/transactions/manual', handler: transactionController.createManual.bind(transactionController), authRequired: true, validateSchema: createTransactionSchema },
   { method: 'POST', path: '/transactions/recurring/:recurringExpenseId', handler: transactionController.processRecurringPayment.bind(transactionController), authRequired: true },
   { method: 'GET', path: '/transactions/history', handler: transactionController.getHistory.bind(transactionController), authRequired: true },
@@ -514,6 +525,9 @@ export async function handler(
   event: APIGatewayProxyEvent,
   context: Context
 ): Promise<APIGatewayProxyResult> {
+  // Extract origin before try/catch so it's available in the catch block for CORS headers
+  const origin = event.headers?.['origin'] || event.headers?.['Origin'];
+
   try {
     // Extract method and path from event
     // For HTTP API v2, method is in requestContext.http.method, rawPath is available
@@ -521,7 +535,7 @@ export async function handler(
     const eventV2 = event as any;
     const method = eventV2.requestContext?.http?.method || event.httpMethod || 'GET';
     let rawPath = eventV2.rawPath || event.path || '/';
-    
+
     // Handle stage path (e.g., /$default/health -> /health)
     // When using {proxy+}, the stage is included in the path
     const stage = eventV2.requestContext?.stage || '$default';
@@ -530,12 +544,9 @@ export async function handler(
     } else if (rawPath === `/${stage}`) {
       rawPath = '/';
     }
-    
+
     // Remove query string if present in rawPath
     const path = rawPath.split('?')[0];
-
-    // Extract origin for CORS
-    const origin = event.headers?.['origin'] || event.headers?.['Origin'];
 
     // Handle OPTIONS requests (CORS preflight)
     if (method === 'OPTIONS') {

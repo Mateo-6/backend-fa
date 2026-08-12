@@ -5,6 +5,9 @@ import { getMongooseInstance } from '../database/mongoose-client';
 import { TransactionSubtype } from 'fa-contracts';
 import mongoose from 'mongoose';
 import { sanitizeStringValue } from '../utils/sanitize-query';
+import { sessionContext } from '../database/session-context';
+import { logger } from '../utils/logger';
+import { getRequestContext } from '../http/middleware/request-context';
 
 /**
  * Mongoose implementation of TransactionRepository.
@@ -17,20 +20,26 @@ export class TransactionMongooseRepository implements TransactionRepository {
    * @returns {Promise<Transaction>} Created transaction mapped to the domain type.
    */
   async create(transaction: Transaction): Promise<Transaction> {
+    const ctx = getRequestContext();
     await getMongooseInstance();
-    const created = await TransactionModel.create({
-      amount: transaction.amount,
-      description: transaction.description,
-      date: transaction.date,
-      type: transaction.type,
-      subtype: transaction.subtype ?? null,
-      user: transaction.userId,
-      category: transaction.category,
-      paymentMethod: transaction.paymentMethodId || null,
-      isRecurring: transaction.isRecurring,
-      recurringExpense: transaction.recurringExpenseId,
-      cardPaymentDetails: transaction.cardPaymentDetails ?? null,
-    });
+    const session = sessionContext.getStore();
+    logger.debug('DB insert: Transaction', { ...ctx, type: transaction.type, amount: transaction.amount });
+    const [created] = await TransactionModel.create(
+      [{
+        amount: transaction.amount,
+        description: transaction.description,
+        date: transaction.date,
+        type: transaction.type,
+        subtype: transaction.subtype ?? null,
+        user: transaction.userId,
+        category: transaction.category,
+        paymentMethod: transaction.paymentMethodId || null,
+        isRecurring: transaction.isRecurring,
+        recurringExpense: transaction.recurringExpenseId,
+        cardPaymentDetails: transaction.cardPaymentDetails ?? null,
+      }],
+      session ? { session } : undefined,
+    );
     return this.toDomain(created);
   }
 
@@ -42,8 +51,10 @@ export class TransactionMongooseRepository implements TransactionRepository {
    * @returns {Promise<Transaction[]>} Transactions tied to the user, ordered by date descending.
    */
   async findAllByUser(userId: string, filters?: TransactionFilters): Promise<{ items: Transaction[]; total: number }> {
+    const ctx = getRequestContext();
+    logger.debug('DB query: Transactions.findAllByUser', { ...ctx, userId, filters });
     await getMongooseInstance();
-    const query: Record<string, unknown> = { user: userId };
+    const query: Record<string, unknown> = { user: userId, deletedAt: null };
 
     const dateFilter: Record<string, Date> = {};
     if (filters?.startDate) {
@@ -81,6 +92,7 @@ export class TransactionMongooseRepository implements TransactionRepository {
       TransactionModel.countDocuments(query).exec(),
     ]);
 
+    logger.debug('DB result: Transactions.findAllByUser', { ...getRequestContext(), count: transactions.length, total });
     return {
       items: transactions.map((transaction) => this.toDomain(transaction)),
       total,
@@ -95,7 +107,7 @@ export class TransactionMongooseRepository implements TransactionRepository {
    */
   async findById(id: string): Promise<Transaction | null> {
     await getMongooseInstance();
-    const transaction = await TransactionModel.findById(id).exec();
+    const transaction = await TransactionModel.findOne({ _id: id, deletedAt: null }).exec();
     if (!transaction) {
       return null;
     }
@@ -141,7 +153,12 @@ export class TransactionMongooseRepository implements TransactionRepository {
       mappedData.recurringExpense = data.recurringExpenseId || null;
     }
 
-    const transaction = await TransactionModel.findByIdAndUpdate(id, { $set: mappedData }, { new: true }).exec();
+    const session = sessionContext.getStore();
+    const transaction = await TransactionModel.findByIdAndUpdate(
+      id,
+      { $set: mappedData },
+      { new: true, ...(session ? { session } : {}) },
+    ).exec();
     if (!transaction) {
       return null;
     }
@@ -155,8 +172,15 @@ export class TransactionMongooseRepository implements TransactionRepository {
    * @returns {Promise<void>} Resolves when the document is deleted.
    */
   async delete(id: string): Promise<void> {
+    const ctx = getRequestContext();
+    logger.debug('DB soft-delete: Transaction', { ...ctx, transactionId: id });
     await getMongooseInstance();
-    await TransactionModel.deleteOne({ _id: id }).exec();
+    const session = sessionContext.getStore();
+    await TransactionModel.updateOne(
+      { _id: id },
+      { $set: { deletedAt: new Date() } },
+      session ? { session } : undefined,
+    ).exec();
   }
 
   /**
@@ -188,6 +212,7 @@ export class TransactionMongooseRepository implements TransactionRepository {
         : null,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
+      deletedAt: doc.deletedAt ?? null,
     };
   }
 }

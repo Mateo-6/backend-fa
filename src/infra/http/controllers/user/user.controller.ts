@@ -1,10 +1,11 @@
-// controllers/UserController.ts
-import { Request, Response } from "express";
+import { Request, Response } from 'express';
 import { UserService } from '../../../../application/services/user.service';
-import { CreateUserDto } from "../../../../application/dto/user/create-user.dto";
-import { UpdateUserDto } from "../../../../application/dto/user/update-user.dto";
-import { NotFoundError } from "../../../../domain/errors/app-error";
-import { sendSuccess } from "../../utils/response.util";
+import { CreateUserDto } from '../../../../application/dto/user/create-user.dto';
+import { UpdateUserDto } from '../../../../application/dto/user/update-user.dto';
+import { NotFoundError } from '../../../../domain/errors/app-error';
+import { sendSuccess } from '../../utils/response.util';
+import { AuthenticatedRequest } from '../../types/request.types';
+import { logger } from '../../../utils/logger';
 
 export class UserController {
   private readonly userService: UserService;
@@ -24,9 +25,12 @@ export class UserController {
    * @returns {Promise<void>} Resolves when the response is sent.
    */
   public async create(req: Request, res: Response): Promise<void> {
-    // req.body is already validated by the middleware
+    const { requestId } = req as AuthenticatedRequest;
     const createUserDto: CreateUserDto = req.body;
+
+    logger.info('Creating user', { requestId, email: createUserDto.email });
     const user = await this.userService.create(createUserDto);
+    logger.info('User created', { requestId, userId: user.id });
     sendSuccess(res, user, 201);
   }
 
@@ -38,6 +42,9 @@ export class UserController {
    * @returns {Promise<void>} Resolves when the response is sent.
    */
   public async getAll(req: Request, res: Response): Promise<void> {
+    const { requestId } = req as AuthenticatedRequest;
+    logger.info('Fetching all users', { requestId });
+
     const users = await this.userService.findAll();
     sendSuccess(res, users);
   }
@@ -50,7 +57,10 @@ export class UserController {
    * @returns {Promise<void>} Resolves when the response is sent.
    */
   public async getById(req: Request, res: Response): Promise<void> {
+    const { requestId } = req as AuthenticatedRequest;
     const { id } = req.params;
+
+    logger.info('Fetching user by ID', { requestId, targetId: id });
     const user = await this.userService.findById(id);
     if (!user) {
       throw new NotFoundError('User', id);
@@ -66,8 +76,11 @@ export class UserController {
    * @returns {Promise<void>} Resolves when the response is sent.
    */
   public async update(req: Request, res: Response): Promise<void> {
+    const { requestId } = req as AuthenticatedRequest;
     const { id } = req.params;
     const updateUserDto: UpdateUserDto = req.body;
+
+    logger.info('Updating user', { requestId, targetId: id });
     const user = await this.userService.update(id, updateUserDto);
     sendSuccess(res, user);
   }
@@ -80,9 +93,11 @@ export class UserController {
    * @returns {Promise<void>} Resolves when the response is sent.
    */
   public async delete(req: Request, res: Response): Promise<void> {
+    const { requestId } = req as AuthenticatedRequest;
     const { id } = req.params;
+
+    logger.info('Deleting user', { requestId, targetId: id });
     await this.userService.delete(id);
     sendSuccess(res, null, 204);
   }
-
 }

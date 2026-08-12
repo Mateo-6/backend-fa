@@ -24,7 +24,60 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+      - mongo_keyfile:/data/keyfile
+    entrypoint:
+      - bash
+      - -c
+      - |
+        if [ ! -f /data/keyfile/mongod.key ]; then
+          openssl rand -base64 756 > /data/keyfile/mongod.key
+          chmod 400 /data/keyfile/mongod.key
+          chown 999:999 /data/keyfile/mongod.key
+        fi
+        exec docker-entrypoint.sh mongod --replSet rs0 --bind_ip_all --keyFile /data/keyfile/mongod.key
+    healthcheck:
+      test: >
+        mongosh --quiet --eval "db.adminCommand('ping')"
+        --username root --password rootpassword --authenticationDatabase admin
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  mongodb-init:
+    image: mongo:7
+    container_name: mongodb-init
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    restart: on-failure
+    entrypoint:
+      - bash
+      - -c
+      - |
+        mongosh --host mongodb:27017 \
+          --username root --password rootpassword --authenticationDatabase admin \
+          --eval "
+            try {
+              rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'localhost:27017' }] });
+              print('Replica set initialized');
+            } catch(e) {
+              print('Replica set already initialized');
+            }
+          "
+
+  redis:
+    image: redis:7-alpine
+    container_name: financial-app-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
 
 volumes:
   mysql_data:
   mongo_data:
+  mongo_keyfile:
+  redis_data:

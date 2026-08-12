@@ -1,9 +1,11 @@
 import { Response } from 'express';
 import { NotificationService } from '../../../../application/services/notification.service';
 import { RegisterPushTokenDto } from '../../../../application/dto/notification/register-push-token.dto';
+import { GetNotificationsQueryDto } from '../../../../application/dto/notification/get-notifications-query.dto';
 import { AuthenticatedRequest } from '../../types/request.types';
 import { sendSuccess } from '../../utils/response.util';
 import { UnauthorizedError } from '../../../../domain/errors/app-error';
+import { logger } from '../../../utils/logger';
 
 /**
  * Controller for handling notification-related HTTP requests.
@@ -27,15 +29,13 @@ export class NotificationController {
    * @returns {Promise<void>} Resolves when the response is sent.
    */
   public async registerToken(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('User ID not found in request');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('User ID not found in request');
 
+    const { requestId, user } = req;
     const registerPushTokenDto: RegisterPushTokenDto = req.body;
-    const userId = req.user.id;
 
-    const updatedUser = await this.notificationService.registerPushToken(userId, registerPushTokenDto);
-    
+    logger.info('Registering push token', { requestId, userId: user.id });
+    const updatedUser = await this.notificationService.registerPushToken(user.id, registerPushTokenDto);
     sendSuccess(res, { message: 'Token registrado exitosamente', user: updatedUser }, 200);
   }
 
@@ -49,18 +49,13 @@ export class NotificationController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async getNotifications(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
-    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
-    const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
+    const { requestId, user } = req;
+    const { limit, offset } = req.query as unknown as GetNotificationsQueryDto;
 
-    const paginatedNotifications = await this.notificationService.getNotifications(req.user.id, {
-      limit,
-      offset,
-    });
-
+    logger.info('Fetching notifications', { requestId, userId: user.id, limit, offset });
+    const paginatedNotifications = await this.notificationService.getNotifications(user.id, { limit, offset });
     sendSuccess(res, paginatedNotifications);
   }
 
@@ -73,13 +68,13 @@ export class NotificationController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async markAsRead(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
+    const { requestId, user } = req;
     const { id } = req.params;
-    const updatedNotification = await this.notificationService.markNotificationAsRead(id, req.user.id);
 
+    logger.info('Marking notification as read', { requestId, userId: user.id, notificationId: id });
+    const updatedNotification = await this.notificationService.markNotificationAsRead(id, user.id);
     sendSuccess(res, updatedNotification);
   }
 
@@ -92,13 +87,11 @@ export class NotificationController {
    * @returns {Promise<void>} Resolves when the response is dispatched.
    */
   public async getUnreadCount(req: AuthenticatedRequest, res: Response): Promise<void> {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Usuario no autenticado');
-    }
+    if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
-    const count = await this.notificationService.getUnreadCount(req.user.id);
-
+    const { requestId, user } = req;
+    logger.info('Fetching unread notification count', { requestId, userId: user.id });
+    const count = await this.notificationService.getUnreadCount(user.id);
     sendSuccess(res, { count });
   }
 }
-

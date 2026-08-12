@@ -16,6 +16,10 @@ deploy/.lambda-update-*.zip
 # IDE
 .cursor
 .vscode
+.claude
 
 # OS
 .DS_Store
+
+./deploy
+./mockups

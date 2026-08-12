@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { Category, CategoryType } from '../../../domain/category/types/category.types';
 
 export const createCategorySchema: z.ZodType<
-  Pick<Category, 'name' | 'description' | 'type'>
+  Pick<Category, 'name' | 'description' | 'type' | 'color' | 'icon'>
 > = z.object({
   name: z.string().min(1, 'El nombre es requerido').max(100, 'El nombre debe tener menos de 100 caracteres'),
   description: z
@@ -13,6 +13,8 @@ export const createCategorySchema: z.ZodType<
   type: z.nativeEnum(CategoryType, {
     message: 'El tipo debe ser "income", "expense" o "transfer"',
   }),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Color inválido').nullable().optional(),
+  icon: z.string().max(60, 'Nombre de icono inválido').nullable().optional(),
 });
 
 export type CreateCategoryDto = z.infer<typeof createCategorySchema>;
