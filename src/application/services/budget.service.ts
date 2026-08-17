@@ -10,6 +10,7 @@ import { NotFoundError, ForbiddenError, ConflictError } from '../../domain/error
 import { TransactionType } from '../../domain/finance/types/transaction.types';
 import { logger } from '../../infra/utils/logger';
 import { getRequestContext } from '../../infra/http/middleware/request-context';
+import { notificationHub } from '../../infra/http/notifications/notification-hub';
 
 /**
  * Budget with computed progress fields appended.
@@ -150,8 +151,9 @@ export class BudgetService {
   }
 
   /**
-   * Updates mutable fields of an existing budget.
-   * period and categoryId are immutable after creation.
+   * Updates fields of an existing budget.
+   * All fields are editable. When the period, category, or start date changes, the
+   * endDate is recomputed, overlap conflicts are re-validated, and spent is recalculated.
    *
    * @param {string} id Budget identifier.
    * @param {UpdateBudgetDto} data Fields to update.
@@ -159,14 +161,65 @@ export class BudgetService {
    * @returns {Promise<BudgetWithProgress>} Updated budget with progress fields.
    * @throws {NotFoundError} If the budget does not exist.
    * @throws {ForbiddenError} If the budget does not belong to the user.
+   * @throws {ConflictError} If an active overlapping budget for the same category exists.
    */
   async update(id: string, data: UpdateBudgetDto, userId: string): Promise<BudgetWithProgress> {
     const budget = await this.budgetRepository.findById(id);
     if (!budget) throw new NotFoundError('Budget', id);
     if (budget.userId !== userId) throw new ForbiddenError('No tienes permiso para modificar este presupuesto');
 
-    const updated = await this.budgetRepository.update(id, data);
+    const nextCategoryId = data.categoryId !== undefined ? data.categoryId : budget.categoryId;
+    const nextPeriod = data.period ?? budget.period;
+    const nextStartDate = data.startDate ?? budget.startDate;
+
+    const periodChanged = data.period !== undefined && data.period !== budget.period;
+    const startDateChanged =
+      data.startDate !== undefined && data.startDate.getTime() !== budget.startDate.getTime();
+    const categoryChanged = data.categoryId !== undefined && data.categoryId !== budget.categoryId;
+    const structuralChange = periodChanged || startDateChanged || categoryChanged;
+
+    // Re-validate no overlapping active budget for the same category after the change
+    if (structuralChange) {
+      const endDate = this.calculateEndDate(nextStartDate, nextPeriod);
+      const existing = await this.budgetRepository.findAllByUser(userId, { isActive: true });
+      const conflict = existing.find((b) => {
+        if (b.id === id) return false;
+        const sameCat = b.categoryId === nextCategoryId;
+        const overlaps = b.startDate <= endDate && b.endDate >= nextStartDate;
+        return sameCat && overlaps;
+      });
+      if (conflict) {
+        const ctx = getRequestContext();
+        logger.warn('Budget conflict on update: active budget already exists for this period', {
+          ...ctx,
+          conflictingBudgetId: conflict.id,
+          name: conflict.name,
+        });
+        throw new ConflictError(
+          `Ya existe un presupuesto activo para esta categoría en el período indicado: "${conflict.name}"`
+        );
+      }
+    }
+
+    const payload: Partial<Budget> = { ...data };
+    if (periodChanged || startDateChanged) {
+      payload.endDate = this.calculateEndDate(nextStartDate, nextPeriod);
+    }
+
+    // Reset sent alerts when limits change so thresholds can re-fire.
+    if (data.amount !== undefined || data.alertThresholds !== undefined) {
+      payload.alertsSent = [];
+    }
+
+    const updated = await this.budgetRepository.update(id, payload);
     if (!updated) throw new NotFoundError('Budget', id);
+
+    // Recompute spent when the window or category changes
+    if (structuralChange) {
+      await this.recalculateSpent(id);
+      return this.getById(id, userId);
+    }
+
     return this.withProgress(updated);
   }
 
@@ -329,7 +382,7 @@ export class BudgetService {
       });
 
       try {
-        await this.notificationRepository.create({
+        const notification = await this.notificationRepository.create({
           userId: budget.userId,
           title,
           body,
@@ -342,6 +395,7 @@ export class BudgetService {
             percentage: Math.round(percentage),
           },
         });
+        notificationHub.publish(budget.userId, notification);
       } catch (error) {
         logger.error('Failed to persist budget alert', {
           userId: budget.userId,

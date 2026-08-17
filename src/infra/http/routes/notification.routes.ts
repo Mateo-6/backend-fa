@@ -12,6 +12,7 @@ const router = Router();
 const notificationController = new NotificationController(container.notificationService);
 
 router.post('/register-token', authMiddleware(container.tokenService), validate(registerPushTokenSchema), asyncHandler(notificationController.registerToken.bind(notificationController)));
+router.get('/stream', authMiddleware(container.tokenService), asyncHandler(notificationController.stream.bind(notificationController)));
 router.get('/', authMiddleware(container.tokenService), validate(getNotificationsQuerySchema, 'query'), asyncHandler(notificationController.getNotifications.bind(notificationController)));
 router.patch('/:id/read', authMiddleware(container.tokenService), asyncHandler(notificationController.markAsRead.bind(notificationController)));
 router.get('/unread-count', authMiddleware(container.tokenService), asyncHandler(notificationController.getUnreadCount.bind(notificationController)));

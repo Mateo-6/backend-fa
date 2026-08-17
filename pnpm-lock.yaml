@@ -30,8 +30,8 @@ importers:
         specifier: ^8.3.1
         version: 8.3.1(express@5.2.1)
       fa-contracts:
-        specifier: file:../fa-contracts/fa-contracts-1.2.0.tgz
-        version: file:../fa-contracts/fa-contracts-1.2.0.tgz
+        specifier: file:vendor/fa-contracts-1.2.0.tgz
+        version: file:vendor/fa-contracts-1.2.0.tgz
       fuse.js:
         specifier: ^7.3.0
         version: 7.3.0
@@ -60,6 +60,9 @@ importers:
         specifier: ^4.1.12
         version: 4.2.1
     devDependencies:
+      '@types/aws-lambda':
+        specifier: ^8.10.162
+        version: 8.10.162
       '@types/bcrypt':
         specifier: ^6.0.0
         version: 6.0.0
@@ -133,6 +136,9 @@ packages:
 
   '@tsconfig/node16@1.0.4':
     resolution: {integrity: sha512-vxhUy4J8lyeyinH7Azl1pdd43GJhZH/tP2weN8TntQblOY+A0XbT8DJk1/oCPuOOyg/Ja757rG0CgHcWC8OfMA==}
+
+  '@types/aws-lambda@8.10.162':
+    resolution: {integrity: sha512-Fn658grtLOci1oxi1391vvDWJRKNGWRSqfxRkmN/Iy3c0tQH1USMKEXcPYHLvope+ZgTFocx9FRQJx1muBL6qw==}
 
   '@types/bcrypt@6.0.0':
     resolution: {integrity: sha512-/oJGukuH3D2+D+3H4JWLaAsJ/ji86dhRidzZ/Od7H/i8g+aCmvkeCc6Ni/f9uxGLSQVCRZkX2/lqEFG2BvWtlQ==}
@@ -526,8 +532,8 @@ packages:
     resolution: {integrity: sha512-hIS4idWWai69NezIdRt2xFVofaF4j+6INOpJlVOLDO8zXGpUVEVzIYk12UUi2JzjEzWL3IOAxcTubgz9Po0yXw==}
     engines: {node: '>= 18'}
 
-  fa-contracts@file:../fa-contracts/fa-contracts-1.2.0.tgz:
-    resolution: {integrity: sha512-dd/G/2s/WFwendCxloPtGyOxHr+2uyqlHdVGJyyk8ELZmm2zG0GMZCNLKRRnd7mzYLM2I3c9ynkxRMQxsokPFQ==, tarball: file:../fa-contracts/fa-contracts-1.2.0.tgz}
+  fa-contracts@file:vendor/fa-contracts-1.2.0.tgz:
+    resolution: {integrity: sha512-dd/G/2s/WFwendCxloPtGyOxHr+2uyqlHdVGJyyk8ELZmm2zG0GMZCNLKRRnd7mzYLM2I3c9ynkxRMQxsokPFQ==, tarball: file:vendor/fa-contracts-1.2.0.tgz}
     version: 1.2.0
 
   fast-fifo@1.3.2:
@@ -1287,6 +1293,8 @@ snapshots:
 
   '@tsconfig/node16@1.0.4': {}
 
+  '@types/aws-lambda@8.10.162': {}
+
   '@types/bcrypt@6.0.0':
     dependencies:
       '@types/node': 25.0.3
@@ -1699,7 +1707,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  fa-contracts@file:../fa-contracts/fa-contracts-1.2.0.tgz: {}
+  fa-contracts@file:vendor/fa-contracts-1.2.0.tgz: {}
 
   fast-fifo@1.3.2: {}
 

@@ -142,6 +142,11 @@ export class BudgetMongooseRepository implements BudgetRepository {
 
     if (typeof data.name === 'string') mappedData.name = data.name;
     if (typeof data.amount === 'number') mappedData.amount = data.amount;
+    if (typeof data.currency === 'string') mappedData.currency = data.currency;
+    if (typeof data.period === 'string') mappedData.period = data.period;
+    if (data.categoryId !== undefined) mappedData.categoryId = data.categoryId;
+    if (data.startDate instanceof Date) mappedData.startDate = data.startDate;
+    if (data.endDate instanceof Date) mappedData.endDate = data.endDate;
     if (typeof data.spent === 'number') mappedData.spent = data.spent;
     if (typeof data.isActive === 'boolean') mappedData.isActive = data.isActive;
     if (typeof data.rollover === 'boolean') mappedData.rollover = data.rollover;

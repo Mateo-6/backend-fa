@@ -2,3 +2,5 @@ allowBuilds:
   bcrypt: true
 onlyBuiltDependencies:
   - bcrypt
+minimumReleaseAgeExclude:
+  - fa-contracts

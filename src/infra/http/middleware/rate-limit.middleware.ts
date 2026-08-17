@@ -38,7 +38,7 @@ export const amiRateLimit = rateLimit({
   max: 60,
   keyGenerator: (req) => {
     const authenticatedReq = req as AuthenticatedRequest;
-    return authenticatedReq.user?.id ?? ipKeyGenerator(req);
+    return authenticatedReq.user?.id ?? ipKeyGenerator(req.ip ?? '');
   },
   standardHeaders: true,
   legacyHeaders: false,
