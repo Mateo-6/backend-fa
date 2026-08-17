@@ -33,8 +33,8 @@ import { RecurringExpenseService } from '../../application/services/recurring-ex
 import { PaymentMethodController } from './controllers/payment-method/payment-method.controller';
 import { PaymentMethodService } from '../../application/services/payment-method.service';
 
-import { DashboardController } from './controllers/dashboard/dashboard.controller';
-import { DashboardService } from '../../application/services/dashboard.service';
+import { SummaryController } from './controllers/summary/summary.controller';
+import { SummaryService } from '../../application/services/summary.service';
 import { CreditCardService } from '../../application/services/credit-card.service';
 import { CreditCardController } from './controllers/credit-card/credit-card.controller';
 
@@ -128,7 +128,7 @@ const recurringExpenseService = new RecurringExpenseService(
   paymentMethodRepository
 );
 const creditCardService = new CreditCardService(paymentMethodRepository, transactionRepository);
-const dashboardService = new DashboardService(transactionRepository, recurringExpenseRepository, creditCardService, paymentMethodRepository);
+const summaryService = new SummaryService(transactionRepository, recurringExpenseRepository, creditCardService, paymentMethodRepository);
 const notificationRepository = new NotificationMongooseRepository();
 const notificationService = new NotificationService(userRepository, notificationRepository);
 const budgetRepository = new BudgetMongooseRepository();
@@ -146,7 +146,7 @@ const categoryController = new CategoryController(categoryService);
 const transactionController = new TransactionController(transactionService, amiService);
 const recurringExpenseController = new RecurringExpenseController(recurringExpenseService);
 const paymentMethodController = new PaymentMethodController(paymentMethodService);
-const dashboardController = new DashboardController(dashboardService);
+const summaryController = new SummaryController(summaryService);
 const notificationController = new NotificationController(notificationService);
 const creditCardController = new CreditCardController(creditCardService);
 const budgetController = new BudgetController(budgetService);
@@ -402,8 +402,8 @@ const routes: RouteConfig[] = [
   { method: 'PUT', path: '/payment-methods/:id', handler: paymentMethodController.update.bind(paymentMethodController), authRequired: true, validateSchema: updatePaymentMethodSchema },
   { method: 'DELETE', path: '/payment-methods/:id', handler: paymentMethodController.delete.bind(paymentMethodController), authRequired: true },
 
-  // Dashboard routes (all require auth)
-  { method: 'GET', path: '/dashboard', handler: dashboardController.getDashboard.bind(dashboardController), authRequired: true },
+  // Summary routes (all require auth)
+  { method: 'GET', path: '/summary', handler: summaryController.getSummary.bind(summaryController), authRequired: true },
 
   // Notification routes (all require auth)
   { method: 'POST', path: '/notifications/register-token', handler: notificationController.registerToken.bind(notificationController), authRequired: true, validateSchema: registerPushTokenSchema },

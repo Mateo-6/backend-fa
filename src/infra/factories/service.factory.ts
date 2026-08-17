@@ -19,7 +19,7 @@ import { PaymentMethodService } from '../../application/services/payment-method.
 import { TransactionService } from '../../application/services/transaction.service';
 import { RecurringExpenseService } from '../../application/services/recurring-expense.service';
 import { BudgetService } from '../../application/services/budget.service';
-import { DashboardService } from '../../application/services/dashboard.service';
+import { SummaryService } from '../../application/services/summary.service';
 import { CreditCardService } from '../../application/services/credit-card.service';
 import { GmfService } from '../../application/services/gmf.service';
 import { NotificationService } from '../../application/services/notification.service';
@@ -61,7 +61,7 @@ const transactionService = new TransactionService(
   budgetService,
 );
 const recurringExpenseService = new RecurringExpenseService(recurringExpenseRepository, userRepository, paymentMethodRepository);
-const dashboardService = new DashboardService(transactionRepository, recurringExpenseRepository, creditCardService, paymentMethodRepository);
+const summaryService = new SummaryService(transactionRepository, recurringExpenseRepository, creditCardService, paymentMethodRepository);
 const gmfService = new GmfService(transactionRepository, paymentMethodRepository);
 const notificationService = new NotificationService(userRepository, notificationRepository);
 const amiService = new AmiService(openAiParser, categoryService, paymentMethodService, redisCacheService);
@@ -75,7 +75,7 @@ export const container = {
   transactionService,
   recurringExpenseService,
   budgetService,
-  dashboardService,
+  summaryService,
   creditCardService,
   gmfService,
   notificationService,

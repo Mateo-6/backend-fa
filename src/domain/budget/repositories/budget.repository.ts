@@ -50,7 +50,7 @@ export interface BudgetRepository {
 
   /**
    * Retrieves active budgets for a user ordered by (spent/amount) descending.
-   * Used for the dashboard summary widget.
+   * Used for the summary widget.
    *
    * @param {string} userId Owner identifier.
    * @returns {Promise<Budget[]>} Active budgets sorted by consumption percentage.

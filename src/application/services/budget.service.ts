@@ -112,7 +112,7 @@ export class BudgetService {
 
   /**
    * Retrieves active budgets sorted by consumption percentage descending.
-   * Used for the dashboard widget.
+   * Used for the summary widget.
    *
    * @param {string} userId User identifier.
    * @returns {Promise<BudgetWithProgress[]>} Summary budgets.

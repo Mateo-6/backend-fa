@@ -16,19 +16,22 @@ export class RecurringExpenseMongooseRepository implements RecurringExpenseRepos
    */
   async create(recurringExpense: RecurringExpense): Promise<RecurringExpense> {
     await getMongooseInstance();
-    const created = await RecurringExpenseModel.create({
-      name: recurringExpense.name,
-      amount: recurringExpense.amount,
-      currency: recurringExpense.currency,
-      user: recurringExpense.userId,
-      category: recurringExpense.categoryId,
-      paymentMethod: recurringExpense.paymentMethodId, // Mongoose will convert string to ObjectId
-      frequency: recurringExpense.frequency,
-      payDay: recurringExpense.payDay,
-      startDate: recurringExpense.startDate,
-      nextPaymentDate: recurringExpense.nextPaymentDate,
-      isActive: recurringExpense.isActive,
-    });
+    const session = sessionContext.getStore();
+    const [created] = await RecurringExpenseModel.create([
+      {
+        name: recurringExpense.name,
+        amount: recurringExpense.amount,
+        currency: recurringExpense.currency,
+        user: recurringExpense.userId,
+        category: recurringExpense.categoryId,
+        paymentMethod: recurringExpense.paymentMethodId, // Mongoose will convert string to ObjectId
+        frequency: recurringExpense.frequency,
+        payDay: recurringExpense.payDay,
+        startDate: recurringExpense.startDate,
+        nextPaymentDate: recurringExpense.nextPaymentDate,
+        isActive: recurringExpense.isActive,
+      },
+    ], session ? { session } : undefined);
     return this.toDomain(created);
   }
 

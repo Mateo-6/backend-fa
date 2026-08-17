@@ -78,7 +78,7 @@ export class BudgetMongooseRepository implements BudgetRepository {
 
   /**
    * Retrieves active budgets for a user sorted by consumption percentage descending.
-   * Used for the dashboard summary widget (most consumed first).
+   * Used for the summary widget (most consumed first).
    *
    * @param {string} userId Owner identifier.
    * @returns {Promise<Budget[]>} Active budgets.

@@ -161,6 +161,36 @@ export class TransactionService {
     const transactionDate = data.date instanceof Date ? data.date : new Date(data.date);
 
     const transaction = await this.transactionRunner.run(async () => {
+      let recurringExpenseId: string | undefined;
+      let isRecurring = false;
+
+      // Create a recurring expense configuration when an expense is marked as recurring
+      if (data.type === TransactionType.EXPENSE && data.isRecurring && data.paymentMethodId) {
+        const frequency = data.recurringFrequency ?? RecurringFrequency.MONTHLY;
+        const payDay = data.recurringPayDay ?? transactionDate.getDate();
+
+        const paymentMethod = await this.paymentMethodRepository.findById(data.paymentMethodId);
+
+        const recurringExpense = await this.recurringExpenseRepository.create({
+          userId,
+          name: data.description,
+          amount: data.amount,
+          currency: paymentMethod?.currency ?? 'USD',
+          categoryId: data.categoryId,
+          paymentMethodId: data.paymentMethodId,
+          frequency,
+          payDay,
+          startDate: transactionDate,
+          nextPaymentDate: this.calculateNextPaymentDate(transactionDate, payDay, frequency),
+          isActive: true,
+        });
+
+        recurringExpenseId = recurringExpense.id;
+        isRecurring = true;
+
+        logger.debug('Recurring expense created from manual transaction', { ...ctx, recurringExpenseId });
+      }
+
       const created = await this.transactionRepository.create({
         userId,
         amount: data.amount,
@@ -171,7 +201,8 @@ export class TransactionService {
         paymentMethodId: data.paymentMethodId,
         sourcePaymentMethodId: data.sourcePaymentMethodId,
         destinationPaymentMethodId: data.destinationPaymentMethodId,
-        isRecurring: false,
+        isRecurring,
+        recurringExpenseId,
         budgetAmount: data.budgetAmount ?? null,
       });
 

@@ -57,7 +57,7 @@ export class BudgetController {
 
   /**
    * Retrieves active budgets sorted by consumption percentage descending.
-   * Used for the dashboard widget.
+   * Used for the summary widget.
    *
    * @param {AuthenticatedRequest} req Express request.
    * @param {Response} res Express response.

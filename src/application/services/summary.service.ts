@@ -7,9 +7,9 @@ import { TransactionSubtype, PaymentMethodType, BankAccountDetails, CashDetails 
 import { CreditCardService, CreditCardSummary } from './credit-card.service';
 
 /**
- * Dashboard summary data with financial metrics.
+ * Financial summary data with financial metrics.
  */
-export interface DashboardSummary {
+export interface FinancialSummary {
   totalBalance: number;
   totalIncome: number;
   totalExpenses: number;
@@ -18,10 +18,10 @@ export interface DashboardSummary {
 }
 
 /**
- * Complete dashboard data response.
+ * Complete summary data response.
  */
-export interface DashboardData {
-  summary: DashboardSummary;
+export interface SummaryData {
+  summary: FinancialSummary;
   recentTransactions: Transaction[];
   upcomingPayments: RecurringExpense[];
   /** Up to 3 credit cards sorted by daysUntilPayment (most urgent first). */
@@ -29,10 +29,10 @@ export interface DashboardData {
 }
 
 /**
- * Service for managing dashboard data and calculations.
+ * Service for managing summary data and calculations.
  * All financial calculations are performed server-side to avoid frontend computation.
  */
-export class DashboardService {
+export class SummaryService {
   /**
    * @param {TransactionRepository} transactionRepository Repository for transaction data access.
    * @param {RecurringExpenseRepository} recurringExpenseRepository Repository for recurring expense data access.
@@ -46,14 +46,14 @@ export class DashboardService {
   ) {}
 
   /**
-   * Retrieves complete dashboard data for a user.
+   * Retrieves complete summary data for a user.
    * Transactions are scoped to the current month (from day 1 to today) to reflect
    * the current period's financial performance. Upcoming payments are not date-filtered.
    *
    * @param {string} userId User identifier.
-   * @returns {Promise<DashboardData>} Complete dashboard data including summary, recent transactions, and upcoming payments.
+   * @returns {Promise<SummaryData>} Complete summary data including metrics, recent transactions, and upcoming payments.
    */
-  async getDashboardData(userId: string): Promise<DashboardData> {
+  async getSummaryData(userId: string): Promise<SummaryData> {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
     const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
@@ -105,9 +105,9 @@ export class DashboardService {
    * Computes total income, total expenses, and balance (income - expenses).
    *
    * @param {Transaction[]} transactions Array of user transactions.
-   * @returns {DashboardSummary} Object containing totalBalance, totalIncome, and totalExpenses.
+   * @returns {FinancialSummary} Object containing totalBalance, totalIncome, and totalExpenses.
    */
-  private calculateSummary(transactions: Transaction[], availableBalance: number): DashboardSummary {
+  private calculateSummary(transactions: Transaction[], availableBalance: number): FinancialSummary {
     let totalIncome = 0;
     let totalExpenses = 0;
 

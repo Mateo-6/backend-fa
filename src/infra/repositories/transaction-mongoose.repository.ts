@@ -202,6 +202,7 @@ export class TransactionMongooseRepository implements TransactionRepository {
       paymentMethodId: doc.paymentMethod?.toString() || undefined,
       isRecurring: doc.isRecurring,
       recurringExpenseId: doc.recurringExpense?.toString(),
+      budgetAmount: doc.budgetAmount ?? null,
       cardPaymentDetails: doc.cardPaymentDetails
         ? {
             creditCardId: doc.cardPaymentDetails.creditCardId,

@@ -1,11 +1,13 @@
 import { z } from 'zod';
 import { TransactionType } from '../../../domain/finance/types/transaction.types';
+import { RecurringFrequency } from '../../../domain/finance/types/recurring-expense.types';
 
 /**
  * Schema for creating a new transaction.
  * - EXPENSE: paymentMethodId is required.
  * - INCOME: paymentMethodId is optional.
  * - TRANSFER: sourcePaymentMethodId and destinationPaymentMethodId are required; paymentMethodId must not be provided.
+ * - Recurring fields (isRecurring, recurringFrequency, recurringPayDay) only apply to EXPENSE.
  */
 export const createTransactionSchema = z
   .object({
@@ -23,8 +25,20 @@ export const createTransactionSchema = z
     sourcePaymentMethodId: z.string().min(1, 'El ID del método de pago origen es requerido').optional(),
     destinationPaymentMethodId: z.string().min(1, 'El ID del método de pago destino es requerido').optional(),
     budgetAmount: z.number().min(0, 'El monto al presupuesto no puede ser negativo').nullable().optional(),
+    isRecurring: z.boolean().optional(),
+    recurringFrequency: z.nativeEnum(RecurringFrequency, {
+      message: 'La frecuencia debe ser WEEKLY, MONTHLY o YEARLY',
+    }).optional(),
+    recurringPayDay: z.number().int('El día de pago debe ser un número entero').min(1, 'El día de pago debe estar entre 1 y 31').max(31, 'El día de pago debe estar entre 1 y 31').optional(),
   })
   .superRefine((data, ctx) => {
+    if (data.isRecurring && data.type !== TransactionType.EXPENSE) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'El gasto recurrente solo aplica a transacciones de tipo EXPENSE',
+        path: ['isRecurring'],
+      });
+    }
     if (data.type === TransactionType.TRANSFER) {
       if (!data.sourcePaymentMethodId || data.sourcePaymentMethodId.trim() === '') {
         ctx.addIssue({

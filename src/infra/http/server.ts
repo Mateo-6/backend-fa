@@ -8,7 +8,7 @@ import authRoutes from './routes/auth.routes';
 import transactionRoutes from './routes/transaction.routes';
 import recurringExpenseRoutes from './routes/recurring-expense.routes';
 import paymentMethodRoutes from './routes/payment-method.routes';
-import dashboardRoutes from './routes/dashboard.routes';
+import summaryRoutes from './routes/summary.routes';
 import notificationRoutes from './routes/notification.routes';
 import creditCardRoutes from './routes/credit-card.routes';
 import budgetRoutes from './routes/budget.routes';
@@ -63,7 +63,7 @@ export class Server {
     this.app.use('/transactions', transactionRoutes);
     this.app.use('/recurring-expenses', recurringExpenseRoutes);
     this.app.use('/payment-methods', paymentMethodRoutes);
-    this.app.use('/dashboard', dashboardRoutes);
+    this.app.use('/summary', summaryRoutes);
     this.app.use('/notifications', notificationRoutes);
     this.app.use('/credit-cards', creditCardRoutes);
     this.app.use('/budgets', budgetRoutes);
