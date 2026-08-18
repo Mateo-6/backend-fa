@@ -1,6 +1,5 @@
 import Redis from 'ioredis';
 import { ICache } from '../../domain/cache/cache.interface';
-import { logger } from '../utils/logger';
 
 /**
  * Singleton Redis cache service with silent failure semantics.
@@ -11,29 +10,14 @@ export class RedisCacheService implements ICache {
   private readonly client: Redis;
 
   constructor() {
-    const rawUrl = process.env.REDIS_URL ?? 'redis://localhost:6379';
-    const maskedUrl = rawUrl.replace(/redis(?:s)?:\/\/([^:]+):([^@]+)@/, 'redis://$1:****@');
-    logger.info(`Redis target URL: ${maskedUrl}`);
-    this.client = new Redis(rawUrl, {
+    this.client = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
       enableOfflineQueue: false,
       maxRetriesPerRequest: 1,
       connectTimeout: 2000,
     });
 
     // Suppress unhandled error events — errors are caught per-call
-    this.client.on('error', (err) => {
-      logger.warn(`Redis connection error: ${err.message}`, {
-        redisErr: err instanceof Error ? err.stack : String(err),
-      });
-    });
-
-    this.client.on('ready', () => {
-      logger.info('Redis connected');
-    });
-
-    this.client.on('connecting', () => {
-      logger.info('Connecting to Redis...');
-    });
+    this.client.on('error', () => {});
   }
 
   /**
@@ -46,8 +30,8 @@ export class RedisCacheService implements ICache {
   async connect(): Promise<void> {
     try {
       await this.client.connect();
-    } catch (err) {
-      logger.warn(`Redis connect failed: ${err instanceof Error ? err.message : String(err)}`);
+    } catch {
+      // Silent — Redis being down must never block startup
     }
   }
 
@@ -64,8 +48,7 @@ export class RedisCacheService implements ICache {
       const raw = await this.client.get(key);
       if (!raw) return null;
       return JSON.parse(raw) as T;
-    } catch (err) {
-      logger.warn(`Redis get failed: ${key} — ${err instanceof Error ? err.message : String(err)}`);
+    } catch {
       return null;
     }
   }
@@ -82,9 +65,8 @@ export class RedisCacheService implements ICache {
   async set<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
     try {
       await this.client.set(key, JSON.stringify(value), 'EX', ttlSeconds);
-      logger.info(`Redis set ok: ${key}`);
-    } catch (err) {
-      logger.warn(`Redis set failed: ${key} — ${err instanceof Error ? err.message : String(err)}`);
+    } catch {
+      // Silently swallow — cache write failures are non-fatal
     }
   }
 
