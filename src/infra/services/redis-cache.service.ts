@@ -37,6 +37,21 @@ export class RedisCacheService implements ICache {
   }
 
   /**
+   * Waits for the Redis connection to be ready before the server starts
+   * serving requests, avoiding first-request races on cold starts.
+   * Fails silently if Redis is unavailable — the app must keep working.
+   *
+   * @returns {Promise<void>}
+   */
+  async connect(): Promise<void> {
+    try {
+      await this.client.connect();
+    } catch (err) {
+      logger.warn(`Redis connect failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  /**
    * Retrieves and deserialises a cached value by key.
    * Returns null on cache miss or any Redis error.
    *

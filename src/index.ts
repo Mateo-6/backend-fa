@@ -2,12 +2,15 @@ import 'dotenv/config';
 import { Server } from './infra/http/server';
 import { MongooseClientSingleton } from './infra/database/mongoose-client';
 import { logger } from './infra/utils/logger';
+import { redisCacheService } from './infra/services/redis-cache.service';
 
 async function bootstrap(): Promise<void> {
   try {
     logger.info('Starting application...');
     await MongooseClientSingleton.connect();
     logger.info('MongoDB connection established');
+
+    await redisCacheService.connect();
 
     const server = new Server();
     server.start();
