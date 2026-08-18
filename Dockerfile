@@ -10,9 +10,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 make g+
 # Pin pnpm to match the local toolchain
 RUN npm install -g pnpm@11.3.0
 
+# Authenticate with GitHub Packages for the @mateo-6 scope
+ARG NPM_TOKEN
+RUN if [ -n "$NPM_TOKEN" ]; then npm config set '//npm.pkg.github.com/:_authToken' "$NPM_TOKEN"; else echo "warning: NPM_TOKEN not set, install of @mateo-6 packages may fail"; fi
+
 # Install dependencies (locked versions from pnpm-lock.yaml)
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY vendor ./vendor
+COPY .npmrc ./
 RUN pnpm install --frozen-lockfile
 
 # Build TypeScript sources

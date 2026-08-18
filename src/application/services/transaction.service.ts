@@ -12,7 +12,7 @@ import { RecurringExpense, RecurringFrequency } from '../../domain/finance/types
 import { CategoryType } from '../../domain/category/types/category.types';
 import { NotFoundError, ForbiddenError, ValidationError } from '../../domain/errors/app-error';
 import { ITransactionRunner } from '../../domain/shared/transaction-runner.interface';
-import { TransactionSubtype, PaymentMethodType, BankAccountDetails, CreditCardDetails } from 'fa-contracts';
+import { TransactionSubtype, PaymentMethodType, BankAccountDetails, CreditCardDetails } from '@mateo-6/fa-contracts';
 import { logger } from '../../infra/utils/logger';
 import { getRequestContext } from '../../infra/http/middleware/request-context';
 

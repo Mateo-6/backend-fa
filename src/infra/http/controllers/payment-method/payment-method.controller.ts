@@ -65,7 +65,7 @@ export class PaymentMethodController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const { transactionDate } = req.query;
 
     if (!transactionDate || typeof transactionDate !== 'string') {
@@ -86,7 +86,7 @@ export class PaymentMethodController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const { is_exempt }: ToggleGmfExemptDto = req.body;
 
     logger.info('Updating GMF exemption', { requestId, userId: user.id, paymentMethodId: id, is_exempt });
@@ -106,7 +106,7 @@ export class PaymentMethodController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const updatePaymentMethodDto: UpdatePaymentMethodDto = req.body;
 
     logger.info('Updating payment method', { requestId, userId: user.id, paymentMethodId: id });
@@ -126,7 +126,7 @@ export class PaymentMethodController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     logger.info('Deleting payment method', { requestId, userId: user.id, paymentMethodId: id });
     await this.paymentMethodService.delete(id, user.id);

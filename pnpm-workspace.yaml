@@ -3,4 +3,4 @@ allowBuilds:
 onlyBuiltDependencies:
   - bcrypt
 minimumReleaseAgeExclude:
-  - fa-contracts
+  - '@mateo-6/fa-contracts'

@@ -8,7 +8,7 @@ export type {
   BankAccountDetails,
   CashDetails,
   PaymentMethodDetails,
-} from 'fa-contracts';
+} from '@mateo-6/fa-contracts';
 
-export { PaymentMethodType, BankAccountType } from 'fa-contracts';
+export { PaymentMethodType, BankAccountType } from '@mateo-6/fa-contracts';
 

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { TransactionType } from 'fa-contracts';
+import { TransactionType } from '@mateo-6/fa-contracts';
 
 export const transactionHistoryQuerySchema = z.object({
   startDate: z.string().date('Formato de fecha inválido, use YYYY-MM-DD').optional(),

@@ -3,7 +3,7 @@ import { RecurringExpenseRepository } from '../../domain/finance/repositories/re
 import { PaymentMethodRepository } from '../../domain/payment-method/repositories/payment-method.repository';
 import { Transaction, TransactionType } from '../../domain/finance/types/transaction.types';
 import { RecurringExpense } from '../../domain/finance/types/recurring-expense.types';
-import { TransactionSubtype, PaymentMethodType, BankAccountDetails, CashDetails } from 'fa-contracts';
+import { TransactionSubtype, PaymentMethodType, BankAccountDetails, CashDetails } from '@mateo-6/fa-contracts';
 import { CreditCardService, CreditCardSummary } from './credit-card.service';
 
 /**

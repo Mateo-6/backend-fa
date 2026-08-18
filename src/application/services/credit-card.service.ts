@@ -2,7 +2,7 @@ import { PaymentMethodRepository } from '../../domain/payment-method/repositorie
 import { TransactionRepository } from '../../domain/finance/repositories/transaction.repository';
 import { PaymentMethod, PaymentMethodType, CreditCardDetails, BankAccountDetails } from '../../domain/payment-method/types/payment-method.types';
 import { Transaction, TransactionType } from '../../domain/finance/types/transaction.types';
-import { TransactionSubtype, CardPaymentDetails } from 'fa-contracts';
+import { TransactionSubtype, CardPaymentDetails } from '@mateo-6/fa-contracts';
 import { NotFoundError, ForbiddenError, ValidationError } from '../../domain/errors/app-error';
 import { TransactionModel } from '../../infra/database/models/transaction.model';
 import { PaymentMethodModel } from '../../infra/database/models/payment-method.model';

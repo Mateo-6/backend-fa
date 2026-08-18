@@ -59,7 +59,7 @@ export class TransactionController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { recurringExpenseId } = req.params;
+    const { recurringExpenseId } = req.params as { recurringExpenseId: string };
 
     logger.info('Processing recurring payment', { requestId, userId: user.id, recurringExpenseId });
     const transaction = await this.transactionService.processRecurringPayment(user.id, recurringExpenseId);
@@ -121,7 +121,7 @@ export class TransactionController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const updateTransactionDto: UpdateTransactionDto = req.body;
 
     logger.info('Updating transaction', { requestId, userId: user.id, transactionId: id });
@@ -141,7 +141,7 @@ export class TransactionController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     logger.info('Deleting transaction', { requestId, userId: user.id, transactionId: id });
     await this.transactionService.delete(id, user.id);

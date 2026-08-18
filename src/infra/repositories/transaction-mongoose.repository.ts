@@ -2,7 +2,7 @@ import { TransactionRepository, TransactionFilters } from '../../domain/finance/
 import { Transaction } from '../../domain/finance/types/transaction.types';
 import { TransactionModel, ITransactionDocument } from '../database/models/transaction.model';
 import { getMongooseInstance } from '../database/mongoose-client';
-import { TransactionSubtype } from 'fa-contracts';
+import { TransactionSubtype } from '@mateo-6/fa-contracts';
 import mongoose from 'mongoose';
 import { sanitizeStringValue } from '../utils/sanitize-query';
 import { sessionContext } from '../database/session-context';

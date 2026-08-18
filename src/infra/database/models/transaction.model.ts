@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 import { Transaction, TransactionType, CategorySnapshot } from '../../../domain/finance/types/transaction.types';
-import { TransactionSubtype } from 'fa-contracts';
+import { TransactionSubtype } from '@mateo-6/fa-contracts';
 
 /**
  * Embedded sub-document for card payment details.

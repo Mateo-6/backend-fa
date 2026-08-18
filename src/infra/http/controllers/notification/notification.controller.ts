@@ -72,7 +72,7 @@ export class NotificationController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     logger.info('Marking notification as read', { requestId, userId: user.id, notificationId: id });
     const updatedNotification = await this.notificationService.markNotificationAsRead(id, user.id);

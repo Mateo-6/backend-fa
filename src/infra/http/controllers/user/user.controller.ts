@@ -58,7 +58,7 @@ export class UserController {
    */
   public async getById(req: Request, res: Response): Promise<void> {
     const { requestId } = req as AuthenticatedRequest;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     logger.info('Fetching user by ID', { requestId, targetId: id });
     const user = await this.userService.findById(id);
@@ -77,7 +77,7 @@ export class UserController {
    */
   public async update(req: Request, res: Response): Promise<void> {
     const { requestId } = req as AuthenticatedRequest;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const updateUserDto: UpdateUserDto = req.body;
 
     logger.info('Updating user', { requestId, targetId: id });
@@ -94,7 +94,7 @@ export class UserController {
    */
   public async delete(req: Request, res: Response): Promise<void> {
     const { requestId } = req as AuthenticatedRequest;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     logger.info('Deleting user', { requestId, targetId: id });
     await this.userService.delete(id);

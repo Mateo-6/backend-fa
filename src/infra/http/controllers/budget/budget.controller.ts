@@ -99,7 +99,7 @@ export class BudgetController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     logger.info('Fetching budget by ID', { requestId, userId: user.id, budgetId: id });
     const budget = await this.budgetService.getById(id, user.id);
@@ -117,7 +117,7 @@ export class BudgetController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const dto: UpdateBudgetDto = req.body;
 
     logger.info('Updating budget', { requestId, userId: user.id, budgetId: id });
@@ -136,7 +136,7 @@ export class BudgetController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     logger.info('Recalculating budget', { requestId, userId: user.id, budgetId: id });
     const budget = await this.budgetService.recalculate(id, user.id);
@@ -154,7 +154,7 @@ export class BudgetController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     logger.info('Finalizing budget', { requestId, userId: user.id, budgetId: id });
     await this.budgetService.finalize(id, user.id);
@@ -172,7 +172,7 @@ export class BudgetController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     logger.info('Permanently deleting budget', { requestId, userId: user.id, budgetId: id });
     await this.budgetService.permanentDelete(id, user.id);
