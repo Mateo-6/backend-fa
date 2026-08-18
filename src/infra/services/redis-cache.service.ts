@@ -1,5 +1,6 @@
 import Redis from 'ioredis';
 import { ICache } from '../../domain/cache/cache.interface';
+import { logger } from '../utils/logger';
 
 /**
  * Singleton Redis cache service with silent failure semantics.
@@ -18,7 +19,17 @@ export class RedisCacheService implements ICache {
     });
 
     // Suppress unhandled error events — errors are caught per-call
-    this.client.on('error', () => {});
+    this.client.on('error', (err) => {
+      logger.warn(`Redis connection error: ${err.message}`);
+    });
+
+    this.client.on('ready', () => {
+      logger.info('Redis connected');
+    });
+
+    this.client.on('connecting', () => {
+      logger.info('Connecting to Redis...');
+    });
   }
 
   /**
@@ -34,7 +45,8 @@ export class RedisCacheService implements ICache {
       const raw = await this.client.get(key);
       if (!raw) return null;
       return JSON.parse(raw) as T;
-    } catch {
+    } catch (err) {
+      logger.warn(`Redis get failed: ${key} — ${err instanceof Error ? err.message : String(err)}`);
       return null;
     }
   }
@@ -51,8 +63,9 @@ export class RedisCacheService implements ICache {
   async set<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
     try {
       await this.client.set(key, JSON.stringify(value), 'EX', ttlSeconds);
-    } catch {
-      // Silently swallow — cache write failures are non-fatal
+      logger.info(`Redis set ok: ${key}`);
+    } catch (err) {
+      logger.warn(`Redis set failed: ${key} — ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
