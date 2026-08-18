@@ -1,3 +1,4 @@
+import { param } from '../../utils/param.util';
 import { Response } from 'express';
 import { CategoryService } from '../../../../application/services/category.service';
 import { CreateCategoryDto } from '../../../../application/dto/category/create-category.dto';
@@ -62,7 +63,7 @@ export class CategoryController {
    */
   public async getById(req: AuthenticatedRequest, res: Response): Promise<void> {
     const { requestId } = req;
-    const { id } = req.params as { id: string };
+    const id = param(req, 'id');
 
     logger.info('Fetching category by ID', { requestId, categoryId: id });
     const category = await this.categoryService.findById(id);
@@ -82,7 +83,7 @@ export class CategoryController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params as { id: string };
+    const id = param(req, 'id');
     const updateCategoryDto: UpdateCategoryDto = req.body;
 
     logger.info('Updating category', { requestId, userId: user.id, categoryId: id });
@@ -102,7 +103,7 @@ export class CategoryController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params as { id: string };
+    const id = param(req, 'id');
 
     logger.info('Deleting category', { requestId, userId: user.id, categoryId: id });
     await this.categoryService.delete(id, user.id);

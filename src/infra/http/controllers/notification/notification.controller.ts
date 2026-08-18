@@ -1,3 +1,4 @@
+import { param } from '../../utils/param.util';
 import { Response } from 'express';
 import { NotificationService } from '../../../../application/services/notification.service';
 import { RegisterPushTokenDto } from '../../../../application/dto/notification/register-push-token.dto';
@@ -72,7 +73,7 @@ export class NotificationController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params as { id: string };
+    const id = param(req, 'id');
 
     logger.info('Marking notification as read', { requestId, userId: user.id, notificationId: id });
     const updatedNotification = await this.notificationService.markNotificationAsRead(id, user.id);

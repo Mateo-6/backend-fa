@@ -1,3 +1,4 @@
+import { param } from '../../utils/param.util';
 import { Response } from 'express';
 import { TransactionService } from '../../../../application/services/transaction.service';
 import { AmiService } from '../../../../application/services/ami.service';
@@ -59,7 +60,7 @@ export class TransactionController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { recurringExpenseId } = req.params as { recurringExpenseId: string };
+    const recurringExpenseId = param(req, 'recurringExpenseId');
 
     logger.info('Processing recurring payment', { requestId, userId: user.id, recurringExpenseId });
     const transaction = await this.transactionService.processRecurringPayment(user.id, recurringExpenseId);
@@ -121,7 +122,7 @@ export class TransactionController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params as { id: string };
+    const id = param(req, 'id');
     const updateTransactionDto: UpdateTransactionDto = req.body;
 
     logger.info('Updating transaction', { requestId, userId: user.id, transactionId: id });
@@ -141,7 +142,7 @@ export class TransactionController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params as { id: string };
+    const id = param(req, 'id');
 
     logger.info('Deleting transaction', { requestId, userId: user.id, transactionId: id });
     await this.transactionService.delete(id, user.id);

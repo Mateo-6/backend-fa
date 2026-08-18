@@ -1,3 +1,4 @@
+import { param } from '../../utils/param.util';
 import { Response } from 'express';
 import { CreditCardService } from '../../../../application/services/credit-card.service';
 import { PayCardDto } from '../../../../application/dto/credit-card/pay-card.dto';
@@ -42,7 +43,7 @@ export class CreditCardController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params as { id: string };
+    const id = param(req, 'id');
 
     logger.info('Fetching card detail', { requestId, userId: user.id, cardId: id });
     const detail = await this.creditCardService.getCardDetail(user.id, id);
@@ -60,7 +61,7 @@ export class CreditCardController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params as { id: string };
+    const id = param(req, 'id');
 
     logger.info('Fetching card statements', { requestId, userId: user.id, cardId: id });
     const statements = await this.creditCardService.getStatements(user.id, id);
@@ -79,7 +80,8 @@ export class CreditCardController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id, periodStart } = req.params as { id: string; periodStart: string };
+    const id = param(req, 'id');
+    const periodStart = param(req, 'periodStart');
     const periodStartDate = new Date(periodStart);
 
     if (isNaN(periodStartDate.getTime())) {
@@ -103,7 +105,7 @@ export class CreditCardController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params as { id: string };
+    const id = param(req, 'id');
     const payCardDto: PayCardDto = req.body;
 
     logger.info('Processing card payment', { requestId, userId: user.id, cardId: id, amount: payCardDto.amount });
@@ -123,7 +125,7 @@ export class CreditCardController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params as { id: string };
+    const id = param(req, 'id');
 
     logger.info('Fetching card payment history', { requestId, userId: user.id, cardId: id });
     const payments = await this.creditCardService.getPaymentHistory(user.id, id);

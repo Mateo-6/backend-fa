@@ -1,3 +1,4 @@
+import { param } from '../../utils/param.util';
 import { Response } from 'express';
 import { RecurringExpenseService } from '../../../../application/services/recurring-expense.service';
 import { CreateRecurringDto } from '../../../../application/dto/finance/create-recurring.dto';
@@ -65,7 +66,7 @@ export class RecurringExpenseController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params as { id: string };
+    const id = param(req, 'id');
     const updateData: Partial<Omit<RecurringExpense, 'id'>> = req.body;
 
     logger.info('Updating recurring expense', { requestId, userId: user.id, recurringId: id });
@@ -85,7 +86,7 @@ export class RecurringExpenseController {
     if (!req.user?.id) throw new UnauthorizedError('Usuario no autenticado');
 
     const { requestId, user } = req;
-    const { id } = req.params as { id: string };
+    const id = param(req, 'id');
 
     logger.info('Deleting recurring expense', { requestId, userId: user.id, recurringId: id });
     await this.recurringExpenseService.delete(id, user.id);
