@@ -11,7 +11,10 @@ export class RedisCacheService implements ICache {
   private readonly client: Redis;
 
   constructor() {
-    this.client = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
+    const rawUrl = process.env.REDIS_URL ?? 'redis://localhost:6379';
+    const maskedUrl = rawUrl.replace(/redis(?:s)?:\/\/([^:]+):([^@]+)@/, 'redis://$1:****@');
+    logger.info(`Redis target URL: ${maskedUrl}`);
+    this.client = new Redis(rawUrl, {
       lazyConnect: true,
       enableOfflineQueue: false,
       maxRetriesPerRequest: 1,
@@ -20,7 +23,9 @@ export class RedisCacheService implements ICache {
 
     // Suppress unhandled error events — errors are caught per-call
     this.client.on('error', (err) => {
-      logger.warn(`Redis connection error: ${err.message}`);
+      logger.warn(`Redis connection error: ${err.message}`, {
+        redisErr: err instanceof Error ? err.stack : String(err),
+      });
     });
 
     this.client.on('ready', () => {
