@@ -15,7 +15,6 @@ export class RedisCacheService implements ICache {
     const maskedUrl = rawUrl.replace(/redis(?:s)?:\/\/([^:]+):([^@]+)@/, 'redis://$1:****@');
     logger.info(`Redis target URL: ${maskedUrl}`);
     this.client = new Redis(rawUrl, {
-      lazyConnect: true,
       enableOfflineQueue: false,
       maxRetriesPerRequest: 1,
       connectTimeout: 2000,
