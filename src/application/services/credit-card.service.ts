@@ -469,7 +469,7 @@ export class CreditCardService {
   /**
    * Computes the number of days until the next cut-off and next payment dates.
    * - Next cut-off: next occurrence of cut_off_day after today.
-   * - Next payment: payment_day of the month AFTER the next cut-off month.
+   * - Next payment: next occurrence of payment_day (the upcoming monthly due date).
    *
    * @param {number} cutOffDay Day of month for the card's cut-off.
    * @param {number} paymentDay Day of month for the card's payment due date.
@@ -499,11 +499,14 @@ export class CreditCardService {
     const msPerDay = 1000 * 60 * 60 * 24;
     const daysUntilCutOff = Math.round((nextCutOff.getTime() - now.getTime()) / msPerDay);
 
-    let paymentYear = cutOffYear;
-    let paymentMonth = cutOffMonth + 1;
-    if (paymentMonth > 11) {
-      paymentMonth = 0;
-      paymentYear += 1;
+    let paymentYear = todayYear;
+    let paymentMonth = todayMonth;
+    if (todayDay > paymentDay) {
+      paymentMonth += 1;
+      if (paymentMonth > 11) {
+        paymentMonth = 0;
+        paymentYear += 1;
+      }
     }
     const daysInPaymentMonth = new Date(paymentYear, paymentMonth + 1, 0).getDate();
     const finalPaymentDay = Math.min(paymentDay, daysInPaymentMonth);
