@@ -166,20 +166,6 @@ export class PaymentMethodService {
       throw new ValidationError('Solo las cuentas de ahorros pueden ser exentas del 4x1000');
     }
 
-    if (isExempt) {
-      const allPaymentMethods = await this.paymentMethodRepository.findAllByUser(userId);
-      for (const pm of allPaymentMethods) {
-        if (pm.id !== paymentMethodId && pm.type === PaymentMethodType.BANK_ACCOUNT) {
-          const pmDetails = pm.details as BankAccountDetails;
-          if (pmDetails.is_gmf_exempt) {
-            await this.paymentMethodRepository.update(pm.id!, {
-              details: { ...pmDetails, is_gmf_exempt: false },
-            });
-          }
-        }
-      }
-    }
-
     return this.paymentMethodRepository.update(paymentMethodId, {
       details: { ...details, is_gmf_exempt: isExempt },
     });
